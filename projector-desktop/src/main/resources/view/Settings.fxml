@@ -18,10 +18,11 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import java.lang.String?>
 <BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:id="mainBorderPain" prefHeight="1500.0" prefWidth="850.0"
-            xmlns="http://javafx.com/javafx/8.0.171" fx:controller="projector.controller.SettingsController">
+            xmlns="http://javafx.com/javafx/11.0.1" fx:controller="projector.controller.SettingsController">
     <center>
         <ScrollPane fx:id="scrollPane" prefHeight="55.0" prefWidth="50.0" BorderPane.alignment="CENTER">
             <BorderPane maxWidth="1.7976931348623157E308">
@@ -174,6 +175,18 @@
                         </HBox>
                     </GridPane>
                 </left>
+                <top>
+                    <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                        <center>
+                            <Pane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                                <TextField fx:id="topTextBox" layoutX="69.0" layoutY="113.0" text="top"/>
+                                <TextField fx:id="leftTextBox" layoutX="69.0" layoutY="75.0" text="left"/>
+                                <TextField fx:id="bottomTextBox" layoutX="69.0" layoutY="144.0" text="bottom"/>
+                                <TextField fx:id="rightTextBox" layoutX="69.0" layoutY="41.0" text="right"/>
+                            </Pane>
+                        </center>
+                    </BorderPane>
+                </top>
             </BorderPane>
         </ScrollPane>
     </center>

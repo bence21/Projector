@@ -101,7 +101,14 @@ public class SettingsController {
     private CheckBox referenceItalicCheckBox;
     @FXML
     private Spinner<Integer> progressLineThicknessSpinner;
-
+    @FXML
+    private TextField topTextBox;
+    @FXML
+    private TextField leftTextBox;
+    @FXML
+    private TextField bottomTextBox;
+    @FXML
+    private TextField rightTextBox;
     private Settings settings;
     private ProjectionScreenController projectionScreenController;
 
@@ -179,6 +186,7 @@ public class SettingsController {
                 appearanceComboBox.getSelectionModel().select(1);
                 break;
         }
+        loadMarginsToTextFields();
     }
 
     private void initializeNetworkButtons() {
@@ -299,6 +307,7 @@ public class SettingsController {
                 settings.setSceneStyleFile("applicationDark.css");
                 break;
         }
+        setMarginsToSettings(settings);
         settings.save();
         projectionScreenController.setBackGroundColor(backgroundColorPicker.getValue());
         if (listeners != null) {
@@ -344,6 +353,24 @@ public class SettingsController {
     public void onUpdateButtonAction() {
         Updater updater = Updater.getInstance();
         updater.updateExe();
+    }
+
+    private void loadMarginsToTextFields() {
+        topTextBox.setText(settings.getTopMargin() + "");
+        leftTextBox.setText(settings.getLeftMargin() + "");
+        rightTextBox.setText(settings.getRightMargin() + "");
+        bottomTextBox.setText(settings.getBottomMargin() + "");
+    }
+
+    private void setMarginsToSettings(Settings settings) {
+        String rightMargin = rightTextBox.getText();
+        String leftMargin = leftTextBox.getText();
+        String topMargin = topTextBox.getText();
+        String bottomMargin = bottomTextBox.getText();
+        settings.setTopMargin(Double.parseDouble(topMargin));
+        settings.setLeftMargin(Double.parseDouble(leftMargin));
+        settings.setRightMargin(Double.parseDouble(rightMargin));
+        settings.setBottomMargin(Double.parseDouble(bottomMargin));
     }
 
     public void setPrefHeight(double d) {

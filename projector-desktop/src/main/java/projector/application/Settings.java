@@ -78,6 +78,10 @@ public class Settings {
     private boolean checkLanguages = false;
     private boolean allowRemote = false;
     private String sceneStyleFile = "application.css";
+    private double topMargin;
+    private double leftMargin;
+    private double rightMargin;
+    private double bottomMargin;
 
     protected Settings() {
         load();
@@ -88,6 +92,38 @@ public class Settings {
             instance = new Settings();
         }
         return instance;
+    }
+
+    public double getTopMargin() {
+        return topMargin;
+    }
+
+    public void setTopMargin(double topMargin) {
+        this.topMargin = topMargin;
+    }
+
+    public double getLeftMargin() {
+        return leftMargin;
+    }
+
+    public void setLeftMargin(double leftMargin) {
+        this.leftMargin = leftMargin;
+    }
+
+    public double getRightMargin() {
+        return rightMargin;
+    }
+
+    public void setRightMargin(double rightMargin) {
+        this.rightMargin = rightMargin;
+    }
+
+    public double getBottomMargin() {
+        return bottomMargin;
+    }
+
+    public void setBottomMargin(double bottomMargin) {
+        this.bottomMargin = bottomMargin;
     }
 
     public synchronized int getMaxFont() {
@@ -341,6 +377,15 @@ public class Settings {
             bw.write(allowRemote + System.lineSeparator());
             bw.write("sceneStyleFile" + System.lineSeparator());
             bw.write(sceneStyleFile + System.lineSeparator());
+            bw.write("topMargin" + System.lineSeparator());
+            bw.write(topMargin + System.lineSeparator());
+            bw.write("leftMargin" + System.lineSeparator());
+            bw.write(leftMargin + System.lineSeparator());
+            bw.write("rightMargin" + System.lineSeparator());
+            bw.write(rightMargin + System.lineSeparator());
+            bw.write("bottomMargin" + System.lineSeparator());
+            bw.write(bottomMargin + System.lineSeparator());
+
             bw.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -467,6 +512,18 @@ public class Settings {
             String sceneStyleFile = br.readLine();
             if (sceneStyleFile != null) {
                 this.sceneStyleFile = sceneStyleFile;
+                br.readLine();
+                String topMargin = br.readLine();
+                this.topMargin = (Double.parseDouble(topMargin));
+                br.readLine();
+                String leftMargin = br.readLine();
+                this.leftMargin = (Double.parseDouble(leftMargin));
+                br.readLine();
+                String rightMargin = br.readLine();
+                this.rightMargin = (Double.parseDouble(rightMargin));
+                br.readLine();
+                String bottomMargin = br.readLine();
+                this.bottomMargin = (Double.parseDouble(bottomMargin));
             }
             br.close();
         } catch (IOException | NullPointerException | IllegalArgumentException e) {
