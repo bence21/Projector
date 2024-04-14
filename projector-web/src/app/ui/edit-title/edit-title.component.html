@@ -1,0 +1,9 @@
+<div class="example-full-width">
+  <mat-form-field [ngClass]="titleCaseApplicable()?'titleEdit':'example-full-width'" [formGroup]="form">
+    <input type="text" id="title" [formControlName]="'title'" required matInput placeholder="Title">
+  </mat-form-field>
+  <button *ngIf="titleCaseApplicable()" type="button" mat-icon-button (click)="refactorTitleCase()"
+    [matTooltip]="getTitleCaseToolTip()">
+    <mat-icon svgIcon="change_case">change_case</mat-icon>
+  </button>
+</div>

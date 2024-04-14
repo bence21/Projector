@@ -1,0 +1,125 @@
+<div class="container">
+  <br>
+  <mat-card>
+    <mat-card-content>
+
+      <h1>Edit song</h1>
+      <app-song-guidelines></app-song-guidelines>
+      <mat-radio-group class="example-radio-group" [(ngModel)]="editorType" (change)="editorTypeChange()">
+        <mat-radio-button class="example-radio-button" [value]="'verse'">Verse editor</mat-radio-button>
+        <mat-radio-button class="example-radio-button" [value]="'raw'">Raw editor</mat-radio-button>
+      </mat-radio-group>
+      <form [formGroup]="form" class="example-form">
+        <div class="formLayout">
+
+          <div class="example-container">
+            <mat-form-field *ngIf="auth.isLoggedIn" class="example-full-width">
+              <!--suppress HtmlUnknownAttribute -->
+              <mat-select placeholder="Language" required [(value)]="selectedLanguage">
+                <mat-option *ngFor="let language of languages" [value]="language">
+                  {{ language.printLanguage() }}
+                </mat-option>
+                <mat-option (click)="openNewLanguageDialog()">
+                  {{'Add new language'}}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button *ngIf="originalLanguage != selectedLanguage" mat-button color="accent"
+              (click)="onApplyLanguageButtonClick()">Apply</button>
+            <mat-form-field class="example-full-width">
+              <input type="text" id="youtubeUrl" formControlName="youtubeUrl" [value]="youtubeUrl" matInput
+                (change)="calculateUrlId()" placeholder="Youtube url">
+            </mat-form-field>
+            <iframe [class]="safeUrl!=null?'embeddedVideo':'hideEmbeddedVideo'" scrolling="no" [src]='safeUrl'
+              frameborder="0" allowfullscreen></iframe>
+            <app-edit-title [selectedLanguage]="selectedLanguage" [form]="form"></app-edit-title>
+            <mat-error *ngIf="formErrors.title">
+              <mat-icon class="material-icon">error</mat-icon>
+              {{formErrors.title}}
+            </mat-error>
+
+            <div *ngIf="editorType==='verse'">
+              <h4>Verses:</h4>
+              <!--suppress JSUnusedLocalSymbols -->
+              <div *ngFor="let verse of verses; let i = index;">
+                <mat-chip-list [multiple]="true">
+                  <mat-chip *ngFor="let chip of sectionTypes; let j=index"
+                    selected="{{sectionTypes[j].type == verse.type}}" (click)="changeMe(sectionTypes[j], verse)"
+                    color="primary" [value]="getSectionName(chip, verse, i)" [selectable]="true">
+                    {{getSectionName(chip, verse, i)}}
+                  </mat-chip>
+                  <button type="button" mat-icon-button (click)="removeSection(i)" matTooltip="Remove section">
+                    <mat-icon>clear</mat-icon>
+                  </button>
+                </mat-chip-list>
+                <mat-form-field class="example-full-width">
+                  <textarea matInput matTextareaAutosize placeholder="Section {{i+1}}." [matAutosizeMinRows]="2"
+                    [matAutosizeMaxRows]="15" formControlName="verse{{i}}" maxlength="1000"></textarea>
+                </mat-form-field>
+              </div>
+              <button type="button" mat-icon-button (click)="addNewVerse()" matTooltip="Add a new section">
+                <mat-icon>add</mat-icon>
+              </button>
+              <br>
+              <br>
+              <div cdkDropListGroup>
+                <mat-chip-list [multiple]="true" cdkDropList [cdkDropListData]="usedSectionTypes"
+                  cdkDropListSortingDisabled (cdkDropListDropped)="drop($event)"
+                  [cdkDropListEnterPredicate]="noReturnPredicate">>
+                  <mat-chip *ngFor="let chip of usedSectionTypes; let j=index" selected="true" color="primary"
+                    matTooltip="{{chip.text}}" matTooltipPosition="above" [value]="chip.name" [selectable]="true"
+                    cdkDrag>
+                    {{chip.name}}
+                  </mat-chip>
+                </mat-chip-list>
+                <mat-label>Verse order</mat-label>
+                <button *ngIf="!customSectionOrder" type="button" mat-icon-button (click)="setCustomSectionOrder(true)">
+                  <mat-icon>lock_open</mat-icon>
+                </button>
+                <button *ngIf="customSectionOrder" type="button" mat-icon-button (click)="setCustomSectionOrder(false)">
+                  <mat-icon>lock</mat-icon>
+                </button>
+                <mat-chip-list [multiple]="true" class="mat-chip-list-stacked" aria-orientation="vertical" cdkDropList
+                  [cdkDropListData]="sectionOrder" (cdkDropListDropped)="drop($event)">>
+                  <mat-chip class="sectionOrder" *ngFor="let chip of sectionOrder; let j=index" selected="true"
+                    color="primary" matTooltip="{{chip.text}}" matTooltipPosition="right" [removable]="true"
+                    [value]="chip.name" [selectable]="true" cdkDrag>
+                    <mat-icon matChipRemove style="margin-left: 0px; margin-right: 8px" (click)="removeSectionOrder(j)">
+                      cancel</mat-icon>
+                    {{chip.name}}
+                  </mat-chip>
+                </mat-chip-list>
+              </div>
+              <mat-error *ngIf="formErrors.verseOrder">
+                <mat-icon class="material-icon">error</mat-icon>
+                {{formErrors.verseOrder}}
+              </mat-error>
+              <mat-form-field class="example-full-width">
+                <mat-label>Author</mat-label>
+                <input type="text" id="author" formControlName="author" matInput>
+              </mat-form-field>
+            </div>
+            <div *ngIf="editorType==='raw'">
+              <mat-form-field class="example-full-width">
+                <textarea matInput matTextareaAutosize [matAutosizeMinRows]="7" placeholder="Text"
+                  formControlName="songText"></textarea>
+              </mat-form-field>
+              <h5>You need to switch back to verse editor in order to {{SubmitOrPublish()}}</h5>
+            </div>
+          </div>
+          <br>
+          <br>
+          <button type="submit" (click)="onSubmit()" class="btn btn-success"
+            [disabled]="needToDisable()">{{SubmitOrPublish()}}</button>
+          <button *ngIf="refactorable()" type="button" mat-icon-button (click)="refactor()"
+            matTooltip="Automatic fixes">
+            <mat-icon svgIcon="magic_tool">magic_tool</mat-icon>
+          </button>
+        </div>
+        <br>
+      </form>
+
+    </mat-card-content>
+  </mat-card>
+  <br>
+</div>

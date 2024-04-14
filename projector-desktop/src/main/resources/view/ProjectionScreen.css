@@ -1,0 +1,11 @@
+.background {
+    -fx-background-color: #00000000;
+}
+
+.blank {
+    -fx-background-color: #919000;
+}
+
+.launcher {
+    -fx-background-color: #00ff4400;
+}

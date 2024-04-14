@@ -1,0 +1,73 @@
+<div class="container">
+    <br>
+    <mat-card>
+        <mat-card-content>
+            <h1>{{'User'}}</h1>
+            <div class="formLayout">
+                <div class="form-group">
+                    <mat-icon class="material-icon">mail</mat-icon>
+                    <label for="email">E-mail</label>
+                    <input #email matInput type="email" class="form-control" value="{{user.email}}" disabled>
+                </div>
+
+                <div class="form-group">
+                    <mat-icon class="material-icon">person_outline</mat-icon>
+                    <label for="surname">Name</label>
+                    <input type="text" id="surname" class="form-control" value="{{user.surname}}" disabled>
+                </div>
+
+                <div class="form-group">
+                    <mat-icon class="material-icon">person_outline</mat-icon>
+                    <label for="firstName">First name</label>
+                    <input type="text" id="firstName" class="form-control" value="{{user.firstName}}" disabled>
+                </div>
+
+                <div *ngIf="user.activated == false" class="form-group">
+                    <mat-icon class="material-icon">check_circle_outline</mat-icon>
+                    <label for="activated">{{user.getActivatedString()}}</label>
+                </div>
+
+                <br>
+            </div>
+            <br>
+            <mat-form-field class="example-full-width">
+                <mat-select placeholder="Role" required [(value)]="user.role">
+                    <mat-option *ngFor="let role of roles" [value]="role">
+                        {{ getRoleString(role) }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+            <button *ngIf="originalUser.role != user.role" mat-button color="accent"
+                (click)="onApplyRoleButtonClick()">Apply</button>
+            <div *ngIf="originalUser.isReviewer()">
+                <br>
+                {{'Select languages which songs to be able to review'}}
+                <br>
+                <mat-form-field class="example-full-width">
+                    <mat-chip-list #chipList class="example-full-width" aria-label="Languages">
+                        <mat-chip *ngFor="let language of user.reviewLanguages" [selectable]="false" [removable]="true">
+                            {{language.englishName}}
+                            <mat-icon matChipRemove style="margin-left: 0px; margin-right: 8px"
+                                (click)="removeLanguage(language)">cancel</mat-icon>
+                        </mat-chip>
+                        <mat-select *ngIf="(remainedLanguages.length > 0)" placeholder="Language">
+                            <br>
+                            <mat-option (click)="selectLanguage(language)" *ngFor="let language of remainedLanguages"
+                                [value]="language">
+                                {{ getLanguageString(language) }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-chip-list>
+                </mat-form-field>
+                <button *ngIf="reviewLanguagesDiffers()" mat-button color="accent"
+                    (click)="onApplyReviewLanguagesButtonClick()">Apply</button>
+                <a href="/#/admin/reviewer-statistics/{{user.uuid}}">
+                    <button mat-button>
+                        Review statistics
+                    </button>
+                </a>
+            </div>
+        </mat-card-content>
+    </mat-card>
+
+</div>

@@ -1,0 +1,9 @@
+.enabledGuideLine {
+    visibility: inherit; 
+    /* Just for code. No special use */
+}
+
+.hideGuideLine {
+    visibility: hidden;
+    display: none;
+}

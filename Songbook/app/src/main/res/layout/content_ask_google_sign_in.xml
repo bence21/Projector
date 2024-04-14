@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/primaryColor"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingTop="18dp"
+    android:paddingBottom="18dp"
+    tools:context=".ui.activity.SongActivity">
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="match_parent"
+        android:layout_height="57dp"
+        android:layout_marginStart="0dp"
+        android:layout_marginLeft="0dp"
+        android:layout_marginTop="0dp"
+        android:gravity="center"
+        android:padding="10dp"
+        android:text="@string/sync_in_google_drive"
+        android:textSize="28sp" />
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:background="#104d15" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="303dp"
+        android:layout_height="83dp"
+        android:layout_marginTop="24dp"
+        android:gravity="center|top"
+        android:text="@string/from_now_you_can_synchronize_your_favourite_songs_across_google_drive"
+        android:textSize="18sp" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:drawableStart="@drawable/common_google_signin_btn_icon_dark"
+        android:drawableLeft="@drawable/common_google_signin_btn_icon_dark"
+        android:drawablePadding="4dp"
+        android:onClick="onGoogleSignIn"
+        android:text="@string/sign_in_with_google" />
+
+    <Button
+        android:id="@+id/dontShowButton"
+        style="@style/Base.Widget.AppCompat.Button.Borderless"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onDontShowAgain"
+        android:text="@string/don_t_show_again"
+        android:textColor="@color/secondaryTextColor" />
+
+    <TextView
+        android:id="@+id/notWorksTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/probably_sign_in_not_works_on_your_device"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+</LinearLayout>

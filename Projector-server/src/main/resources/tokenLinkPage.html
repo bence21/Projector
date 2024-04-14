@@ -1,0 +1,56 @@
+<style>
+  .Songs .button:hover{background:#4f9e0e;text-decoration:none}
+
+</style>
+
+<div class="Songs">
+    <table style="padding:24px 2% 0 2%;background-color:#ffffff;margin:0 auto;min-width:700px;">
+        <tbody>
+        <tr>
+            <td style="width:100%;vertical-align:top;">
+                <h1 style="text-align:center;word-spacing:0px;color:seagreen;">Songs</h1>
+            </td>
+        </tr>
+        <tr>
+            <td style="width:100%;vertical-align:top;padding:40px 70px;">
+                <div style="color:darkgray;line-height:150%;margin-bottom:0;margin-top:0;">
+                    <h2 style="text-align:right;right:5px;letter-spacing:normal;text-indent:0px;white-space:normal;font-size:20px;">
+                        ${currentDate}
+                    </h2>
+                    <h1 style="text-align:center;word-spacing:0px;color:seagreen;">
+                        Hey there,
+                    </h1>
+                    <blockquote style="margin:0 0 0 40px;border:none;padding:0px;">
+                        <div style="color:darkgray;line-height:normal;word-wrap:break-word;padding:2px 0px 0px;font-size:20px;">
+                            You recently requested to reset your password for your Songs acount.
+                        </div>
+                        <div><br>
+                        </div>
+                        <div style="-webkit-border-radius:28;-moz-border-radius:28;border-radius:28px;-webkit-box-shadow:0px 1px 3px #666666;-moz-box-shadow:0px 1px 3px #666666;box-shadow:0px 1px 3px #666666;-webkit-transition-duration:0.4s;transition-duration:0.4s;font-family:Georgia;text-align:center;background:#268513;margin:0 auto;width:50%;padding:10px 20px 10px 20px;border-right:solid #666666 3px;border-bottom:solid #666666 3px;text-decoration:none;">
+                            <a target="_blank" href="${link}"
+                               style="color:white;text-decoration-line:none;font-size:large;">
+                                Click here<span id="show"> to reset your password</span></a>
+                        </div>
+                        <div><br>
+                        </div>
+                        <div style="color:darkgray;line-height:normal;word-wrap:break-word;padding:2px 0px 0px;font-size:20px;">
+                            If you did not request password reset, please ignore this email. This password reset
+                            is only valid until ${tokenExpiryDate}.
+                        </div>
+                    </blockquote>
+                    <div>
+                        <br>
+                        <br>
+                    </div>
+                    <blockquote style="margin:0 0 0 40px;border:none;padding:0px;">
+                        <div style="color:darkgray;line-height:normal;word-wrap:break-word;padding:2px 0px 0px;font-size:20px;font-size:15px;">
+                            Cheerfully yours,<br>
+                            The Songs Team.
+                        </div>
+                    </blockquote>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>

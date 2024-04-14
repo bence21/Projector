@@ -1,0 +1,235 @@
+<!--suppress ALL -->
+<div class="container">
+  <div *ngIf="song.reviewerErased">
+    <br>
+    <h3>
+      Song is erased.
+    </h3>
+  </div>
+  <div *ngIf="auth.getUser().isAdmin() || hasReviewerRoleForSong">
+    <br>
+    <mat-card *ngIf="song.deleted && !song.reviewerErased">
+      <mat-card-content>
+        <h4>
+          Song is in review.
+        </h4>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  <br>
+  <mat-card>
+    <div class="title">
+      <h3 class="title">{{song.title}}
+      </h3>
+      <div *ngIf="conditionForShowingCollection()">
+        <div *ngIf="collections != undefined">
+          <div *ngFor="let collection of collections">
+            <p *ngFor="let collectionElement of collection.songCollectionElements"
+              (click)="onCollectionElementClick(collectionElement, collection)">
+              {{collection.name + " " + collectionElement.ordinalNumber}}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <mat-card-content>
+      <mat-card *ngFor="let songVerse of song.getSongVerses()"
+        [ngClass]="songVerse.chorus?['chorus','mat-elevation-z5']:'mat-elevation-z1'">
+        <mat-card-content>
+          <span class="sectionTypeElementInVerses">
+            {{songVerse.getTypeInitialWithCount()}}
+          </span>
+          <div *ngFor="let line of songVerse.lines">
+            <h4 class="verse">{{line}}</h4>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <br>
+      <mat-card>
+        <span *ngFor="let songVerse of song.getVerses()" class="sectionTypeElement" matTooltip="{{songVerse.text}}"
+          matTooltipPosition="above">
+          {{songVerse.getTypeInitialWithCount()}}
+        </span>
+      </mat-card>
+      <div *ngIf="safeUrl!=null && idCheckOk">
+        <app-youtube-id-check [videoId]="youtubeId" (onResult)="onYouTubeIdCheckResult($event)"></app-youtube-id-check>
+        <div *ngIf="showYouTubeVideo()">
+          <br>
+          <mat-card>
+            <iframe [class]="safeUrl!=null?'embeddedVideo':'hideEmbeddedVideo'" scrolling="no" [src]='safeUrl'
+              frameborder="0" allowfullscreen></iframe>
+          </mat-card>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <br>
+  <div>
+    <button mat-button (click)="openShareDialog()">
+      <mat-icon>share</mat-icon>
+      SHARE
+    </button>
+  </div>
+
+  <div *ngIf="auth.isLoggedIn && auth.getUser() != undefined">
+    <div *ngIf="auth.getUser().isAdmin()">
+      <br>
+      <div *ngIf="song.backUpSongId!==undefined">
+        <a href="/#/song/{{song.backUpSongId}}" target="_blank">{{'Open backup song'}}</a>
+      </div>
+      <div *ngIf="song.uploaded && song.deleted">
+        <button mat-button (click)="publishSong()">
+          Publish
+        </button>
+        <button mat-button (click)="eraseSong()">
+          Erase
+        </button>
+      </div>
+      <div *ngIf="!song.uploaded">
+        <button *ngIf="song.deleted" mat-button (click)="publishSong()">
+          Remove deleted
+        </button>
+      </div>
+    </div>
+    <div *ngIf="hasPermissionToAddSongsToCollection()">
+      <button mat-button (click)="addToCollectionSong()">
+        Add to collection
+      </button>
+    </div>
+    <div *ngIf="auth.getUser().isAdmin() || hasReviewerRoleForSong">
+      <br>
+      <table>
+        <tr *ngIf="song.views>0">
+          <td>Views:&nbsp;</td>
+          <td>{{song.views}}</td>
+        </tr>
+        <tr *ngIf="song.favourites > 0 && auth.getUser().isAdmin()">
+          <td>Favourites:&nbsp;</td>
+          <td>{{song.favourites}}</td>
+        </tr>
+        <tr *ngIf="song.createdByEmail != undefined">
+          <td>Created by email:&nbsp;</td>
+          <td>{{song.createdByEmail}}</td>
+        </tr>
+        <tr *ngIf="song.author">
+          <td>Author:&nbsp;</td>
+          <td>{{song.author}}</td>
+        </tr>
+        <tr *ngIf="song.createdDate">
+          <td>Created date:&nbsp;</td>
+          <td>{{song.createdDate | date: 'yyyy/MM/dd HH:mm'}}</td>
+        </tr>
+        <tr *ngIf="song.modifiedDate">
+          <td>Modified date:&nbsp;</td>
+          <td>{{song.modifiedDate | date: 'yyyy/MM/dd HH:mm'}}</td>
+        </tr>
+        <tr *ngIf="song.lastModifiedByUserEmail && auth.getUser().isAdmin()">
+          <td>Last modified by user email:&nbsp;</td>
+          <td>{{song.lastModifiedByUserEmail}}</td>
+        </tr>
+      </table>
+      <br>
+      <button *ngIf="!song.deleted" mat-button (click)="deleteSong()">
+        Delete
+      </button>
+      <button *ngIf="song.deleted && hasReviewerRoleForSong && !song.reviewerErased" mat-button (click)="eraseSong()">
+        Erase
+      </button>
+      <br>
+      <div *ngIf="unreviewedSuggestions.length > 0">
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              Song has unreviewed suggestions
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+          <mat-nav-list>
+            <mat-list-item *ngFor="let suggestion of unreviewedSuggestions" (click)="selectSuggestion(suggestion)">
+              <a>{{ suggestion.modifiedDate | date: 'yyyy/MM/dd HH:mm'}} {{" " + suggestion.getHeader() + " "}} </a>
+              <a href="/#/suggestion/{{suggestion.uuid}}" target="_blank">{{'. Open'}}</a>
+            </mat-list-item>
+          </mat-nav-list>
+        </mat-expansion-panel>
+      </div>
+      <button mat-button (click)="editSong()">
+        Edit
+      </button>
+      <app-edit-song [song]="song" *ngIf="editing"></app-edit-song>
+      <div *ngIf="song.originalId!==undefined">
+        <br>
+        <mat-card>
+          <mat-card-content>
+            <h4>This song has been uploaded after changes were made:</h4>
+            <div *ngIf="originalSong!==null">
+              <a href="/#/song/{{song.originalId}}" target="_blank">
+                {{'Open original song'}}
+              </a>
+            </div>
+          </mat-card-content>
+        </mat-card>
+        <div *ngIf="originalSong!==null">
+          <app-compare-songs [song]="song" [secondSong]="originalSong" [descriptionLabelLeft]="'Current song:'"
+            [descriptionLabelRight]="'Original song:'"></app-compare-songs>
+        </div>
+        <br>
+      </div>
+      <div>
+        <button mat-button (click)="showSimilar()">
+          Similarities
+        </button>
+        <div *ngIf="showSimilarities">
+          <div *ngIf="similar.length>0">
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  Similar songs
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              <mat-nav-list>
+                <mat-list-item *ngFor="let song of similar" (click)="selectSecondSong(song)">
+                  <a>{{ song.title + " "}}</a>
+                  <a href="/#/song/{{song.uuid}}" target="_blank">{{'. Open'}}</a>
+                </mat-list-item>
+              </mat-nav-list>
+              <div *ngIf="secondSong!==null">
+                <app-compare-songs [song]="song" [secondSong]="secondSong"
+                  [descriptionLabelLeft]="'Current song:'"></app-compare-songs>
+                <button *ngIf="auth.getUser().isAdmin() && collections != undefined && collections.length > 0"
+                  mat-button (click)="copySongCollectionElementsToSimilar()">
+                  Copy song collection elements to similar!
+                </button>
+              </div>
+            </mat-expansion-panel>
+          </div>
+          <div *ngIf="similar.length<1&&receivedSimilar">
+            <h3>No similar</h3>
+          </div>
+          <div *ngIf="similar.length<1&&!receivedSimilar">
+            <h3>Getting similar</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="auth.isLoggedIn && (auth.getUser().isUser() || auth.getUser().isAdmin() || auth.getUser().isReviewer())">
+    <button mat-button (click)="markForVersionGroup()">
+      {{markText}}
+    </button>
+    <button *ngIf="markedForVersionSong!==null && !marked" mat-button (click)="mergeVersionGroup()">
+      Merge with: {{markedForVersionSong.title}}
+    </button>
+    <button *ngIf="versionGroupRemovable()" mat-button (click)="removeVersionGroup()">
+      Remove from version group
+    </button>
+  </div>
+  <div *ngIf="songsByVersionGroup.length>0">
+    <br>
+    <h4>Versions:</h4>
+    <mat-nav-list>
+      <mat-list-item *ngFor="let song of songsByVersionGroup" (click)="openInNewTab(song)">
+        {{song.title}}
+      </mat-list-item>
+    </mat-nav-list>
+  </div>
+</div>

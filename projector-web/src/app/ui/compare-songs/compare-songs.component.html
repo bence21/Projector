@@ -1,0 +1,80 @@
+<mat-checkbox [checked]="repeatChorus" (change)="changeRepeatChorus()">
+  Repeat chorus
+</mat-checkbox>
+<h4>Matches: {{percentage*100 | number :'1.0-2'}}%</h4>
+<mat-grid-list cols="2" rowHeight="700px">
+  <mat-grid-tile style="overflow-y: auto;" [colspan]="1" [rowspan]="1">
+    <mat-card class="example-card">
+      <div class="descriptionHeader" *ngIf="isCompareDescriptionLabel()">
+        {{m_descriptionLabelLeft}}
+        <br>
+      </div>
+      <mat-card-header>
+        <mat-card-title>{{m_song.title}}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content [style.overflow]="'auto'" [style.height.px]="'600'">
+        <mat-card *ngFor="let songVerse of m_song.getVerses()">
+          <mat-card-content>
+            <div *ngFor="let lineCompare of songVerse.lineCompareLines">
+              <span *ngIf="lineCompare.color" class="lineWithoutModification" #leftLineCompares
+                (click)="focusOnRight(lineCompare.commonCount)">{{lineCompare.text}}
+              </span>
+              <span *ngIf="!lineCompare.color" class="lineWithModification" #leftDifferentLines>
+                <span *ngFor="let wordCompare of lineCompare.lineWord.words">
+                  <span *ngIf="wordCompare.color" #leftWordCompares (click)="focusOnRightWord(wordCompare.commonCount)"
+                    class="wordWithoutModification">{{wordCompare.text}}</span>
+                  <span *ngIf="!wordCompare.color" class="wordWithModification">
+                    <span *ngFor="let character of wordCompare.characters">
+                      <span *ngIf="character.color" #leftCharacterCompares
+                        (click)="focusOnRightCharacter(character.commonCount)"
+                        class="characterWithoutModification">{{character.text}}</span>
+                      <span *ngIf="!character.color" class="characterWithModification">{{character.text}}</span>
+                    </span>
+                  </span>
+                </span>
+              </span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </mat-card-content>
+    </mat-card>
+  </mat-grid-tile>
+  <mat-grid-tile [colspan]="1" [rowspan]="1">
+    <mat-card class="example-card">
+      <div class="descriptionHeader" *ngIf="isCompareDescriptionLabel()">
+        {{m_descriptionLabelRight}}
+        <br>
+      </div>
+      <mat-card-header>
+        <mat-card-title>
+          {{m_secondSong.title + " - "}}<a href="/#/song/{{m_secondSong.uuid}}" target="_blank">{{'Open'}}</a>
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content [style.overflow]="'auto'" [style.height.px]="'600'">
+        <mat-card *ngFor="let songVerse of m_secondSong.getVerses()">
+          <mat-card-content>
+            <div *ngFor="let lineCompare of songVerse.lineCompareLines">
+              <span *ngIf="lineCompare.color" class="lineWithoutModification">
+                <span #rightLineCompares (click)="focusOnLeft(lineCompare.commonCount)">{{lineCompare.text}}</span>
+              </span>
+              <span *ngIf="!lineCompare.color" class="lineWithModification" #rightDifferentLines>
+                <span *ngFor="let wordCompare of lineCompare.lineWord.words">
+                  <span *ngIf="wordCompare.color" #rightWordCompares (click)="focusOnLeftWord(wordCompare.commonCount)"
+                    class="wordWithoutModification">{{wordCompare.text}}</span>
+                  <span *ngIf="!wordCompare.color" class="wordWithModification">
+                    <span *ngFor="let character of wordCompare.characters">
+                      <span *ngIf="character.color" #rightCharacterCompares
+                        (click)="focusOnLeftCharacter(character.commonCount)"
+                        class="characterWithoutModification">{{character.text}}</span>
+                      <span *ngIf="!character.color" class="characterWithModification">{{character.text}}</span>
+                    </span>
+                  </span>
+                </span>
+              </span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </mat-card-content>
+    </mat-card>
+  </mat-grid-tile>
+</mat-grid-list>

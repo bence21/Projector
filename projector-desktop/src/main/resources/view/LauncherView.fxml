@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<BorderPane prefHeight="512.0" prefWidth="512.0" xmlns="http://javafx.com/javafx/18" styleClass="launcher"
+            stylesheets="@ProjectionScreen.css">
+    <center>
+        <ImageView preserveRatio="true" BorderPane.alignment="CENTER">
+            <Image url="@../ic_launcher.png"/>
+        </ImageView>
+    </center>
+</BorderPane>

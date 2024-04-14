@@ -1,0 +1,4 @@
+call copyCredentials.bat
+call copyApplicationProperties.bat
+call gradle bootJar
+call copyCredentialsRevert.bat

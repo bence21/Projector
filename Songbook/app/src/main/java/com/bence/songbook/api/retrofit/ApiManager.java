@@ -1,0 +1,123 @@
+package com.bence.songbook.api.retrofit;
+
+import com.bence.projector.common.dto.LanguageDTO;
+import com.bence.projector.common.serializer.DateDeserializer;
+import com.bence.projector.common.serializer.DateSerializer;
+import com.google.gson.GsonBuilder;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Cookie;
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+public class ApiManager {
+
+    private static ApiManager instance;
+    private List<Cookie> cookies = null;
+
+    public ApiManager() {
+
+    }
+
+    public static ApiManager getInstance() {
+        if (instance == null) {
+            instance = new ApiManager();
+        }
+        return instance;
+    }
+
+    public static Retrofit getClient() {
+        String BASE_URL = "http://192.168.1.134:8080";
+        String SECOND_BASE_URL = "http://192.168.100.119:8080";
+        HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
+        httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        HeaderInterceptor headerInterceptor = new HeaderInterceptor();
+        OkHttpClient shortOkHttpClient = new OkHttpClient.Builder()
+                .connectTimeout(3, TimeUnit.SECONDS)
+                .readTimeout(100, TimeUnit.SECONDS)
+                .addInterceptor(httpLoggingInterceptor)
+                .addInterceptor(headerInterceptor)
+                .followRedirects(false)
+                .build();
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .connectTimeout(100, TimeUnit.SECONDS)
+                .readTimeout(100, TimeUnit.SECONDS)
+                .addInterceptor(httpLoggingInterceptor)
+                .addInterceptor(headerInterceptor)
+                .followRedirects(false)
+                .build();
+
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(Date.class, new DateDeserializer()).registerTypeAdapter(Date.class,
+                new DateSerializer());
+        GsonConverterFactory factory = GsonConverterFactory.create(gsonBuilder.create());
+        Retrofit build = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(factory)
+                .client(shortOkHttpClient)
+                .build();
+        Call<List<LanguageDTO>> languages = build.create(LanguageApi.class).getLanguages();
+        Response<List<LanguageDTO>> response;
+        try {
+            response = languages.execute();
+            if (response.isSuccessful()) {
+                return build;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new Retrofit.Builder()
+                .baseUrl(SECOND_BASE_URL)
+                .addConverterFactory(factory)
+                .client(okHttpClient)
+                .build();
+
+    }
+
+    public List<Cookie> getCookies() {
+        return cookies;
+    }
+
+    public void setCookies(List<Cookie> cookies) {
+        this.cookies = cookies;
+    }
+
+    public static class HeaderInterceptor implements Interceptor {
+        @Override
+        public okhttp3.Response intercept(Chain chain) throws IOException {
+            Request.Builder builder = chain.request()
+                    .newBuilder();
+            setCookieHeader(builder);
+            Request request = builder.build();
+            return chain.proceed(request);
+        }
+
+        private void setCookieHeader(Request.Builder builder) {
+            List<Cookie> cookies = ApiManager.getInstance().getCookies();
+            if (cookies != null) {
+                StringBuilder cookieString = null;
+                for (Cookie cookie : cookies) {
+                    String s = cookie.name() + "=" + cookie.value();
+                    if (cookieString == null) {
+                        cookieString = new StringBuilder(s);
+                    } else {
+                        cookieString.append("; ").append(s);
+                    }
+                }
+                if (cookieString != null) {
+                    builder.addHeader("Cookie", cookieString.toString());
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.text.TextFlow?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
+            xmlns="http://javafx.com/javafx/8.0.121"
+            fx:controller="projector.controller.song.CompareSimilarSongsController">
+    <center>
+        <GridPane fx:id="conflictGridPane">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints maxHeight="-Infinity" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                <RowConstraints maxHeight="-Infinity" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                <RowConstraints vgrow="ALWAYS"/>
+                <RowConstraints minHeight="30.0" prefHeight="40.0" vgrow="NEVER"/>
+            </rowConstraints>
+            <Label fx:id="conflictTitle" text="%Your version" GridPane.rowIndex="1"/>
+            <ScrollPane GridPane.rowIndex="2">
+                <TextFlow fx:id="conflictLocalSongTextFlow">
+                    <GridPane.margin>
+                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                    </GridPane.margin>
+                </TextFlow>
+            </ScrollPane>
+            <Label fx:id="secondTitle" text="%Online version" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <ScrollPane GridPane.columnIndex="1" GridPane.rowIndex="2">
+                <TextFlow fx:id="conflictSongTextFlow">
+                    <GridPane.margin>
+                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                    </GridPane.margin>
+                </TextFlow>
+            </ScrollPane>
+            <BorderPane GridPane.rowIndex="3">
+                <center>
+                    <Button fx:id="deleteLeft" mnemonicParsing="false" text="Delete left"/>
+                </center>
+                <right>
+                    <Button fx:id="acceptButton" mnemonicParsing="false" text="Accept"/>
+                </right>
+            </BorderPane>
+            <BorderPane GridPane.columnIndex="1" GridPane.rowIndex="3">
+                <center>
+                    <Button fx:id="deleteRight" mnemonicParsing="false" text="Delete right"/>
+                </center>
+            </BorderPane>
+        </GridPane>
+    </center>
+</BorderPane>

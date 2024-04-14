@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.shape.Line?>
+<?import projector.utils.scene.text.MyTextFlow?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" styleClass="background"
+            stylesheets="@ProjectionScreen.css" xmlns="http://javafx.com/javafx/8"
+            fx:controller="projector.controller.ProjectionScreenController">
+    <center>
+        <BorderPane fx:id="mainPane">
+            <center>
+                <BorderPane fx:id="paneForMargins">
+                    <center>
+                        <BorderPane fx:id="paneForPadding">
+                            <center>
+                                <BorderPane fx:id="contentPane">
+                                    <center>
+                                        <Pane fx:id="pane" BorderPane.alignment="CENTER">
+                                            <Line fx:id="progressLine" layoutY="1.0" stroke="#ffffffd0"/>
+                                            <MyTextFlow fx:id="textFlow" textAlignment="CENTER">
+                                            </MyTextFlow>
+                                            <Canvas fx:id="canvas" BorderPane.alignment="CENTER">
+                                            </Canvas>
+                                        </Pane>
+                                    </center>
+                                    <right>
+                                        <Pane fx:id="pane1" minWidth="150" BorderPane.alignment="CENTER">
+                                            <MyTextFlow fx:id="textFlow1" textAlignment="CENTER">
+                                            </MyTextFlow>
+                                        </Pane>
+                                    </right>
+                                </BorderPane>
+                            </center>
+                        </BorderPane>
+                    </center>
+                </BorderPane>
+            </center>
+        </BorderPane>
+    </center>
+</BorderPane>

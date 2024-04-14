@@ -1,0 +1,64 @@
+<div class="container">
+  <br>
+  <div class="alert alert-success" *ngIf="suggestion.reviewed">
+    <mat-icon>rate_review</mat-icon>
+    Already reviewed
+  </div>
+  <table>
+    <tr>
+      <td>Email&nbsp;</td>
+      <td>{{suggestion.createdByEmail}}</td>
+    </tr>
+    <tr>
+      <td>Title&nbsp;</td>
+      <td>{{suggestion.title}}</td>
+    </tr>
+    <tr>
+      <td>Description&nbsp;</td>
+      <td>{{suggestion.description}}</td>
+    </tr>
+    <tr>
+      <td>Created date&nbsp;</td>
+      <td>{{suggestion.createdDate| date: 'yyyy/MM/dd HH:mm'}}</td>
+    </tr>
+    <tr>
+      <td>Modified date&nbsp;</td>
+      <td>{{suggestion.modifiedDate| date: 'yyyy/MM/dd HH:mm'}}</td>
+    </tr>
+    <tr *ngIf="suggestion.lastModifiedByUserEmail && auth.getUser().isAdmin()">
+      <td>Last modified by user email:&nbsp;</td>
+      <td>{{suggestion.lastModifiedByUserEmail}}</td>
+    </tr>
+  </table>
+  <div *ngIf="safeUrl!=null">
+    <mat-card>
+      <mat-card-title>
+        Suggested youtube video
+      </mat-card-title>
+      <mat-card-content>
+      <iframe [class]="safeUrl!=null?'embeddedVideo':'hideEmbeddedVideo'" scrolling="no" [src]='safeUrl' frameborder="0"
+        allowfullscreen></iframe>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div *ngIf="suggestionSong!==undefined&&song!==undefined">
+    <app-compare-songs [song]="suggestionSong" [secondSong]="originalSongForCompare"
+    [descriptionLabelLeft]="'Suggestion:'"></app-compare-songs>
+  </div>
+  <br>
+  <mat-expansion-panel>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        Original song
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <div *ngIf="song!==undefined">
+      <a href="/#/song/{{song.uuid}}" target="_blank">
+        {{'Open in new tab'}}</a>
+    </div>
+    <app-song [i_song]="song"></app-song>
+  </mat-expansion-panel>
+  <br>
+  <button *ngIf="!suggestion.reviewed" mat-raised-button (click)="onDoneButtonClick()">Mark as reviewed</button>
+</div>

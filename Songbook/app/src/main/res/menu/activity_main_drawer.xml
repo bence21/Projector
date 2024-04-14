@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_download_songs"
+            android:icon="@drawable/ic_cloud_download_black_24dp"
+            android:title="@string/download_songs" />
+        <item
+            android:id="@+id/nav_new_song"
+            android:icon="@drawable/ic_add_circle_black_24dp"
+            android:title="@string/new_song" />
+        <item
+            android:id="@+id/nav_library"
+            android:icon="@drawable/ic_folder_black_24dp"
+            android:title="@string/my_library" />
+    </group>
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_sign_in"
+            android:icon="@drawable/ic_person_black_24dp"
+            android:title="@string/sign_in" />
+    </group>
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_privacy_policy"
+            android:icon="@drawable/ic_policy_document"
+            android:title="@string/privacy_policy" />
+    </group>
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings_black_24dp"
+            android:title="@string/settings" />
+    </group>
+
+</menu>

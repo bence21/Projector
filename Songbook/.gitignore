@@ -1,0 +1,10 @@
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+/photos/
+/ignore/
+/app/release/
+/app/src/main/java/com/bence/songbook/utils/NumberRound.java

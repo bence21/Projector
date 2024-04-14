@@ -1,0 +1,6 @@
+<div class="guidelines-container">
+  <h3>Check guidelines</h3>
+  <app-song-guideline-checker *ngFor="let guideline of guidelines" [pGuideline]="guideline"
+    [class]="guideline.enabled?'enabledGuideLine':'hideGuideLine'"></app-song-guideline-checker>
+</div>
+<br>

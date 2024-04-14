@@ -1,0 +1,10 @@
+<mat-expansion-panel [expanded]="shouldBeExpanded()">
+  <mat-expansion-panel-header>
+    <mat-panel-title>
+      <mat-checkbox [(ngModel)]="checkboxState" (click)="onCheckBoxClick($event)">
+        {{guideline.title}}
+      </mat-checkbox>
+    </mat-panel-title>
+  </mat-expansion-panel-header>
+  <p>{{guideline.text}}</p>
+</mat-expansion-panel>

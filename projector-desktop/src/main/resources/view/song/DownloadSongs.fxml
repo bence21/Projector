@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.text.TextFlow?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
+            xmlns="http://javafx.com/javafx/8.0.121" fx:controller="projector.controller.song.DownloadSongsController">
+    <top>
+        <Label fx:id="downloadingLabel" text="%Downloading"/>
+    </top>
+    <left>
+        <BorderPane>
+            <top>
+                <Label text="%New song"/>
+            </top>
+            <center>
+                <ListView fx:id="newSongListView" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                    <BorderPane.margin>
+                        <Insets bottom="7.0" left="7.0" right="7.0" top="7.0"/>
+                    </BorderPane.margin>
+                </ListView>
+            </center>
+        </BorderPane>
+    </left>
+    <center>
+        <GridPane fx:id="conflictGridPane">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints maxHeight="-Infinity" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                <RowConstraints maxHeight="-Infinity" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                <RowConstraints vgrow="ALWAYS"/>
+                <RowConstraints minHeight="30.0" prefHeight="40.0" vgrow="NEVER"/>
+            </rowConstraints>
+            <BorderPane GridPane.columnSpan="2147483647">
+                <center>
+                    <Label fx:id="conflictTitle"/>
+                </center>
+                <left>
+                    <Label text="%Conflict" BorderPane.alignment="CENTER"/>
+                </left>
+            </BorderPane>
+            <Label text="%Your version" GridPane.rowIndex="1"/>
+            <ScrollPane GridPane.rowIndex="2">
+                <TextFlow fx:id="conflictLocalSongTextFlow">
+                    <GridPane.margin>
+                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                    </GridPane.margin>
+                </TextFlow>
+            </ScrollPane>
+            <Label text="%Online version" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <ScrollPane GridPane.columnIndex="1" GridPane.rowIndex="2">
+                <TextFlow fx:id="conflictSongTextFlow">
+                    <GridPane.margin>
+                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                    </GridPane.margin>
+                </TextFlow>
+            </ScrollPane>
+            <BorderPane GridPane.rowIndex="3" GridPane.columnSpan="2">
+                <center>
+                    <HBox BorderPane.alignment="CENTER" alignment="CENTER" spacing="15">
+                        <BorderPane>
+                            <center>
+                                <Button fx:id="keepButton" mnemonicParsing="false" text="%Keep local"/>
+                            </center>
+                        </BorderPane>
+                        <BorderPane>
+                            <center>
+                                <Button fx:id="acceptBothButton" mnemonicParsing="false" text="%Accept both"/>
+                            </center>
+                        </BorderPane>
+                        <BorderPane>
+                            <center>
+                                <Button fx:id="acceptButton" mnemonicParsing="false" text="%Accept new"/>
+                            </center>
+                        </BorderPane>
+                    </HBox>
+                </center>
+            </BorderPane>
+        </GridPane>
+    </center>
+</BorderPane>

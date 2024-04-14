@@ -1,0 +1,62 @@
+<br>
+<div class="container" *ngIf="songLink !== undefined">
+  <div class="alert alert-success" *ngIf="songLink.applied">
+    <mat-icon>rate_review</mat-icon>
+    Already reviewed
+  </div>
+  <table>
+    <tr>
+      <td>Email&nbsp;</td>
+      <td>{{songLink.createdByEmail}}</td>
+    </tr>
+    <tr>
+      <td>Created date&nbsp;</td>
+      <td>{{songLink.createdDate| date: 'yyyy/MM/dd HH:mm'}}</td>
+    </tr>
+    <tr>
+      <td>Modified date&nbsp;</td>
+      <td>{{songLink.modifiedDate| date: 'yyyy/MM/dd HH:mm'}}</td>
+    </tr>
+  </table>
+
+  <div *ngIf="song1 !== undefined && song2 !== undefined">
+    <app-compare-songs [song]="song1" [secondSong]="song2"></app-compare-songs>
+  </div>
+  <mat-expansion-panel *ngIf="song1 !== undefined">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        {{song1.title}}
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <div>
+      <a href="/#/song/{{song1.uuid}}" target="_blank">
+        {{'Open in new tab'}}</a>
+    </div>
+    <app-song [i_song]="song1"></app-song>
+  </mat-expansion-panel>
+  <mat-expansion-panel *ngIf="song2 !== undefined">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        {{song2.title}}
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <div>
+      <a href="/#/song/{{song2.uuid}}" target="_blank">
+        {{'Open in new tab'}}</a>
+    </div>
+    <app-song [i_song]="song2"></app-song>
+  </mat-expansion-panel>
+  <br>
+  <div *ngIf="!songLink.applied">
+    <button mat-raised-button (click)="onRejectButtonClick()">Reject</button>
+    <br>
+    <br>
+    <br>
+    <button mat-raised-button (click)="onMergeSongsButtonClick()">Merge songs</button>
+  </div>
+</div>
+<div class="container">
+  <div class="alert alert-warning" *ngIf="isNull">
+    Song link deleted
+  </div>
+</div>

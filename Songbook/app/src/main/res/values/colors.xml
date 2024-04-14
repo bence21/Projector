@@ -1,0 +1,32 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="black_overlay">#003602</color>
+    <color name="accent_material_dark" tools:ignore="PrivateResource">#009906</color>
+    <color name="background">#4b594b</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <color name="primaryColor">#1b5e20</color>
+    <color name="primaryLightColor">#1b5e20</color>
+    <color name="primaryDarkColor">#eb14350e</color>
+    <color name="secondaryColor">#102a00</color>
+    <color name="secondaryLightColor">#283593</color>
+    <color name="secondaryDarkColor">#014530</color>
+    <color name="primaryTextColor">#fffde7</color>
+    <color name="secondaryTextColor">#e0f7fa</color>
+    <color name="secondaryDarkTextColor">#6E797A</color>
+    <color name="backgroundC">#000000</color>
+    <color name="foregroundC">#FFFFFF</color>
+
+    <color name="primaryColor2">#2e7d32</color>
+    <color name="primaryLightColor2">#c5e1a5</color>
+    <color name="primaryDarkColor2">#def6f7ff</color>
+    <color name="secondaryColor2">#304ffe</color>
+    <color name="secondaryLightColor2">#0d47a1</color>
+    <color name="secondaryDarkColor2">#004d40</color>
+    <color name="primaryTextColor2">#000000</color>
+    <color name="secondaryTextColor2">#1a237e</color>
+    <color name="secondaryDarkTextColor2">#0E1344</color>
+    <color name="backgroundC2">#FFFFFF</color>
+    <color name="foregroundC2">#000000</color>
+</resources>

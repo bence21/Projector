@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.bence.songbook.ui.activity.SuggestEditsActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/SongBookTheme.AppBarOverlay">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary">
+
+        </androidx.appcompat.widget.Toolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
+        android:id="@+id/updateSongsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        tools:context="com.bence.songbook.ui.activity.SuggestEditsActivity"
+        tools:showIn="@layout/activity_suggest_choose">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:labelFor="@id/suggestion"
+            android:text="@string/short_description_of_the_suggestion" />
+
+        <EditText
+            android:id="@+id/suggestion"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="@string/description"
+            android:importantForAutofill="no"
+            android:inputType="textNoSuggestions|textMultiLine"
+            android:maxLength="1000"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="1">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title" />
+
+            <EditText
+                android:id="@+id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/title_of_the_song"
+                android:importantForAutofill="no"
+                android:inputType="text|textCapSentences"
+                android:maxLength="50" />
+        </GridLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/verses" />
+
+        <EditText
+            android:id="@+id/text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:layout_marginRight="17dp"
+            android:ems="12"
+            android:hint="@string/insert_here_the_song_verses_nseparated_by_an_empty_line_n_n1_example_n_n2_example"
+            android:importantForAutofill="no"
+            android:inputType="textMultiLine|textCapSentences"
+            android:lines="12"
+            android:maxLength="10000"
+            android:padding="7dp" />
+    </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/fab_margin"
+        android:contentDescription="@string/login"
+        android:tint="@color/primaryTextColor"
+        app:backgroundTint="@color/primaryDarkColor"
+        app:fabSize="auto"
+        app:srcCompat="@drawable/ic_done_black_24dp" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

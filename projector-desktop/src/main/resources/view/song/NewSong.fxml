@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+<BorderPane prefHeight="700.0" prefWidth="400.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="projector.controller.song.NewSongController">
+    <top>
+        <VBox styleClass="v-box">
+            <BorderPane>
+                <left>
+                    <Label text="%Language" BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets right="4.0"/>
+                        </BorderPane.margin>
+                    </Label>
+                </left>
+                <center>
+                    <ComboBox fx:id="languageComboBoxForNewSong" prefHeight="31.0" BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets top="4.0"/>
+                        </BorderPane.margin>
+                    </ComboBox>
+                </center>
+                <padding>
+                    <Insets left="4.0" right="4.0"/>
+                </padding>
+                <right>
+                    <CheckBox fx:id="uploadCheckBox" selected="true" text="Upload" BorderPane.alignment="CENTER"/>
+                </right>
+            </BorderPane>
+            <BorderPane prefHeight="54.0" BorderPane.alignment="CENTER">
+                <left>
+                    <Label text="%Title" BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets right="4.0"/>
+                        </BorderPane.margin>
+                    </Label>
+                </left>
+                <center>
+                    <TextField fx:id="titleTextField" prefHeight="31.0" BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets top="4.0"/>
+                        </BorderPane.margin>
+                    </TextField>
+                </center>
+                <padding>
+                    <Insets left="4.0" right="4.0"/>
+                </padding>
+                <bottom>
+                    <BorderPane>
+                        <center>
+                            <ColorPicker fx:id="colorPicker" BorderPane.alignment="CENTER"/>
+                        </center>
+                        <bottom>
+                            <HBox alignment="CENTER" spacing="4">
+                                <RadioButton fx:id="verseEditorRadioButton" text="%Verse editor"/>
+                                <RadioButton fx:id="rawTextEditorRadioButton" text="%Raw text editor"/>
+                                <padding>
+                                    <Insets bottom="4.0" top="4.0"/>
+                                </padding>
+                            </HBox>
+                        </bottom>
+                        <right>
+                            <ToggleButton fx:id="secondTextToggleButton" onAction="#secondTextOnAction"
+                                          text="SecondText" textFill="#00000035" BorderPane.alignment="CENTER">
+                                <font>
+                                    <Font size="7.0"/>
+                                </font>
+                            </ToggleButton>
+                        </right>
+                    </BorderPane>
+                </bottom>
+            </BorderPane>
+        </VBox>
+    </top>
+    <center>
+        <BorderPane fx:id="borderPane" styleClass="border-pane">
+            <bottom>
+                <BorderPane fx:id="rawTextBorderPane" styleClass="border-pane" BorderPane.alignment="CENTER">
+                    <center>
+                        <TextArea fx:id="textArea" BorderPane.alignment="CENTER">
+                            <BorderPane.margin>
+                                <Insets left="4.0" right="4.0"/>
+                            </BorderPane.margin>
+                        </TextArea>
+                    </center>
+                    <padding>
+                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                    </padding>
+                </BorderPane>
+            </bottom>
+            <center>
+                <ScrollPane fx:id="verseEditorScrollPane" hbarPolicy="NEVER">
+                    <BorderPane styleClass="border-pane">
+                        <center>
+                            <VBox fx:id="textAreas" alignment="TOP_CENTER" spacing="4.0" styleClass="v-box">
+                                <TextArea prefHeight="121.0" BorderPane.alignment="CENTER"/>
+                                <TextArea prefHeight="184.0" BorderPane.alignment="CENTER"/>
+                            </VBox>
+                        </center>
+                        <bottom>
+                            <Button fx:id="newVerseButton" text="%New verse" BorderPane.alignment="CENTER">
+                                <BorderPane.margin>
+                                    <Insets top="4.0"/>
+                                </BorderPane.margin>
+                            </Button>
+                        </bottom>
+                        <padding>
+                            <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                        </padding>
+                    </BorderPane>
+                    <padding>
+                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                    </padding>
+                </ScrollPane>
+            </center>
+
+        </BorderPane>
+    </center>
+    <bottom>
+        <BorderPane styleClass="border-pane">
+            <top>
+                <ListView fx:id="verseOrderListView" prefHeight="42.0" BorderPane.alignment="CENTER"/>
+            </top>
+            <left>
+                <Button fx:id="uploadButton" mnemonicParsing="false" onAction="#uploadButtonOnAction" text="%Upload"
+                        visible="false" BorderPane.alignment="CENTER_RIGHT">
+                    <BorderPane.margin>
+                        <Insets bottom="4.0" right="4.0" top="4.0"/>
+                    </BorderPane.margin>
+                </Button>
+            </left>
+            <right>
+                <Button fx:id="saveButton" mnemonicParsing="false" onAction="#saveButtonOnAction" text="%Save"
+                        BorderPane.alignment="CENTER_RIGHT">
+                    <BorderPane.margin>
+                        <Insets bottom="4.0" right="4.0" top="4.0"/>
+                    </BorderPane.margin>
+                </Button>
+            </right>
+        </BorderPane>
+    </bottom>
+</BorderPane>

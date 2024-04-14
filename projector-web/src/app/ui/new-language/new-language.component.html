@@ -1,0 +1,33 @@
+<mat-card>
+  <mat-card-content>
+    <h1>New language</h1>
+
+    <form (ngSubmit)="onSubmit()" [formGroup]="form" class="example-form">
+      <div class="formLayout">
+
+        <div class="example-container">
+          <mat-form-field class="example-full-width">
+            <input type="text" id="englishName" formControlName="englishName" required matInput
+                   placeholder="English name">
+          </mat-form-field>
+          <mat-error *ngIf="formErrors.englishName">
+            <mat-icon class="material-icon">error</mat-icon>
+            {{formErrors.englishName}}
+          </mat-error>
+          <mat-form-field class="example-full-width">
+            <input type="text" id="nativeName" formControlName="nativeName" required matInput placeholder="Native name">
+          </mat-form-field>
+          <mat-error *ngIf="formErrors.nativeName">
+            <mat-icon class="material-icon">error</mat-icon>
+            {{formErrors.nativeName}}
+          </mat-error>
+        </div>
+        <br>
+        <br>
+        <button type="submit" class="btn btn-success" [disabled]="!form.valid">Submit</button>
+      </div>
+      <br>
+    </form>
+
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,4 @@
+include ':app'
+
+//include ":projector-common"
+//project(":projector-common").projectDir = file("../projector-common")

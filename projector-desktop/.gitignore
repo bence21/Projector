@@ -1,0 +1,8 @@
+build/
+data/
+/forSetup/
+/application.version
+/testData/
+/projectorTest.log
+/gallery/
+/.cache/

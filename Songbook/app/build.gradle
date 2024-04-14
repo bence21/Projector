@@ -1,0 +1,84 @@
+import com.android.build.api.dsl.ManagedVirtualDevice
+
+apply plugin: 'com.android.application'
+ext {
+    play_services_version = "16.0.0"
+    support_version = "27.1.1"
+}
+android {
+    compileSdkVersion 34
+    buildToolsVersion '34.0.0'
+    defaultConfig {
+        applicationId "com.bence.songbook.dev"
+        minSdkVersion 16
+        //noinspection OldTargetApi
+        targetSdkVersion 34
+        versionCode 124
+        versionName '2.13.11'
+        vectorDrawables.useSupportLibrary = true
+        multiDexEnabled true
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false // if it's true app from play store doesn't open
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+        managedDevices {
+            devices {
+
+                // run with ../gradlew  nexusOneApi30DebugAndroidTest
+                nexusOneApi30(ManagedVirtualDevice) {
+                    // A lower resolution device is used here for better emulator performance
+                    device = "Nexus One"
+                    apiLevel = 30
+                    // Also use the AOSP ATD image for better emulator performance
+                    systemImageSource = "aosp-atd"
+                }
+            }
+        }
+    }
+    namespace "com.bence.songbook"
+    testNamespace "com.bence.songbook.test"
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+//    implementation project(":projector-common")
+//    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.squareup.retrofit2:retrofit:2.3.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.8.0'
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    implementation 'com.j256.ormlite:ormlite-core:4.48'
+    implementation 'com.j256.ormlite:ormlite-android:4.48'
+    implementation 'com.j256.ormlite:ormlite-jdbc:4.48'
+//    implementation 'com.google.firebase:firebase-core:16.0.3'
+    implementation "com.google.android.gms:play-services-auth:$play_services_version"
+    implementation "com.google.android.gms:play-services-drive:$play_services_version"
+    implementation 'androidx.multidex:multidex:2.0.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
+    androidTestImplementation "androidx.test.ext:junit:1.1.5"
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
+}
+
+//apply plugin: 'com.google.gms.google-services'

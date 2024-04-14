@@ -1,0 +1,14 @@
+.foot {
+  min-height: 200px;
+}
+
+@media screen and (max-width: 600px) {
+  a > span {
+    display: none;
+    visibility: hidden;
+  }
+}
+
+nav {
+  background-color: #00820e;
+}

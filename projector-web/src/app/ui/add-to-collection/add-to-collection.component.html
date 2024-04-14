@@ -1,0 +1,31 @@
+<mat-card>
+  <mat-card-content>
+    <h1>Adding to collection</h1>
+    <p>Ensure that the song lyrics accurately represent the words in the song!</p>
+    <form *ngIf="containingSongCollections()" (ngSubmit)="onSubmit()" [formGroup]="form" class="example-form">
+      <div class="formLayout">
+
+        <div class="example-container">
+          <mat-form-field class="example-full-width">
+            <!--suppress HtmlUnknownAttribute -->
+            <mat-select placeholder="Collection" required [(value)]="selectedSongCollection">
+              <mat-option *ngFor="let songCollection of songCollections" [value]="songCollection">
+                {{ songCollection.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field class="example-full-width">
+            <input type="text" id="ordinalNumber" formControlName="ordinalNumber" required matInput
+                   placeholder="Ordinal number">
+          </mat-form-field>
+        </div>
+      </div>
+      <br>
+      <br>
+      <button type="submit" class="btn btn-success" [disabled]="!this.form.valid">Submit</button>
+    </form>
+    <div *ngIf="!containingSongCollections()">
+      <p>No song collections in current language</p>
+    </div>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,20 @@
+#downloadButton {
+    text-align: center;
+}
+.centerClass {
+    text-align: center;
+}
+.wrapper {
+    max-width: 710px;
+}
+#appPreviewImage {
+  max-width: 700px;
+  width: 100%;
+  filter: brightness(88%);
+}
+#appPreviewImage:hover {
+    filter: brightness(100%);
+}
+.smallFont {
+    font-size: smaller;
+}

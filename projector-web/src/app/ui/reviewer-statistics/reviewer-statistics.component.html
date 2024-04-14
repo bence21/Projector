@@ -1,0 +1,29 @@
+<div class="container">
+  <br>
+  <mat-card *ngIf="user!==undefined">
+    <mat-card-content>
+      <h1>{{'User'}}</h1>
+      <div class="formLayout">
+        <div class="form-group">
+          <mat-icon class="material-icon">mail</mat-icon>
+          <label for="email">E-mail</label>
+          <input #email matInput type="email" class="form-control" value="{{user.email}}" disabled>
+        </div>
+        <div class="form-group">
+          <mat-icon class="material-icon">person_outline</mat-icon>
+          <label for="surname">Name</label>
+          <input type="text" id="surname" class="form-control" value="{{user.surname}}" disabled>
+        </div>
+        <div class="form-group">
+          <mat-icon class="material-icon">person_outline</mat-icon>
+          <label for="firstName">First name</label>
+          <input type="text" id="firstName" class="form-control" value="{{user.firstName}}" disabled>
+        </div>
+        <br>
+      </div>
+      <br>
+      <app-reviewer-statistics-list [user]="user"></app-reviewer-statistics-list>
+    </mat-card-content>
+  </mat-card>
+
+</div>

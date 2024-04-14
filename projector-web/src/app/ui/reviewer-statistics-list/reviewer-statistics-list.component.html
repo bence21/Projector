@@ -1,0 +1,57 @@
+<mat-card>
+  <mat-card-content style="overflow-x: auto">
+    <div class="example-container mat-elevation-z8">
+      <form class="example-form">
+        <mat-form-field class="example-full-width">
+          <input type="text" placeholder="Search" aria-label="Text" matInput [formControl]="songControl">
+        </mat-form-field>
+      </form>
+      <div class="form-group">
+        <mat-label>
+          After
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        </mat-label>
+        <input matInput [matDatepicker]="picker" placeholder="After date" [min]="minDate" class="form-control"
+          (dateChange)="afterDateChange($event)" required>
+        <mat-datepicker #picker></mat-datepicker>
+      </div>
+      <mat-table #table [dataSource]="dataSource" class="example-table" matSort>
+
+        <ng-container matColumnDef="Nr">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell"> Nr</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell"> {{row.nr}}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="reviewedDate">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header> {{'Reviewed date'}}
+          </mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell"> {{row.song.modifiedDate | date:'yyyy/MM/dd HH:mm'}}
+          </mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="title">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{'Title'}}</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">{{row.song.title}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="lastColumn">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{''}}</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">
+            <a href="/#/song/{{row.song.id}}" target="_blank">
+              <mat-icon>
+                open_in_new
+              </mat-icon>
+            </a>
+          </mat-cell>
+        </ng-container>
+
+        <mat-header-row *matHeaderRowDef="displayedColumns" class="example-header-row"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;" class="example-row">
+        </mat-row>
+      </mat-table>
+      <mat-paginator [length]="filteredSongsList.length" [pageSize]="pageE.pageSize"
+        [pageSizeOptions]="[5, 10, 25, 100]" [pageIndex]="pageE.pageIndex" (page)="pageEvent($event)">
+      </mat-paginator>
+    </div>
+
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import projector.ui.NumberTextField?>
+<?import java.lang.String?>
+<BorderPane fx:id="mainBorderPain" prefHeight="1500.0" prefWidth="850.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="projector.controller.SettingsController">
+    <center>
+        <ScrollPane fx:id="scrollPane" prefHeight="55.0" prefWidth="50.0" BorderPane.alignment="CENTER">
+            <BorderPane maxWidth="1.7976931348623157E308">
+                <left>
+                    <GridPane prefHeight="1490.0" prefWidth="709.0" BorderPane.alignment="CENTER">
+                        <columnConstraints>
+                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="248.0" minWidth="10.0" prefWidth="231.0"/>
+                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="622.0" minWidth="10.0" prefWidth="465.0"/>
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="65.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="65.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="677.0" minHeight="200.0" prefHeight="677.0" vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="50.0" minHeight="50.0" prefHeight="50.0" vgrow="SOMETIMES"/>
+                            <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0"
+                                            vgrow="SOMETIMES"/>
+                        </rowConstraints>
+                        <padding>
+                            <Insets left="4.0"/>
+                        </padding>
+                        <Label text="%Language" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="languageComboBox" prefWidth="150.0" GridPane.columnIndex="1"
+                                  GridPane.rowIndex="1"/>
+                        <Label text="%Projection max font size" GridPane.rowIndex="2"/>
+                        <Slider fx:id="maxFontSlider" max="140" min="10" prefHeight="31.0" showTickLabels="true"
+                                showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <CheckBox fx:id="breakLinesCheckbox" mnemonicParsing="false" prefHeight="23.0"
+                                  text="%Break lines" GridPane.rowIndex="3"/>
+                        <Slider fx:id="breakAfterSlider" max="98" min="1" prefHeight="31.0" GridPane.columnIndex="1"
+                                GridPane.rowIndex="3"/>
+                        <Label text="%Line space" GridPane.rowIndex="4"/>
+                        <Slider fx:id="slider" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        <Label text="%Search with accents" GridPane.rowIndex="5"/>
+                        <CheckBox fx:id="accentsCheckBox" mnemonicParsing="false" prefHeight="23.0" prefWidth="13.0"
+                                  GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                        <CheckBox fx:id="referenceItalicCheckBox" mnemonicParsing="false" text="%Reference Italic"
+                                  GridPane.rowIndex="18"/>
+                        <CheckBox fx:id="bibleShortNameCheckBox" mnemonicParsing="false" text="%Show bible short name"
+                                  GridPane.rowIndex="19"/>
+                        <CheckBox fx:id="showSongSecondTextCheckBox" mnemonicParsing="false"
+                                  text="%Show song second text" GridPane.rowIndex="21"/>
+                        <ColorPicker fx:id="songSecondTextColorPicker" prefHeight="31.0" prefWidth="136.0"
+                                     GridPane.columnIndex="1" GridPane.rowIndex="21"/>
+                        <CheckBox fx:id="fastModeCheckBox" mnemonicParsing="false" prefHeight="21.0" prefWidth="137.0"
+                                  text="%Fast mode" GridPane.rowIndex="17"/>
+                        <CheckBox fx:id="showReferenceOnlyCheckBox" mnemonicParsing="false" text="%Show reference only"
+                                  GridPane.columnIndex="1" GridPane.rowIndex="17"/>
+                        <ListView fx:id="listView" prefHeight="163.0" prefWidth="438.0" GridPane.columnIndex="1"
+                                  GridPane.rowIndex="28"/>
+                        <Label text="%Font" GridPane.rowIndex="28"/>
+                        <Label text="%Color" GridPane.rowIndex="6"/>
+                        <ColorPicker fx:id="colorPicker" prefHeight="31.0" prefWidth="134.0" GridPane.columnIndex="1"
+                                     GridPane.rowIndex="6"/>
+                        <RadioButton fx:id="imageRadioButton" mnemonicParsing="false" text="%Background image"
+                                     GridPane.rowIndex="7"/>
+                        <BorderPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="7">
+                            <center>
+                                <TextField fx:id="imagePathTextField" prefHeight="31.0" prefWidth="231.0"
+                                           BorderPane.alignment="CENTER"/>
+                            </center>
+                            <right>
+                                <Button fx:id="imageBrowseButton" mnemonicParsing="false"
+                                        onAction="#onImageBrowseButtonAction" text="%Browse"
+                                        BorderPane.alignment="CENTER"/>
+                            </right>
+                        </BorderPane>
+
+                        <RadioButton fx:id="colorRadioButton" mnemonicParsing="false" text="%Background color"
+                                     GridPane.rowIndex="8"/>
+                        <ColorPicker fx:id="backgroundColorPicker" prefHeight="31.0" prefWidth="136.0"
+                                     GridPane.columnIndex="1" GridPane.rowIndex="8"/>
+                        <Label text="%Progress line color" GridPane.rowIndex="9"/>
+                        <ColorPicker fx:id="progressLineColorPicker" prefHeight="31.0" prefWidth="136.0"
+                                     GridPane.columnIndex="1" GridPane.rowIndex="9"/>
+                        <Label text="%Progress line thickness" GridPane.rowIndex="10"/>
+                        <Spinner fx:id="progressLineThicknessSpinner" editable="true" prefHeight="31.0" prefWidth="75.0"
+                                 GridPane.columnIndex="1" GridPane.rowIndex="10"/>
+                        <Label text="%Progress line position" GridPane.rowIndex="11"/>
+                        <HBox alignment="CENTER_LEFT" spacing="14.0" GridPane.columnIndex="1" GridPane.rowIndex="11">
+                            <RadioButton fx:id="progressLinePositionTopRadioButton" text="%Top"/>
+                            <RadioButton fx:id="progressLinePositionBottomRadioButton" text="%Bottom"/>
+                        </HBox>
+                        <Label text="%Font weight" GridPane.rowIndex="12"/>
+                        <ComboBox fx:id="fontWeightComboBox" prefWidth="150.0" GridPane.columnIndex="1"
+                                  GridPane.rowIndex="12"/>
+                        <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="h-box" GridPane.rowIndex="13">
+                            <CheckBox fx:id="strokeCheckbox" mnemonicParsing="false" text="%Stroke font"/>
+                            <ImageView fx:id="strokeWarningImageView" fitHeight="15.0" fitWidth="20.0"
+                                       pickOnBounds="true" preserveRatio="true">
+                                <Image url="@../icons/warning.png"/>
+                            </ImageView>
+                            <padding>
+                                <Insets bottom="10.0" right="10.0" top="10.0"/>
+                            </padding>
+                        </HBox>
+                        <ColorPicker fx:id="strokeColorPicker" prefHeight="31.0" prefWidth="136.0"
+                                     GridPane.columnIndex="1" GridPane.rowIndex="13"/>
+                        <Label text="%Stroke size" GridPane.rowIndex="14"/>
+                        <Spinner fx:id="strokeSizeSpinner" editable="true" prefHeight="31.0" prefWidth="75.0"
+                                 GridPane.columnIndex="1" GridPane.rowIndex="14"/>
+                        <Label text="%Stroke type" GridPane.rowIndex="15"/>
+                        <ComboBox fx:id="strokeTypeComboBox" prefWidth="150.0" GridPane.columnIndex="1"
+                                  GridPane.rowIndex="15"/>
+                        <Label text="%Appearance" GridPane.rowIndex="16"/>
+                        <ComboBox fx:id="appearanceComboBox" prefWidth="151.0" GridPane.columnIndex="1"
+                                  GridPane.rowIndex="16">
+                            <items>
+                                <FXCollections fx:factory="observableArrayList">
+                                    <String fx:value="Light"/>
+                                    <String fx:value="Dark"/>
+                                </FXCollections>
+                            </items>
+                        </ComboBox>
+                        <Button mnemonicParsing="false" onAction="#onUpdateButtonAction" text="%Update"
+                                GridPane.columnIndex="1"/>
+                        <CheckBox fx:id="previewLoadOnStartCheckbox" mnemonicParsing="false"
+                                  text="%Preview load on start" GridPane.columnIndex="1" GridPane.rowIndex="18"/>
+                        <CheckBox fx:id="referenceChapterSorting" mnemonicParsing="false"
+                                  text="%Reference chapter sorting" GridPane.columnIndex="1" GridPane.rowIndex="19"/>
+                        <CheckBox fx:id="referenceVerseSorting" mnemonicParsing="false" text="%Reference verse sorting"
+                                  GridPane.columnIndex="1" GridPane.rowIndex="20"/>
+                        <CheckBox fx:id="automaticProjectionScreensCheckBox" mnemonicParsing="false"
+                                  text="%Automatically create projection screens" GridPane.columnIndex="1"
+                                  GridPane.rowIndex="22"/>
+                        <Label text="%Vertical alignment" GridPane.rowIndex="23"/>
+                        <VBox alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="23">
+                            <BorderPane>
+                                <left>
+                                    <Label prefWidth="100.0" text="%Top"/>
+                                </left>
+                                <center>
+                                    <Label text="%Center"/>
+                                </center>
+                                <right>
+                                    <Label alignment="CENTER_RIGHT" prefWidth="100.0" text="%Bottom"/>
+                                </right>
+                            </BorderPane>
+                            <Slider fx:id="verticalAlignmentSlider" minorTickCount="7" prefHeight="31.0"
+                                    showTickLabels="true" showTickMarks="true" snapToTicks="true"/>
+                        </VBox>
+                        <Label text="%Horizontal alignment" GridPane.rowIndex="24"/>
+                        <VBox alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="24">
+                            <BorderPane>
+                                <left>
+                                    <Label prefWidth="100.0" text="%Left"/>
+                                </left>
+                                <center>
+                                    <Label text="%Center"/>
+                                </center>
+                                <right>
+                                    <Label alignment="CENTER_RIGHT" prefWidth="100.0" text="%Right"/>
+                                </right>
+                            </BorderPane>
+                            <Slider fx:id="horizontalAlignmentSlider" minorTickCount="7" prefHeight="31.0"
+                                    showTickLabels="true" showTickMarks="true" snapToTicks="true"/>
+                        </VBox>
+                        <Label text="%Text alignment" GridPane.rowIndex="25"/>
+                        <ComboBox fx:id="textAlignmentComboBox" prefWidth="150.0" GridPane.columnIndex="1"
+                                  GridPane.rowIndex="25"/>
+                        <Label text="%Margins" GridPane.rowIndex="26"/>
+                        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="502.0" spacing="10.0"
+                              styleClass="h-box" GridPane.columnIndex="1" GridPane.rowIndex="26">
+                            <Label text="%Top"/>
+                            <NumberTextField fx:id="topMarginTextField" prefWidth="44.0"/>
+                            <Label text="%Right"/>
+                            <NumberTextField fx:id="rightMarginTextField" prefWidth="44.0"/>
+                            <Label text="%Bottom"/>
+                            <NumberTextField fx:id="bottomMarginTextField" prefWidth="44.0"/>
+                            <Label text="%Left"/>
+                            <NumberTextField fx:id="leftMarginTextField" prefWidth="44.0"/>
+                            <CheckBox fx:id="asPaddingCheckbox" prefHeight="17.0" text="%As padding">
+                                <HBox.margin>
+                                    <Insets left="4.0"/>
+                                </HBox.margin>
+                            </CheckBox>
+                        </HBox>
+                        <BorderPane prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="2" GridPane.rowIndex="29">
+                            <center>
+                                <HBox alignment="CENTER_LEFT">
+                                    <Button fx:id="shareOnLocalNetworkButton" text="%Share on local network"
+                                            BorderPane.alignment="CENTER"/>
+                                    <CheckBox fx:id="shareOnLocalNetworkAutomaticallyCheckbox" text="Automatically">
+                                        <HBox.margin>
+                                            <Insets left="4.0"/>
+                                        </HBox.margin>
+                                    </CheckBox>
+                                    <Button fx:id="connectToSharedButton" text="%Connect to shared"
+                                            BorderPane.alignment="CENTER">
+                                        <HBox.margin>
+                                            <Insets left="40.0"/>
+                                        </HBox.margin>
+                                    </Button>
+                                    <CheckBox fx:id="connectToSharedAutomaticallyCheckbox" text="Automatically">
+                                        <HBox.margin>
+                                            <Insets left="4.0"/>
+                                        </HBox.margin>
+                                    </CheckBox>
+                                </HBox>
+                            </center>
+                        </BorderPane>
+                        <HBox GridPane.columnSpan="2" GridPane.rowIndex="30">
+                            <ToggleButton fx:id="allowRemoteButton" onAction="#allowRemoteButtonOnAction"
+                                          text="%Allow remote" visible="false"/>
+                        </HBox>
+                    </GridPane>
+                </left>
+            </BorderPane>
+        </ScrollPane>
+    </center>
+    <bottom>
+        <HBox alignment="TOP_RIGHT" spacing="10.0" styleClass="h-box">
+            <ToggleButton fx:id="liveButton" mnemonicParsing="false" onAction="#onLiveButtonAction" text="%Live"/>
+            <Button mnemonicParsing="false" onAction="#onSaveButtonAction" text="%Save"/>
+            <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+            </padding>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,0 +1,43 @@
+<div class="original">
+  <nav mat-tab-nav-bar>
+
+    <ng-container class="container" *ngIf="!auth.isLoggedIn">
+      <a mat-tab-link *ngFor="let tab of menuTabs" [routerLink]="tab.link" routerLinkActive #rla="routerLinkActive"
+        [active]="rla.isActive">
+        <mat-icon>{{tab.icon}}</mat-icon>
+        <span>{{tab.title}}</span>
+      </a>
+    </ng-container>
+    <div *ngIf="auth.isLoggedIn">
+      <ng-container class="container" *ngIf="isAdmin()">
+        <a mat-tab-link *ngFor="let tab of adminMenuTabs" [routerLink]="tab.link" routerLinkActive
+          #rla="routerLinkActive" [active]="rla.isActive">
+          <mat-icon *ngIf="tab.icon !== undefined">{{tab.icon}}</mat-icon>
+          <mat-icon *ngIf="tab.iconSvg !== undefined" svgIcon="thumbs-up">{{tab.icon}}</mat-icon>
+          <span>{{tab.title}}</span>
+        </a>
+      </ng-container>
+      <ng-container class="container" *ngIf="isUser()">
+        <a mat-tab-link *ngFor="let tab of userMenuTabs" [routerLink]="tab.link" routerLinkActive
+          #rla="routerLinkActive" [active]="rla.isActive">
+          <mat-icon>{{tab.icon}}</mat-icon>
+          <span>{{tab.title}}</span>
+        </a>
+      </ng-container>
+      <ng-container class="container" *ngIf="isReviewer()">
+        <a mat-tab-link *ngFor="let tab of reviewerMenuTabs" [routerLink]="tab.link" routerLinkActive
+          #rla="routerLinkActive" [active]="rla.isActive">
+          <mat-icon>{{tab.icon}}</mat-icon>
+          <span>{{tab.title}}</span>
+        </a>
+      </ng-container>
+
+      <a mat-tab-link routerLink="/account">
+        <mat-icon class="material-icon">account_circle</mat-icon>
+        {{accountName}}
+      </a>
+    </div>
+  </nav>
+  <router-outlet></router-outlet>
+  <div class="foot"></div>
+</div>

@@ -1,0 +1,17 @@
+<div class="container">
+  <br>
+  <mat-card>
+    <mat-card-content>
+      <h4>You need to active your account from email.</h4>
+      <p>
+
+      </p>
+      <br>
+      <button type="button" [disabled]="!resendActivationEmailEnabled" mat-icon-button (click)="resendActivationEmail()">
+        Resend activation email
+      </button>
+      <br>
+    </mat-card-content>
+  </mat-card>
+  <br>
+</div>

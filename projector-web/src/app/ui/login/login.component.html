@@ -1,0 +1,32 @@
+<div class="container">
+  <div>
+    <br>
+    <mat-card>
+      <mat-card-content>
+        <h1>{{'Login'}}</h1>
+        <form (ngSubmit)="onSubmit()" [formGroup]="loginForm">
+
+          <div class="form-group">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" class="form-control" formControlName="email" required>
+            <div *ngIf="formErrors.email" class="alert alert-danger">{{formErrors.email}}</div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">{{'Password'}}</label>
+            <input type="password" id="password" class="form-control" formControlName="password" required>
+            <div *ngIf="formErrors.password" class="alert alert-danger">{{formErrors.password}}</div>
+          </div>
+          <button type="submit" class="btn btn-success" [disabled]="!loginForm.valid">{{'Submit'}}
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+    <mat-card>
+      <mat-card-content>
+        <a href="/#/registration">{{'Create account'}}</a>
+        &nbsp;|&nbsp;<a href="/#/forgottenPassword">{{'Forgotten password'}}</a>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<style>
+  body {
+    background-color: #2e9e35;
+  }
+
+  h1 {
+    align-self: center;
+    align-content: center;
+    align-items: center;
+  }
+
+  .button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+  }
+
+</style>
+<div align="center">
+    <h1>Welcome to ${shortBaseUrl}</h1>
+    <p>
+        After you are logged in, you can add new songs here:
+    </p>
+    <a class="button" href="${baseUrl}/#/addNewSong">New song</a>
+    <br>
+    <br>
+    <p>
+        Please activate your account with this link:
+    </p>
+    <a class="button" href="${baseUrl}/#/activation/${activationCode}">Activate</a>
+
+
+</div>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/bottom_sheet"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/secondaryDarkColor"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    app:behavior_hideable="false"
+    app:behavior_peekHeight="@dimen/bottom_sheet_peek_height"
+    app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+    tools:context="com.bence.songbook.ui.activity.MainActivity">
+
+    <RelativeLayout
+        android:id="@+id/peekLayout"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/bottom_sheet_peek_height"
+        android:background="@color/secondaryColor"
+        android:onClick="onExpandBottomSheetClick"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/bottom_sheet_peek_height"
+            android:layout_centerHorizontal="true"
+            android:contentDescription="@string/queue"
+            android:gravity="center"
+            android:padding="12dp"
+            app:srcCompat="@drawable/ic_format_list_bulleted_black_24dp" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/buttonLayout"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/bottom_sheet_peek_height"
+        android:background="@color/secondaryColor"
+        android:baselineAligned="false"
+        android:gravity="center"
+        android:onClick="onExpandBottomSheetClick"
+        android:weightSum="1.0">
+
+        <ImageView
+            style="@style/Base.Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="0.16"
+            android:clickable="false"
+            android:contentDescription="@string/close"
+            android:gravity="center"
+            app:srcCompat="@drawable/ic_keyboard_arrow_down_black_24dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="0.28"
+            android:gravity="center"
+            android:onClick="onSaveQueue"
+            android:orientation="vertical"
+            tools:ignore="UseCompoundDrawables">
+
+            <ImageView
+                style="@style/Base.Widget.AppCompat.Button.Borderless"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="-10dp"
+                android:layout_marginBottom="-10dp"
+                android:clickable="false"
+                android:contentDescription="@string/save"
+                android:gravity="center"
+                app:srcCompat="@drawable/ic_playlist_add_black_24dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingTop="-10dp"
+                android:text="@string/save"
+                android:textAllCaps="true"
+                android:textColor="#9e9e9e"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="0.28"
+            android:gravity="center"
+            android:onClick="onShareQueue"
+            android:orientation="vertical"
+            tools:ignore="UseCompoundDrawables">
+
+            <ImageView
+                style="@style/Base.Widget.AppCompat.Button.Borderless"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="-10dp"
+                android:layout_marginBottom="-10dp"
+                android:clickable="false"
+                android:contentDescription="@string/save"
+                android:gravity="center"
+                app:srcCompat="@drawable/ic_forward_arrow" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingTop="-10dp"
+                android:text="@string/share"
+                android:textAllCaps="true"
+                android:textColor="#9e9e9e"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="0.28"
+            android:gravity="center"
+            android:onClick="onClearAllQueueClick"
+            android:orientation="vertical"
+            tools:ignore="UseCompoundDrawables">
+
+            <ImageView
+                style="@style/Base.Widget.AppCompat.Button.Borderless"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="-10dp"
+                android:layout_marginBottom="-10dp"
+                android:clickable="false"
+                android:contentDescription="@string/save"
+                android:gravity="center"
+                app:srcCompat="@drawable/ic_clear_all_black_24dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingTop="-10dp"
+                android:text="@string/clear_all"
+                android:textAllCaps="true"
+                android:textColor="#9e9e9e"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <com.bence.songbook.ui.utils.DynamicListView
+        android:id="@+id/queueList"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center" />
+
+</LinearLayout>

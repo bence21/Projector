@@ -1,0 +1,36 @@
+<div class="container">
+  <br>
+  <mat-card>
+    <mat-card-content>
+
+      <h1>New song collection</h1>
+
+      <form (ngSubmit)="onSubmit()" [formGroup]="form" class="example-form">
+        <div class="formLayout">
+          <div class="example-container">
+            <mat-form-field class="example-full-width">
+              <!--suppress HtmlUnknownAttribute -->
+              <mat-select placeholder="Language" required [(value)]="selectedLanguage">
+                <mat-option *ngFor="let language of languages" [value]="language">
+                  {{ language.printLanguage() }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field class="example-full-width">
+              <input type="text" id="title" formControlName="title" required matInput placeholder="Title">
+            </mat-form-field>
+            <mat-error *ngIf="formErrors.title">
+              <mat-icon class="material-icon">error</mat-icon>
+              {{formErrors.title}}
+            </mat-error>
+          </div>
+        </div>
+        <br>
+        <button type="submit" class="btn btn-success">
+          Submit
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+  <br>
+</div>

@@ -1,0 +1,57 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Base.ThemeOverlay.AppCompat.Dark">
+        <!-- Customize your theme here. -->
+    </style>
+
+    <style name="FullscreenTheme" parent="SongBookTheme">
+        <item name="android:actionBarStyle">@style/FullscreenActionBarStyle</item>
+        <item name="android:windowActionBarOverlay">true</item>
+        <item name="android:windowBackground">@null</item>
+        <item name="metaButtonBarStyle">?android:attr/buttonBarStyle</item>
+        <item name="metaButtonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
+    </style>
+
+    <style name="FullscreenActionBarStyle" parent="SongBookTheme">
+        <item name="android:background">@color/black_overlay</item>
+    </style>
+
+    <style name="SongBookTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/black_overlay</item>
+        <item name="primaryColor">@color/primaryColor</item>
+        <item name="primaryLightColor">@color/primaryLightColor</item>
+        <item name="primaryDarkColor">@color/primaryDarkColor</item>
+        <item name="secondaryColor">@color/secondaryColor</item>
+        <item name="secondaryLightColor">@color/secondaryLightColor</item>
+        <item name="secondaryDarkColor">@color/secondaryDarkColor</item>
+        <item name="primaryTextColor">@color/primaryTextColor</item>
+        <item name="secondaryTextColor">@color/secondaryTextColor</item>
+        <item name="secondaryDarkTextColor">@color/secondaryDarkTextColor</item>
+        <item name="backgroundC">@color/backgroundC</item>
+        <item name="foregroundC">@color/foregroundC</item>
+    </style>
+
+    <style name="SongBookTheme.Light" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/black_overlay</item>
+        <item name="primaryColor">@color/primaryColor2</item>
+        <item name="primaryLightColor">@color/primaryLightColor2</item>
+        <item name="primaryDarkColor">@color/primaryDarkColor2</item>
+        <item name="secondaryColor">@color/secondaryColor2</item>
+        <item name="secondaryLightColor">@color/secondaryLightColor2</item>
+        <item name="secondaryDarkColor">@color/secondaryDarkColor2</item>
+        <item name="primaryTextColor">@color/primaryTextColor2</item>
+        <item name="secondaryTextColor">@color/secondaryTextColor2</item>
+        <item name="secondaryDarkTextColor">@color/secondaryDarkTextColor2</item>
+        <item name="backgroundC">@color/backgroundC2</item>
+        <item name="foregroundC">@color/foregroundC2</item>
+    </style>
+
+    <style name="SongBookTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="SongBookTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light">
+        <item name="android:itemBackground">@color/primaryTextColor</item>
+        <item name="android:actionBarItemBackground">@color/primaryTextColor</item>
+    </style>
+
+</resources>

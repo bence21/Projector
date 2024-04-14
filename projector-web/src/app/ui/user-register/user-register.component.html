@@ -1,0 +1,59 @@
+<div class="container">
+  <br>
+  <mat-card>
+    <mat-card-content>
+
+      <h1>{{'Registration'}}</h1>
+
+      <form (ngSubmit)="onSubmit()" [formGroup]="userForm">
+        <div class="formLayout">
+
+          <div class="form-group">
+            <mat-icon class="material-icon">mail</mat-icon>
+            <label for="email">E-mail</label>
+            <input type="email" id="email" class="form-control" formControlName="email" required>
+            <div *ngIf="formErrors.email" class="alert alert-danger">
+              <mat-icon class="material-icon">error</mat-icon>{{formErrors.email}}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <mat-icon class="material-icon">person_outline</mat-icon>
+            <label for="surname">Last name</label>
+            <input type="text" id="surname" class="form-control" formControlName="surname" required>
+            <div *ngIf="formErrors.surname" class="alert alert-danger">{{formErrors.surname}}</div>
+          </div>
+
+          <div class="form-group">
+            <mat-icon class="material-icon">person_outline</mat-icon>
+            <label for="firstName">First name</label>
+            <input type="text" id="firstName" class="form-control" formControlName="firstName" required>
+            <div *ngIf="formErrors.firstName" class="alert alert-danger">{{formErrors.firstName}}</div>
+          </div>
+
+          <div class="form-group">
+            <mat-icon class="material-icon">security</mat-icon>
+            <label for="password">{{'Password'}}</label>
+            <input type="password" id="password" class="form-control" formControlName="password" required>
+            <div *ngIf="formErrors.password" class="alert alert-danger">{{formErrors.password}}</div>
+          </div>
+
+          <div class="form-group">
+            <mat-icon class="material-icon">security</mat-icon>
+            <label for="reEnteredPassword">{{'Reenter password'}}</label>
+            <input type="password" id="reEnteredPassword" class="form-control" formControlName="reEnteredPassword"
+              required>
+            <div *ngIf="formErrors.reEnteredPassword" class="alert alert-danger">{{formErrors.reEnteredPassword}}</div>
+          </div>
+
+          <br>
+          <button type="submit" class="btn btn-success" [disabled]="!userForm.valid">Submit</button>
+          <button type="button" class="btn btn-default" (click)="userForm.reset()">{{'Reset'}}</button>
+        </div>
+        <br>
+      </form>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>

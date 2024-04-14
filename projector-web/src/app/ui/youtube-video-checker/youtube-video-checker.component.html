@@ -1,0 +1,24 @@
+<app-youtube-id-check [song]="songForPlayer" (onResult)="onYouTubeIdCheckResult($event)"></app-youtube-id-check>
+<br>
+<div class="container">
+  <div class="progress-container">
+    <mat-progress-bar class="progress-bar" mode="determinate" [value]="progressValue"></mat-progress-bar>
+    <span class="progress-label" *ngIf="totalSteps > 0">{{ i }} / {{ totalSteps }}</span>
+  </div>
+  <br>
+  <div>
+    <table class="simple-table">
+      <tr *ngFor="let song of songsWithProblems">
+        <td>
+          {{song.title}}
+        </td>
+        <td>
+          {{song.youtubeUrl}}
+        </td>
+        <td>
+          <a href="{{song.getLink()}}" target="_blank">Open</a>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>

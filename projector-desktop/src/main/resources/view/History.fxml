@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.BorderPane?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
+            styleClass="border-pane"
+            xmlns="http://javafx.com/javafx/8.0.121" fx:controller="projector.controller.HistoryController">
+    <center>
+        <ListView fx:id="listView" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+            <BorderPane.margin>
+                <Insets bottom="7.0" left="7.0" right="7.0" top="7.0"/>
+            </BorderPane.margin>
+        </ListView>
+    </center>
+</BorderPane>

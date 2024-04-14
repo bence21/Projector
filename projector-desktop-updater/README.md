@@ -1,0 +1,1 @@
+Unzips the update and starts Projector.exe

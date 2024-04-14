@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<BorderPane prefHeight="140.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="projector.controller.MessageDialogController">
+    <center>
+        <Label fx:id="headerLabel" wrapText="true"/>
+    </center>
+    <bottom>
+        <HBox fx:id="hBox" alignment="CENTER" spacing="12.0">
+            <BorderPane.margin>
+                <Insets bottom="12.0" left="12.0" right="12.0" top="12.0"/>
+            </BorderPane.margin>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,0 +1,51 @@
+.example-card {
+  object-fit: cover;
+  width: 100%;
+}
+
+.descriptionHeader {
+  margin-bottom: 8px;
+}
+
+.lineWithModification {
+  background-color: rgb(255, 240, 240); 
+  font-size: 13px;
+}
+
+.lineWithoutModification {
+  font-size: 12px;
+}
+
+.wordWithModification {
+  background-color: rgb(255, 228, 228); 
+  color: #000000;
+  font-size: 14px;
+}
+
+.wordWithoutModification {
+  font-size: 13px;
+  color: #000000;
+}
+
+.characterWithModification {
+  background-color: rgb(255, 138, 138); 
+  color: #000000;
+  font-size: 15px;
+}
+
+.characterWithoutModification {
+  font-size: 14px;
+  color: #000000;
+}
+
+.focusTo {
+  background-color: white;
+  animation-name: example;
+  animation-duration: 1s;
+}
+
+@keyframes example {
+  0%   {background-color: rgba(255, 255, 255, 0.77);}
+  21%  {background-color: rgba(159, 147, 255, 0.77);}
+  100%  {background-color: rgba(255, 255, 255, 0.77);}
+}

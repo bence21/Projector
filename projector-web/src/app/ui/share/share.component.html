@@ -1,0 +1,29 @@
+<div>
+  <table>
+    <tr>
+      <td>URL:</td>
+      <td>
+        <input id="link" value="http://localhost:8080/song/{{data.uuid}}">
+      </td>
+      <td>
+        <button mat-icon-button (click)="copyLink()">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </td>
+    </tr>
+    <tr>
+      <td>Embedded:</td>
+      <td>
+        <input id="embedded" value='<a href="http://localhost:8080/song/{{data.uuid}}">{{data.title}}</a>'>
+      </td>
+      <td>
+        <button mat-icon-button (click)="copyEmbedded()">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </td>
+    </tr>
+  </table>
+  <br>
+  <br>
+  <p *ngIf="copied!==''">{{copied}}</p>
+</div>

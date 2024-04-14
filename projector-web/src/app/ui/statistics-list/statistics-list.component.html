@@ -1,0 +1,37 @@
+<div class="container">
+  <br>
+  <mat-card>
+    <mat-card-content style="overflow-x: auto">
+      <div class="example-container mat-elevation-z8">
+        <mat-table #table [dataSource]="dataSource" class="example-table">
+
+          <ng-container matColumnDef="Nr">
+            <mat-header-cell *matHeaderCellDef class="example-header-cell"> Nr</mat-header-cell>
+            <mat-cell *matCellDef="let row" class="example-cell"> {{row.nr}}</mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="accessedDate">
+            <mat-header-cell *matHeaderCellDef class="example-header-cell"> {{'accessedDate'}}</mat-header-cell>
+            <mat-cell *matCellDef="let row" class="example-cell"> {{row.accessedDate | date:'yyyy/MM/dd HH:mm'}}
+            </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="remoteAddress">
+            <mat-header-cell *matHeaderCellDef class="example-header-cell">{{'remoteAddress'}}</mat-header-cell>
+            <mat-cell *matCellDef="let row" class="example-cell">{{row.remoteAddress}}</mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="uri">
+            <mat-header-cell *matHeaderCellDef class="example-header-cell">{{'uri'}}</mat-header-cell>
+            <mat-cell *matCellDef="let row" class="example-cell">{{row.uri}}</mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="displayedColumns" class="example-header-row"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;" class="example-row">
+          </mat-row>
+        </mat-table>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+</div>

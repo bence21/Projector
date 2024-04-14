@@ -1,0 +1,3 @@
+rootProject.name = "Projector-Desktop"
+include ":projector-common"
+project(":projector-common").projectDir = file("../projector-common")

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Pane?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity"
+            maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
+            prefHeight="731.0" prefWidth="925.0" xmlns="http://javafx.com/javafx/8"
+            fx:controller="projector.controller.song.ScheduleController">
+    <center>
+        <Pane prefHeight="721.0" prefWidth="928.0" BorderPane.alignment="CENTER">
+            <ListView fx:id="listView" layoutX="14.0" layoutY="14.0"
+                      prefHeight="538" prefWidth="772"/>
+        </Pane>
+    </center>
+</BorderPane>

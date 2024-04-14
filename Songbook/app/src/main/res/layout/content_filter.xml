@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/filterLayout"
+    android:padding="12dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/primaryDarkColor">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <ImageButton
+            android:id="@+id/closeButton"
+            style="@style/AlertDialog.AppCompat.Light"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="right"
+            android:layout_margin="5dp"
+            android:contentDescription="@string/close"
+            app:srcCompat="@drawable/ic_close_black_24dp"
+            tools:ignore="RtlHardcoded" />
+
+
+        <Button
+            android:id="@+id/languageButton"
+            style="@style/Base.Widget.AppCompat.Button.Borderless"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginLeft="6dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginStart="6dp"
+            android:gravity="start|center|end"
+            android:onClick="onLanguageButtonClick"
+            android:padding="5dp"
+            android:text="@string/language"
+            android:textAllCaps="false"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/collectionButton"
+            style="@style/Base.Widget.AppCompat.Button.Borderless"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginLeft="6dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginStart="6dp"
+            android:gravity="start|center|end"
+            android:onClick="onCollectionButtonClick"
+            android:padding="5dp"
+            android:text="@string/collection"
+            android:textAllCaps="false"
+            android:textSize="18sp" />
+
+        <Switch
+            android:id="@+id/containingVideosSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:gravity="start|center|end"
+            android:padding="10dp"
+            android:text="@string/containing_videos"
+            android:textSize="18sp"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Switch
+            android:id="@+id/favouriteSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="6dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:gravity="start|center|end"
+            android:padding="10dp"
+            android:text="@string/favourite"
+            android:textSize="18sp"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </LinearLayout>
+
+
+</ScrollView>

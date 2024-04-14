@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
+            xmlns="http://javafx.com/javafx/8.0.111"
+            fx:controller="projector.controller.song.NewSongCollectionController">
+    <top>
+        <BorderPane BorderPane.alignment="CENTER">
+            <left>
+                <Label text="%Song book title" BorderPane.alignment="CENTER">
+                    <BorderPane.margin>
+                        <Insets left="4.0" right="4.0"/>
+                    </BorderPane.margin>
+                </Label>
+            </left>
+            <center>
+                <TextField fx:id="songCollectionNameTextField" focusTraversable="false" prefHeight="40.0"
+                           BorderPane.alignment="CENTER">
+                    <BorderPane.margin>
+                        <Insets bottom="4.0" right="4.0" top="4.0"/>
+                    </BorderPane.margin>
+                </TextField>
+            </center>
+            <right>
+                <Button fx:id="applyButton" mnemonicParsing="false" text="%Apply" BorderPane.alignment="CENTER">
+                    <BorderPane.margin>
+                        <Insets right="4.0"/>
+                    </BorderPane.margin>
+                </Button>
+            </right>
+        </BorderPane>
+    </top>
+    <center>
+        <GridPane BorderPane.alignment="CENTER">
+            <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                <RowConstraints maxHeight="-Infinity" minHeight="39.0" prefHeight="45.0" vgrow="SOMETIMES"/>
+            </rowConstraints>
+            <BorderPane prefHeight="200.0">
+                <center>
+                    <ListView fx:id="allSongsListView" prefHeight="200.0" BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets left="4.0" right="2.0" top="4.0"/>
+                        </BorderPane.margin>
+                    </ListView>
+                </center>
+                <top>
+                    <BorderPane BorderPane.alignment="CENTER">
+                        <top>
+                            <Label text="%All songs" BorderPane.alignment="CENTER"/>
+                        </top>
+                        <center>
+                            <GridPane BorderPane.alignment="CENTER">
+                                <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                                </columnConstraints>
+                                <rowConstraints>
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+                                </rowConstraints>
+                                <RadioButton fx:id="allRadioButton" mnemonicParsing="false" selected="true"
+                                             text="%All"/>
+                                <RadioButton fx:id="notUsedRadioButton" mnemonicParsing="false" text="%Not used"
+                                             GridPane.columnIndex="1"/>
+                                <RadioButton fx:id="usedRadioButton" mnemonicParsing="false" text="%Used"
+                                             GridPane.columnIndex="2"/>
+                            </GridPane>
+                        </center>
+                    </BorderPane>
+                </top>
+            </BorderPane>
+            <BorderPane prefHeight="200.0" GridPane.columnIndex="1">
+                <top>
+                    <Label text="%Current songs" BorderPane.alignment="CENTER"/>
+                </top>
+                <center>
+                    <ListView fx:id="currentListView" prefHeight="200.0" BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets left="2.0" right="4.0" top="4.0"/>
+                        </BorderPane.margin>
+                    </ListView>
+                </center>
+            </BorderPane>
+            <BorderPane prefHeight="200.0" prefWidth="200.0" GridPane.rowIndex="1">
+                <center>
+                    <Button fx:id="addButton" mnemonicParsing="false" text="%Add" BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                        </BorderPane.margin>
+                    </Button>
+                </center>
+            </BorderPane>
+            <BorderPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                <center>
+                    <Button fx:id="removeButton" mnemonicParsing="false" text="%Remove"
+                            BorderPane.alignment="CENTER">
+                        <BorderPane.margin>
+                            <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                        </BorderPane.margin>
+                    </Button>
+                </center>
+            </BorderPane>
+        </GridPane>
+    </center>
+    <bottom>
+        <BorderPane BorderPane.alignment="CENTER"/>
+    </bottom>
+</BorderPane>

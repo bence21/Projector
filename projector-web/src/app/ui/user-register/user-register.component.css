@@ -1,0 +1,26 @@
+.rowLayout2 {
+	height: 120px;
+	padding: 2em;
+	display: flex;
+	justify-content: space-around;
+}
+
+div.form-group {
+	padding-left: 50px;
+}
+
+form {
+	align-items: center;
+	align-content: center;
+}
+
+.container {
+	max-width: 700px;
+}
+
+@media screen and (max-width:400px) {
+	div.form-group {
+		padding-left: 5px;
+	}
+	
+}

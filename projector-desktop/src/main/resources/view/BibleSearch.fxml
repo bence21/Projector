@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="560" prefWidth="800"
+            styleClass="border-pane"
+            xmlns="http://javafx.com/javafx/8.0.121" fx:controller="projector.controller.BibleSearchController">
+    <center>
+        <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+            <top>
+                <TextField fx:id="bibleSearchTextField" BorderPane.alignment="CENTER">
+                    <BorderPane.margin>
+                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                    </BorderPane.margin>
+                </TextField>
+            </top>
+            <center>
+                <!--<Pane prefHeight="560" prefWidth="800" BorderPane.alignment="CENTER">-->
+                <!--<children>-->
+                <ListView fx:id="searchListView" BorderPane.alignment="CENTER">
+                    <BorderPane.margin>
+                        <Insets bottom="4.0" left="4.0" right="4.0"/>
+                    </BorderPane.margin>
+                </ListView>
+            </center>
+        </BorderPane>
+    </center>
+</BorderPane>

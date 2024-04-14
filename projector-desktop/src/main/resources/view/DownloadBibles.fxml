@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<BorderPane prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="projector.controller.DownloadBiblesController">
+    <center>
+        <BorderPane>
+
+            <top>
+                <Label fx:id="label" text="%Downloading"/>
+            </top>
+            <center>
+                <BorderPane>
+                    <center>
+                        <ScrollPane>
+                            <VBox fx:id="listView" spacing="10.0" BorderPane.alignment="CENTER">
+                                <padding>
+                                    <Insets left="4.0" top="4.0"/>
+                                </padding>
+                            </VBox>
+                        </ScrollPane>
+                    </center>
+                </BorderPane>
+            </center>
+            <bottom>
+                <BorderPane BorderPane.alignment="CENTER">
+                    <BorderPane.margin>
+                        <Insets top="4.0"/>
+                    </BorderPane.margin>
+                    <center>
+                        <HBox alignment="CENTER" spacing="8.0" BorderPane.alignment="CENTER">
+                            <Button fx:id="selectButton" text="%Select"/>
+                            <Button fx:id="updateButton" text="%Update"/>
+                        </HBox>
+                    </center>
+                </BorderPane>
+            </bottom>
+        </BorderPane>
+    </center>
+    <bottom>
+        <BorderPane>
+            <top>
+                <VBox>
+                    <HBox>
+                        <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308"
+                               text="Import MyBible bible modules from"/>
+                        <Hyperlink onAction="#openMyBibleModuleDownloadSite" text="https://www.ph4.org/b4_index.php"
+                                   BorderPane.alignment="CENTER"/>
+                    </HBox>
+                    <Label text="Unzip the compressed file, then you can import the SQLite3 bible module."/>
+                </VBox>
+            </top>
+            <center>
+                <Button onAction="#importMyBibleModule" text="%Import">
+                    <BorderPane.margin>
+                        <Insets top="4.0"/>
+                    </BorderPane.margin>
+                </Button>
+            </center>
+            <padding>
+                <Insets bottom="12.0" left="12.0" right="12.0" top="12.0"/>
+            </padding>
+        </BorderPane>
+    </bottom>
+</BorderPane>

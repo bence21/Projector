@@ -1,0 +1,12 @@
+<div class="guidelines-container">
+  <h3>Guidelines for adding a song text</h3>
+  <mat-expansion-panel *ngFor="let guideline of guidelines" expanded="true">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        {{guideline.title}}
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <p>{{guideline.text}}</p>
+  </mat-expansion-panel>
+</div>
+<br>

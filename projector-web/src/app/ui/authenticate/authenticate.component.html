@@ -1,0 +1,17 @@
+<h1 mat-dialog-title>{{'Session expired'}}</h1>
+<div mat-dialog-content>
+  <form (ngSubmit)="onSubmit()" [formGroup]="loginForm">
+
+    <div class="form-group">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" class="form-control" formControlName="email" required value="{{data.email}}">
+    </div>
+
+    <div class="form-group">
+      <label for="password">{{'Password'}}</label>
+      <input type="password" id="password" class="form-control" formControlName="password" required>
+    </div>
+    <button type="submit" class="btn btn-success" [disabled]="!loginForm.valid">{{'Login'}}
+    </button>
+  </form>
+</div>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="60.0" prefWidth="450.0"
+            xmlns="http://javafx.com/javafx/8.0.121"
+            fx:controller="projector.controller.song.AddToCollectionController">
+    <top>
+        <GridPane alignment="TOP_CENTER">
+            <padding>
+                <Insets bottom="24.0" left="24.0" right="24.0" top="24.0"/>
+            </padding>
+            <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" maxWidth="150.0" minWidth="10.0" prefWidth="231.0"/>
+                <ColumnConstraints hgrow="SOMETIMES" maxWidth="222.0" minWidth="10.0" prefWidth="465.0"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0" vgrow="SOMETIMES"/>
+                <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0" vgrow="SOMETIMES"/>
+                <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0" vgrow="SOMETIMES"/>
+            </rowConstraints>
+
+            <Label alignment="CENTER_RIGHT" text="%Collection" GridPane.rowIndex="0"/>
+            <ComboBox fx:id="collectionComboBox" GridPane.columnIndex="1"/>
+
+            <Label text="%Ordinal number" GridPane.rowIndex="2"/>
+            <TextField fx:id="ordinalNumberTextField" maxWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+        </GridPane>
+    </top>
+    <center>
+        <BorderPane>
+            <padding>
+                <Insets bottom="24.0" left="24.0" right="24.0" top="12.0"/>
+            </padding>
+            <top>
+                <Button fx:id="saveButton" onAction="#onSaveButton" text="%Save" BorderPane.alignment="TOP_CENTER"/>
+            </top>
+        </BorderPane>
+    </center>
+</BorderPane>

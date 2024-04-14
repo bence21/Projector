@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.bence.songbook">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission
+        android:name="android.permission.SET_DEBUG_APP"
+        tools:ignore="ProtectedPermissions" />
+
+    <queries>
+        <intent>
+            <action android:name="com.google.android.youtube.api.service.START" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_descriptor"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/ic_launcher_round"
+        android:theme="@style/SongBookTheme"
+        android:usesCleartextTraffic="true"
+        tools:targetApi="m">
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+
+        </provider>
+
+        <activity
+            android:name=".ui.activity.MainActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="true"
+            android:theme="@style/SongBookTheme"
+            android:windowSoftInputMode="adjustPan">
+            <tools:validation testUrl="https://projector-songbook.herokuapp.com/song/5abf7bcde66f410004c91084" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:pathPattern="/song/.*" />
+                <data android:pathPattern="/queue.*" />
+                <data android:pathPattern="/songList/.*" />
+                <data
+                    android:host="projector-songbook.herokuapp.com"
+                    android:scheme="https" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ui.activity.FullscreenActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:screenOrientation="sensor"
+            android:theme="@style/FullscreenTheme" />
+        <activity android:name=".ui.activity.ExplanationActivity" />
+        <activity
+            android:name=".ui.activity.LoadActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
+        <activity
+            android:name=".ui.activity.LoginActivity"
+            android:configChanges="orientation|screenSize"
+            android:screenOrientation="fullSensor" />
+        <activity
+            android:name=".ui.activity.LanguagesActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
+        <activity
+            android:name=".ui.activity.SettingsActivity"
+            android:label="@string/settings"
+            android:parentActivityName=".ui.activity.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.activity.MainActivity" />
+        </activity>
+        <activity
+            android:name=".ui.activity.SongActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.ConnectToSharedActivity"
+            android:label="Connect to shared"
+            android:screenOrientation="locked"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.ConnectToSharedFullscreenActivity"
+            android:label="Connect to shared"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.NewSongActivity"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.SuggestEditsActivity"
+            android:label="@string/suggest_edits"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.SuggestEditsChooseActivity"
+            android:label="@string/suggest_edits"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.SuggestYouTubeActivity"
+            android:label="@string/youtube_video"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.VersionsActivity"
+            android:label="@string/versions" />
+        <activity
+            android:name=".ui.activity.YoutubeActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
+        <activity
+            android:name=".ui.activity.LibraryActivity"
+            android:theme="@style/SongBookTheme" />
+        <activity
+            android:name=".ui.activity.NewSongListActivity"
+            android:theme="@style/SongBookTheme"
+            android:windowSoftInputMode="stateVisible" />
+        <activity android:name=".ui.activity.SongListActivity" />
+    </application>
+
+</manifest>

@@ -1,0 +1,30 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/backgroundC"
+    android:keepScreenOn="true"
+    android:orientation="vertical"
+    android:screenOrientation="portrait"
+    tools:context=".ui.activity.YoutubeActivity">
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="220dp" />
+
+    <com.bence.songbook.AutoResizeTextView
+        android:id="@+id/fullscreen_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/backgroundC"
+        android:ellipsize="none"
+        android:gravity="center"
+        android:singleLine="false"
+        android:text="Reload"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:textSize="50sp"
+        tools:ignore="HardcodedText" />
+</LinearLayout>

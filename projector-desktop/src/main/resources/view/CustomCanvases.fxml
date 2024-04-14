@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<BorderPane prefHeight="370.0" prefWidth="670.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="projector.controller.CustomCanvasesController">
+    <center>
+        <BorderPane BorderPane.alignment="CENTER">
+            <center>
+                <ScrollPane fitToWidth="true" BorderPane.alignment="CENTER">
+                    <VBox fx:id="vBox" spacing="10.0" BorderPane.alignment="CENTER">
+                        <padding>
+                            <Insets left="4.0" top="4.0"/>
+                        </padding>
+                    </VBox>
+                </ScrollPane>
+            </center>
+        </BorderPane>
+    </center>
+    <bottom>
+        <BorderPane prefHeight="51.0" prefWidth="400.0" styleClass="border-pane" BorderPane.alignment="CENTER">
+            <center>
+                <Button onAction="#onAddCustomCanvas" text="Add custom canvas" BorderPane.alignment="CENTER"/>
+            </center>
+        </BorderPane>
+    </bottom>
+</BorderPane>

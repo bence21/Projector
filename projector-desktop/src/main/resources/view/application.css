@@ -1,0 +1,329 @@
+/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+
+* {
+    -titleBarBackgroundColor: #f1f1f1;
+    -focusedSelectedColorLighter: #94d2ff;
+    -focusedSelectedColor: #7cc8ff;
+    -selectedNotFocusedColor: #dadada;
+    -generalBackgroundColor: #e9e9e9;
+    -textFieldBackgroundColor: #ffffff;
+    -textColor: #000000;
+}
+
+.uj {
+    -fx-background-color: radial-gradient(focus-angle 0.0deg, focus-distance 0.0%, center 50.0% 50.0%, radius 100.0%, rgb(255, 255, 255) 0.0, rgb(128, 153, 255) 100.0);
+    -fx-text-fill: red;
+}
+
+/*.list-view .list-cell{
+	-fx-alignment: center;
+	-fx-text-fill: red;
+	-fx-cursor: hand;
+	-fx-wrap-text: true;
+}*/
+#fancytext {
+    -fx-fill: linear-gradient(from 0% 0% to 100% 200%, repeat, aqua 0%, red 50%);
+    -fx-stroke: black;
+    -fx-stroke-width: 1;
+}
+
+.h-box,
+.split-pane,
+.border-pane {
+    -fx-background-color: -generalBackgroundColor;
+}
+
+.text-field {
+    -fx-background-color: -textFieldBackgroundColor;
+    -fx-text-fill: -textColor;
+
+    /* It's needed because, focused somethimes jumps, because of the border */
+    -fx-border-color: rgba(0, 0, 0, 0);
+    -fx-border-width: 1;
+}
+
+.text-field:focused {
+    -fx-border-color: -focusedSelectedColor;
+}
+
+.text-field:focused {
+    -fx-border-color: -fx-focus-color;
+    -fx-border-width: 1;
+    -fx-border-radius: 2, 2, 2, 2;
+}
+
+.text-area {
+    -fx-text-fill: -textColor;
+}
+
+.text-area .content {
+    -fx-background-color: #e4e4e4;
+}
+
+.list-cell {
+    -fx-text-fill: -textColor;
+}
+
+.list-cell:even {
+    -fx-background-color: #f9f9f9;
+}
+
+.list-cell:even:filled:hover {
+    -fx-background-color: #d9d9d9;
+}
+
+.list-cell:odd {
+    -fx-background-color: #f7f7f7;
+}
+
+.list-cell:odd:filled:hover {
+    -fx-background-color: #d9d9d9;
+}
+
+#verseListView .list-cell:filled:focused {
+    -fx-border-color: #b1b1b1;
+    -fx-border-width: 1;
+    -fx-border-radius: 2, 2, 2, 2;
+}
+
+.list-view {
+    -fx-background-color: #f5f5f5;
+}
+
+/* Selected when control is not focused */
+/* Works when searched at BibleController */
+.list-cell:filled:selected {
+    -fx-background-color: -selectedNotFocusedColor;
+    -fx-table-cell-border-color: derive(-selectedNotFocusedColor, 20%);
+}
+
+.list-cell:filled:selected:focused {
+    -fx-background-color: #c8c8c8;
+}
+
+.list-view:focused>.virtual-flow>.clipped-container>.sheet>.list-cell:filled:selected {
+    -fx-background-color: -focusedSelectedColor;
+    -fx-table-cell-border-color: derive(-focusedSelectedColor, 20%);
+}
+
+#songListView:focused>.virtual-flow>.clipped-container>.sheet>.list-cell:filled:selected {
+    -fx-background-color: -focusedSelectedColorLighter;
+    -fx-table-cell-border-color: derive(-focusedSelectedColorLighter, 20%);
+}
+
+.verseList:filled:focused {
+    -fx-background-color: rgb(128, 128, 255);
+    -fx-text-fill: white;
+}
+
+.verseList-filled-selected {
+    -fx-background-color: rgb(0, 0, 128);
+    -fx-text-fill: white;
+    -fx-font-size: 14pt;
+}
+
+.found {
+    -fx-background-color: #f8c9ab;
+    -fx-text-fill: white;
+}
+
+
+.root {
+    /***************************************************************************
+     *                                                                         *
+     * The main color palette from which the rest of the colors are derived.   *
+     *                                                                         *
+     **************************************************************************/
+
+    /* A light grey that is the base color for objects.  Instead of using
+     * -fx-base directly, the sections in this file will typically use -fx-color.
+     */
+    -fx-base: -generalBackgroundColor;
+
+    -backgroundC: -generalBackgroundColor;
+}
+
+/* 
+.button,
+.combo-box,
+.color-picker,
+.increment-arrow-button,
+.decrement-arrow-button {
+    -fx-text-fill: #ffffff;
+    -fx-color-label: #ffffff;
+    -fx-background-color: -primaryTextColor;
+    -fx-font-family: Raleway, sans-serif;
+    -fx-font-weight: Bold;
+}
+
+.label {
+    -fx-font-family: Raleway, sans-serif;
+}
+
+.button:hover,
+.combo-box:hover,
+.color-picker:hover,
+.increment-arrow-button:hover,
+.decrement-arrow-button:hover {
+    -fx-background-color: #223f62;
+} */
+
+.tab,
+.tab-down-button,
+.control-buttons-tab,
+.tab-header-background {
+    -fx-background-color: #f3f3f3;
+    -fx-border-radius: 4 4 0 0;
+    -fx-border-color: #e3e3e3;
+    -fx-border-width: 2px 1px 2px 1px;
+}
+
+.tab:focused {
+    -fx-text-fill: -textColor;
+    -fx-color-label: -textColor;
+}
+
+.tab:hover,
+.tab:hover .tab-label {
+    -fx-text-fill: #1c1c1c;
+    -fx-color-label: #1c1c1c;
+    -fx-background-color: #f4f4f4;
+}
+
+.tab:selected,
+.tab:selected .tab-label {
+    -fx-text-fill: -textColor;
+    -fx-color-label: -textColor;
+    -fx-background-color: #ffffff;
+}
+
+
+.tab-header-background {
+    -fx-border-color: -backgroundC;
+    -fx-border-width: 2px 0px 2px 0px;
+}
+
+.tab-pane:top *.tab-header-area {
+    -fx-background-insets: 0, 0 0 1 0;
+    -fx-padding: 0.425em 0.0em 0.10em 0.0em;
+    /* overridden as 5 2 0 0 */
+}
+
+.menu-bar {
+    /* Clicking to menuBar bottom nothing happens */
+    -fx-background-color: -titleBarBackgroundColor !important;
+    -fx-padding: 0.0em 0.0em 0.0em 0.0em;
+}
+
+.toggle-button {
+    /* -fx-graphic: url('../icons/monitor.png'); */
+    -fx-graphic-size: 16px 16px;
+    -fx-color-rect-width: 4;
+    -fx-color-rect-height: 3;
+    -fx-graphic-vpos: top;
+    /* -fx-scale-x: 0.3;
+    -fx-scale-y: 0.3; */
+    /* -fx-background-image: url('../icons/monitor.png');
+    -fx-background-size: 19px 19px;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center; */
+}
+
+/* 
+.button > .increment-arrow,
+.combo-box > .increment-arrow,
+.color-picker > .increment-arrow,
+.button > .decrement-arrow,
+.combo-box > .decrement-arrow,
+.color-picker > .decrement-arrow,
+.spinner > .increment-arrow,
+.spinner > .decrement-arrow {
+    -fx-background-color: #fff;
+}
+
+.arrow {
+    -fx-background-color: #ffffff;
+}
+
+.color-picker .color-picker-label .text {
+    -fx-fill: #fff;
+}
+
+.table-view .column-header{
+    -fx-background-color: #f3f3f3;
+    -fx-border-color: #ebebeb;
+    -fx-border-width: 0px 1px 0px 1px;
+}
+
+.table-column .text {
+    -fx-fill: #575757;
+}
+.column-header .text {
+    -fx-fill: -textColor;
+}
+
+.table-row-cell:selected .text {
+    -fx-fill: #fff;
+}
+
+.table-column .arrow {
+    -fx-background-color: -textColor;
+}
+
+.filler
+ {
+    -fx-background-color: #fefefe;
+}
+
+.column-header-background {
+    -fx-background-color: #fefefe;
+    -fx-border-color: #e8e8e8;
+    -fx-border-width: 2px 0px 2px 0px;
+} */
+
+.title-bar,
+.minimize-button,
+.close-button {
+    -fx-background-color: -titleBarBackgroundColor !important;
+}
+
+.minimize-button:hover {
+    -fx-background-color: #cce3cd !important;
+}
+
+.close-button:hover {
+    -fx-background-color: #e81123 !important;
+}
+
+.windowTitle {
+    -fx-text-fill: rgb(86, 86, 86);
+}
+
+.windowTitleFocused {
+    -fx-text-fill: rgb(61, 61, 61);
+}
+
+.split-pane-divider {
+    -fx-background-color: #e3e3e3;
+}
+
+.split-pane-divider:hover {
+    -fx-background-color: #dcdcdc;
+}
+
+.scroll-pane,
+.scroll-pane > .viewport,
+.border-pane,
+.h-box,
+.v-box {
+    -fx-background-color: -generalBackgroundColor;
+}
+
+.toggle-button:selected {
+    -fx-background-color: #d2d2d2;
+}
+
+#accountPopupPane {
+    -fx-border-color: #ffffff;
+    -fx-border-width: 1;
+}

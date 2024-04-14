@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<BorderPane prefHeight="300.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="projector.controller.ProjectionTypeController"
+            styleClass="border-pane">
+    <top>
+        <VBox spacing="4">
+            <CheckBox fx:id="focusOnSongPartCheckBox" text="Focus on Song Part"/>
+            <Label text="%Select projection types:"/>
+        </VBox>
+    </top>
+    <center>
+        <ScrollPane>
+            <VBox fx:id="vBox" spacing="10.0" BorderPane.alignment="CENTER">
+                <padding>
+                    <Insets left="4.0" top="4.0"/>
+                </padding>
+            </VBox>
+        </ScrollPane>
+    </center>
+    <padding>
+        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+    </padding>
+</BorderPane>

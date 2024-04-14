@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<BorderPane prefHeight="560" prefWidth="800" styleClass="border-pane" xmlns="http://javafx.com/javafx/17.0.2-ea"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="projector.controller.UtilsController">
+    <center>
+    </center>
+    <top>
+        <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+            <center>
+                <HBox alignment="CENTER" prefHeight="50.0" prefWidth="100.0" spacing="10.0"
+                      BorderPane.alignment="CENTER">
+                    <TextField fx:id="timeTextField" prefHeight="25.0" prefWidth="50.0" text="15:45"/>
+                    <Button mnemonicParsing="false" onAction="#onShowCountDownButtonEvent" text="Show countdown"/>
+                    <Label fx:id="countDownLabel" text="04:59"/>
+                    <Label text="%Show finish time"/>
+                    <CheckBox fx:id="showFinishTimeCheckBox"/>
+                    <Label text="%Trigger action:"/>
+                    <ComboBox fx:id="actionComboBox" prefWidth="110.0"/>
+                    <Label text="Screens:"/>
+                    <ComboBox fx:id="projectionScreensComboBox"/>
+                </HBox>
+            </center>
+        </BorderPane>
+    </top>
+</BorderPane>
