@@ -59,6 +59,7 @@ public class Song extends BaseEntity {
     private long favouriteCount;
     @DatabaseField(width = 100)
     private String author;
+    @Expose
     @DatabaseField(width = 100)
     private String verseOrder;
     private List<Short> verseOrderList;
