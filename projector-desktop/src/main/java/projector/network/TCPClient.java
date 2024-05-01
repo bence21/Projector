@@ -270,7 +270,9 @@ public class TCPClient {
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
-        thread.interrupt();
+        if (thread != null) {
+            thread.interrupt();
+        }
     }
 
     public static boolean isUnknownException(SocketException e) {
