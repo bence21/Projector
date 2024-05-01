@@ -6,3 +6,5 @@ data/
 /projectorTest.log
 /gallery/
 /.cache/
+/copyCredentials.bat
+/copyCredentialsRevert.bat
