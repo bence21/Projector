@@ -42,3 +42,4 @@ Projector-server/src/main/java/com/bence/projector/server/Import.java
 mysql/
 /.cache/
 /gallery/
+/Projector-server/aPublic_folder/update/app
