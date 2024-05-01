@@ -114,27 +114,23 @@ runtime {
     }
 }
 
-tasks.register('installationTaskPrev', Exec) {
-    dependsOn['jpackageImage']
+task installationTaskPrev(type: Exec, dependsOn: ['jpackageImage']) {
     commandLine '../cer.bat'
 }
 
-tasks.register('installationTaskPrev3', Exec) {
-//    dependsOn['installationTaskPrev']
+// task installationTaskPrev3(type: Exec, dependsOn: ['installationTaskPrev']) {
+task installationTaskPrev3(type: Exec, dependsOn: ['jpackageImage']) {
     commandLine 'py', 'generate_lines.py'
 }
 
-tasks.register('installationTaskPrev2', Exec) {
-    dependsOn['installationTaskPrev3']
+task installationTaskPrev2(type: Exec, dependsOn: ['installationTaskPrev3']) {
     commandLine '"C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe"', 'setup.iss'
 }
 
-tasks.register('installationTask2', Exec) {
-    dependsOn['installationTaskPrev2']
+task installationTask2(type: Exec, dependsOn: ['installationTaskPrev2']) {
     commandLine '../cerInstallation.bat'
 }
 
-tasks.register('installationTask', Exec) {
-    dependsOn['installationTaskPrev2']
+task installationTask(type: Exec, dependsOn: ['installationTaskPrev2']) {
     commandLine 'c:/workspace/Projector/Projector/Projector-server/aPublic_folder/create.bat'
 }
