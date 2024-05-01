@@ -27,8 +27,6 @@ projector.trace.db
 launch4j.xml
 recent.txt
 songVersTimes
-Projector-server/src/main/resources/mail.properties
-Projector-server/src/main/resources/application.properties
 *.jar
 /data/
 settings.ini
