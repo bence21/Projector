@@ -7,7 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
-import projector.api.retrofit.ApiManager;
+import projector.Credentials;
 import projector.controller.listener.LoginListener;
 
 import java.awt.*;
@@ -79,7 +79,7 @@ public class LoginController {
     public void createAccountClick() {
         if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             try {
-                Desktop.getDesktop().browse(new URI(ApiManager.BASE_URL_S + "/#/registration"));
+                Desktop.getDesktop().browse(new URI(Credentials.BASE_URL_S + "/#/registration"));
             } catch (IOException | URISyntaxException e) {
                 throw new RuntimeException(e);
             }

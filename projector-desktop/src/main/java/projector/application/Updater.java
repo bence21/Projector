@@ -11,9 +11,9 @@ import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import projector.Credentials;
 import projector.MainDesktop;
 import projector.api.ProjectorVersionApiBean;
-import projector.api.retrofit.ApiManager;
 import projector.controller.MessageDialogController;
 import projector.controller.UpdateController;
 import projector.utils.AlertUtil;
@@ -254,11 +254,11 @@ public class Updater {
     }
 
     String getUrl(int version) {
-        return ApiManager.BASE_URL + "/api/files/projectorUpdate" + version + ".zip";
+        return Credentials.BASE_URL + "/api/files/projectorUpdate" + version + ".zip";
     }
 
     private String getUpdaterUrl() {
-        return ApiManager.BASE_URL + "/api/files/projectorUpdater.zip";
+        return Credentials.BASE_URL + "/api/files/projectorUpdater.zip";
     }
 
     public void saveApplicationStartedWithVersion() {

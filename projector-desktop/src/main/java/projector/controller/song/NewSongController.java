@@ -37,10 +37,10 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import projector.Credentials;
 import projector.MainDesktop;
 import projector.api.ApiException;
 import projector.api.SongApiBean;
-import projector.api.retrofit.ApiManager;
 import projector.application.ProjectionType;
 import projector.application.Settings;
 import projector.controller.LoginController;
@@ -481,7 +481,7 @@ public class NewSongController {
             Alert alert = new Alert(AlertType.WARNING);
             alert.setTitle("Warning");
             alert.setHeaderText("No language!");
-            alert.setContentText("Please select a language! Or create a new one at " + ApiManager.BASE_URL);
+            alert.setContentText("Please select a language! Or create a new one at " + Credentials.BASE_URL);
             alert.showAndWait();
             return false;
         }
@@ -609,7 +609,7 @@ public class NewSongController {
             secondTextArea.textProperty().addListener((observable, oldValue, newValue) -> previewProjectionScreenController.setText2(secondTextArea.getText(), ProjectionType.SONG));
             textAreasChildren.add(root);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error(e.getMessage(), e);
         }
     }
 

@@ -16,11 +16,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class ApiManager {
+import static projector.Credentials.BASE_URL;
 
-    public static final String DOMAIN = "localhost:8080";
-    public static final String BASE_URL = "http://" + DOMAIN;
-    public static final String BASE_URL_S = "http://" + DOMAIN;
+public class ApiManager {
 
     private static ApiManager instance;
     private List<Cookie> cookies = null;

@@ -59,10 +59,10 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import projector.Credentials;
 import projector.MainDesktop;
 import projector.api.SongApiBean;
 import projector.api.assembler.SongAssembler;
-import projector.api.retrofit.ApiManager;
 import projector.application.ProjectionType;
 import projector.application.ProjectorState;
 import projector.application.Settings;
@@ -152,7 +152,7 @@ public class SongController {
     private static final double minOpacity = 0.4;
     private final SongService songService;
     private final Settings settings = Settings.getInstance();
-    private final String BASE_URL = ApiManager.DOMAIN;
+    private final String BASE_URL = Credentials.DOMAIN;
     @SuppressWarnings("FieldCanBeLocal")
     private final String link = "http://" + BASE_URL;
     @SuppressWarnings("FieldCanBeLocal")
@@ -2018,19 +2018,11 @@ public class SongController {
     }
 
     public void setProjectionScreenController(ProjectionScreenController projectionScreenController) {
-        try {
-            this.projectionScreenController = projectionScreenController;
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
+        this.projectionScreenController = projectionScreenController;
     }
 
     public void setRecentController(RecentController recentController) {
-        try {
-            this.recentController = recentController;
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
+        this.recentController = recentController;
     }
 
     public void setScheduleController(ScheduleController scheduleController) {
@@ -3113,11 +3105,7 @@ public class SongController {
     }
 
     public void setMainController(MyController mainController) {
-        try {
-            this.mainController = mainController;
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
+        this.mainController = mainController;
     }
 
     private void selectFirstSong() {
