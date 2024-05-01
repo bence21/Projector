@@ -39,7 +39,7 @@ public class Updater {
     private static final Logger LOG = LoggerFactory.getLogger(Updater.class);
     private static Updater instance;
     @SuppressWarnings("FieldCanBeLocal")
-    private final int projectorVersionNumber = 79;
+    private final int projectorVersionNumber = 80;
     private final Settings settings = Settings.getInstance();
     private final String updaterPath = "data\\updater.zip";
 
@@ -71,7 +71,7 @@ public class Updater {
             try {
                 ProjectorVersionApiBean projectorVersionApiBean = new ProjectorVersionApiBean();
                 List<ProjectorVersionDTO> projectorVersionsAfterNr = projectorVersionApiBean.getProjectorVersionsAfterNr(projectorVersionNumber);
-                if (projectorVersionsAfterNr != null && projectorVersionsAfterNr.size() > 0) {
+                if (projectorVersionsAfterNr != null && !projectorVersionsAfterNr.isEmpty()) {
                     FXMLLoader loader = new FXMLLoader();
                     loader.setLocation(MainDesktop.class.getResource("/view/UpdateAvailable.fxml"));
                     loader.setResources(settings.getResourceBundle());
@@ -116,7 +116,6 @@ public class Updater {
                 // alert.showAndWait();
                 URL website;
                 try {
-                    //noinspection deprecation
                     website = new URL(getUrl(maxVersion));
                     ReadableByteChannel rbc = Channels.newChannel(website.openStream());
                     File dir = new File("data");
@@ -153,7 +152,6 @@ public class Updater {
                                         try {
                                             sleep(1000);
                                             String command = "cmd /c updater.exe";
-                                            //noinspection deprecation
                                             Runtime.getRuntime().exec(command);
                                         } catch (Exception e) {
                                             LOG.error(e.getMessage(), e);
@@ -188,7 +186,6 @@ public class Updater {
     private boolean downloadAndUnzipUpdater() {
         URL website;
         try {
-            //noinspection deprecation
             website = new URL(getUpdaterUrl());
             ReadableByteChannel rbc = Channels.newChannel(website.openStream());
             File dir = new File("data");
@@ -279,7 +276,7 @@ public class Updater {
             try {
                 ProjectorVersionApiBean projectorVersionApiBean = new ProjectorVersionApiBean();
                 List<ProjectorVersionDTO> projectorVersionsAfterNr = projectorVersionApiBean.getProjectorVersionsAfterNr(projectorVersionNumber);
-                if (projectorVersionsAfterNr != null && projectorVersionsAfterNr.size() > 0) {
+                if (projectorVersionsAfterNr != null && !projectorVersionsAfterNr.isEmpty()) {
                     Updater updater = Updater.getInstance();
                     updater.updateExe(projectorVersionsAfterNr);
                 }
