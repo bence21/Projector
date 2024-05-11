@@ -477,7 +477,7 @@ public class MainActivity extends AppCompatActivity
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.INTERNET}, 1);
         }
-        songs = memory.getSongs();
+        setSongs(memory.getSongs());
         createLoadSongVerseThread();
         songRepository = new SongRepositoryImpl(getApplicationContext());
         searchInSongTextIsAvailableToast = Toast.makeText(getApplicationContext(), R.string.SearchInSongTextIsAvailable, Toast.LENGTH_LONG);
@@ -489,10 +489,14 @@ public class MainActivity extends AppCompatActivity
                 setDataToQueueSongs();
             }
         } else {
-            songs = new ArrayList<>();
+            setSongs(new ArrayList<>());
             initialLoad();
         }
         onCreateEnd();
+    }
+
+    private void setSongs(List<Song> songs) {
+        this.songs = songs;
     }
 
     private void onQueueChanged() {
@@ -912,7 +916,7 @@ public class MainActivity extends AppCompatActivity
         switch (requestCode) {
             case DOWNLOAD_SONGS_REQUEST_CODE:
                 if (resultCode >= 1) {
-                    songs = songRepository.findAllExceptAsDeleted();
+                    setSongs(songRepository.findAllExceptAsDeleted());
                     memory.setSongs(songs);
                     List<QueueSong> queue = memory.getQueue();
                     if (queue == null) {
@@ -966,7 +970,7 @@ public class MainActivity extends AppCompatActivity
                 break;
             case 4:
                 if (resultCode == 1) {
-                    songs = memory.getSongsOrEmptyList();
+                    setSongs(memory.getSongsOrEmptyList());
                     values.clear();
                     int size = songs.size();
                     if (size > 0) {
@@ -1012,7 +1016,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void refreshSongs() {
-        songs = memory.getSongsOrEmptyList();
+        setSongs(memory.getSongsOrEmptyList());
         values.clear();
         values.addAll(songs);
         adapter.setSongList(values);
@@ -2129,7 +2133,7 @@ public class MainActivity extends AppCompatActivity
             for (SongCollectionElement songCollectionElement : songCollection.getSongCollectionElements()) {
                 String songUuid = songCollectionElement.getSongUuid();
                 if (hashMap.containsKey(songUuid)) {
-                    pairSongWithSongCollectionElement_hashMap(hashMap, songCollection, songCollectionElement, songUuid);
+                    pairSongWithSongCollectionElement_hashMap(hashMap, songCollection, songCollectionElement, songUuid, false);
                 }
             }
         }
@@ -2173,29 +2177,33 @@ public class MainActivity extends AppCompatActivity
 
     private void filterSongsByCollection() {
         HashMap<String, Song> hashMap = getStringSongHashMap();
+        HashMap<String, Boolean> addedSongsHashMap = new HashMap<>(hashMap.size());
         songs.clear();
         clearSongCollectionForSongs(hashMap.values());
         if (ifAtLeastOneSongCollectionIsSelected()) {
             for (SongCollection songCollection : songCollections) {
                 if (songCollection.isSelected()) {
-                    for (SongCollectionElement songCollectionElement : songCollection.getSongCollectionElements()) {
-                        String songUuid = songCollectionElement.getSongUuid();
-                        if (hashMap.containsKey(songUuid)) {
-                            addASongCollectionElement(hashMap, songCollection, songCollectionElement, songUuid);
-                        }
-                    }
+                    addSongCollectionElementsByHashMap(songCollection, hashMap, addedSongsHashMap, true);
                 }
             }
         } else {
             for (SongCollection songCollection : songCollections) {
-                for (SongCollectionElement songCollectionElement : songCollection.getSongCollectionElements()) {
-                    String songUuid = songCollectionElement.getSongUuid();
-                    if (hashMap.containsKey(songUuid)) {
-                        addASongCollectionElement(hashMap, songCollection, songCollectionElement, songUuid);
-                    }
-                }
+                addSongCollectionElementsByHashMap(songCollection, hashMap, addedSongsHashMap, false);
             }
             addRestOfSongs(hashMap);
+        }
+    }
+
+    private void addSongCollectionElementsByHashMap(SongCollection songCollection, HashMap<String, Song> hashMap, HashMap<String, Boolean> addedSongsHashMap, boolean filteringByCollection) {
+        for (SongCollectionElement songCollectionElement : songCollection.getSongCollectionElements()) {
+            String songUuid = songCollectionElement.getSongUuid();
+            if (hashMap.containsKey(songUuid)) {
+                Song song = pairSongWithSongCollectionElement_hashMap(hashMap, songCollection, songCollectionElement, songUuid, filteringByCollection);
+                if (!addedSongsHashMap.containsKey(songUuid)) {
+                    songs.add(song);
+                    addedSongsHashMap.put(songUuid, true);
+                }
+            }
         }
     }
 
@@ -2207,21 +2215,17 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void addASongCollectionElement(HashMap<String, Song> hashMap, SongCollection songCollection, SongCollectionElement songCollectionElement, String songUuid) {
-        Song song = pairSongWithSongCollectionElement_hashMap(hashMap, songCollection, songCollectionElement, songUuid);
-        if (song.getSongCollectionElements().size() <= 1) {
-            songs.add(song);
-        }  // else song should be added already
-    }
-
     @NonNull
-    public static Song pairSongWithSongCollectionElement_hashMap(HashMap<String, Song> hashMap, SongCollection songCollection, SongCollectionElement songCollectionElement, String songUuid) {
+    public static Song pairSongWithSongCollectionElement_hashMap(HashMap<String, Song> hashMap, SongCollection songCollection, SongCollectionElement songCollectionElement, String songUuid, boolean filteringByCollection) {
         Song song = hashMap.get(songUuid);
-        pairSongWithSongCollectionElement(song, songCollection, songCollectionElement);
+        pairSongWithSongCollectionElement(song, songCollection, songCollectionElement, filteringByCollection);
         return song;
     }
 
-    public static void pairSongWithSongCollectionElement(Song song, SongCollection songCollection, SongCollectionElement songCollectionElement) {
+    public static void pairSongWithSongCollectionElement(Song song, SongCollection songCollection, SongCollectionElement songCollectionElement, boolean filteringByCollection) {
+        if (filteringByCollection && !songCollection.isSelected()) {
+            return;
+        }
         song.addToSongCollections(songCollection);
         song.addToSongCollectionElements(songCollectionElement);
         songCollectionElement.setSong(song);
@@ -2230,6 +2234,7 @@ public class MainActivity extends AppCompatActivity
     private void clearSongCollectionForSongs(Collection<Song> songs) {
         for (Song song : songs) {
             song.setSongCollections(null);
+            song.setSongCollectionElements(null);
         }
     }
 
@@ -2285,7 +2290,7 @@ public class MainActivity extends AppCompatActivity
             }
         }
         if (songs.isEmpty()) {
-            songs = songRepository.findAllExceptAsDeleted();
+            setSongs(songRepository.findAllExceptAsDeleted());
         }
     }
 

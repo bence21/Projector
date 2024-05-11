@@ -143,7 +143,7 @@ public class SongActivity extends AppCompatActivity {
                 if (hashMap.containsKey(songUuid)) {
                     Song song = hashMap.get(songUuid);
                     if (song != null) {
-                        pairSongWithSongCollectionElement(song, songCollection, songCollectionElement);
+                        pairSongWithSongCollectionElement(song, songCollection, songCollectionElement, false);
                         songs.add(song);
                     }
                     hashMap.remove(songUuid);
@@ -382,8 +382,7 @@ public class SongActivity extends AppCompatActivity {
             try {
                 new SongListElementRepositoryImpl(SongActivity.this).save(songListElement);
             } catch (Exception e) {
-                System.out.println(e.getMessage());
-                e.printStackTrace();
+                logError(e);
             }
             saveToSongListPopupWindow.dismiss();
         });
@@ -391,6 +390,13 @@ public class SongActivity extends AppCompatActivity {
         saveToSongListPopupWindow.setBackgroundDrawable(new BitmapDrawable());
         saveToSongListPopupWindow.setOutsideTouchable(true);
         saveToSongListPopupWindow.showAtLocation(mainLayout, Gravity.CENTER, 0, 0);
+    }
+
+    private void logError(Exception e) {
+        if (e == null) {
+            return;
+        }
+        Log.e(TAG, e.getMessage(), e);
     }
 
     @Override

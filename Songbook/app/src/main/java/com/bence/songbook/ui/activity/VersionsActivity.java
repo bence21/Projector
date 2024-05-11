@@ -7,7 +7,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-    import android.preference.PreferenceManager;
+import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -89,7 +89,7 @@ public class VersionsActivity extends AppCompatActivity {
                 for (SongCollectionElement songCollectionElement : songCollection.getSongCollectionElements()) {
                     String songUuid = songCollectionElement.getSongUuid();
                     if (hashMap.containsKey(songUuid)) {
-                        Song song = pairSongWithSongCollectionElement_hashMap(hashMap, songCollection, songCollectionElement, songUuid);
+                        Song song = pairSongWithSongCollectionElement_hashMap(hashMap, songCollection, songCollectionElement, songUuid, false);
                         songs.add(song);
                         hashMap.remove(songUuid);
                     }
