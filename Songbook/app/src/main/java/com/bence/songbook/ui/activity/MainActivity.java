@@ -2071,7 +2071,6 @@ public class MainActivity extends AppCompatActivity
         filterSongsByCollection();
         filterSongsByVideos();
         filterSongsByFavourites();
-        setFavouritesForSongs();
     }
 
     private void setDataToQueueSongs() {
@@ -2152,6 +2151,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void filterSongsByFavourites() {
+        setFavouritesForSongs();
         if (favouriteSwitch != null && favouriteSwitch.isChecked()) {
             ArrayList<Song> tmpSongs = new ArrayList<>(songs);
             songs.clear();
