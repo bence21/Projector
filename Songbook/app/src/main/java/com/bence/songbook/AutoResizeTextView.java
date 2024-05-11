@@ -1,11 +1,8 @@
 package com.bence.songbook;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.RectF;
-import android.os.Build;
-import androidx.appcompat.widget.AppCompatTextView;
 import android.text.Layout.Alignment;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -13,9 +10,11 @@ import android.util.AttributeSet;
 import android.util.SparseIntArray;
 import android.util.TypedValue;
 
+import androidx.appcompat.widget.AppCompatTextView;
+
 public class AutoResizeTextView extends AppCompatTextView {
     private static final int NO_LINE_LIMIT = -1;
-    private RectF mTextRect = new RectF();
+    private final RectF mTextRect = new RectF();
 
     private RectF mAvailableSpaceRect;
 
@@ -32,13 +31,12 @@ public class AutoResizeTextView extends AppCompatTextView {
     private int mWidthLimit;
     private int mMaxLines;
     private final SizeTester mSizeTester = new SizeTester() {
-        @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
         @Override
         public int onTestSize(int suggestedSize, RectF availableSPace) {
             mPaint.setTextSize(suggestedSize);
             String text = getText().toString();
-            boolean singleline = getMaxLines() == 1;
-            if (singleline) {
+            boolean singleLine = getMaxLines() == 1;
+            if (singleLine) {
                 mTextRect.bottom = mPaint.getFontSpacing();
                 mTextRect.right = mPaint.measureText(text);
             } else {
@@ -70,7 +68,7 @@ public class AutoResizeTextView extends AppCompatTextView {
             }
         }
     };
-    private boolean mInitiallized;
+    private boolean initialized;
 
     public AutoResizeTextView(Context context) {
         super(context);
@@ -107,7 +105,7 @@ public class AutoResizeTextView extends AppCompatTextView {
             // no value was assigned during construction
             mMaxLines = NO_LINE_LIMIT;
         }
-        mInitiallized = true;
+        initialized = true;
     }
 
     @Override
@@ -128,9 +126,9 @@ public class AutoResizeTextView extends AppCompatTextView {
     }
 
     @Override
-    public void setMaxLines(int maxlines) {
-        super.setMaxLines(maxlines);
-        mMaxLines = maxlines;
+    public void setMaxLines(int maxLines) {
+        super.setMaxLines(maxLines);
+        mMaxLines = maxLines;
         reAdjust();
     }
 
@@ -186,7 +184,7 @@ public class AutoResizeTextView extends AppCompatTextView {
     }
 
     private void adjustTextSize() {
-        if (!mInitiallized) {
+        if (!initialized) {
             return;
         }
         float mMinTextSize = 20;

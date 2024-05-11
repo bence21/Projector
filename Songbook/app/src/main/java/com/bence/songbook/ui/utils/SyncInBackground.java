@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import com.bence.projector.common.dto.SongTitleDTO;
 import com.bence.projector.common.dto.SongViewsDTO;
@@ -30,6 +31,7 @@ import java.util.List;
 
 public class SyncInBackground {
 
+    private static final String TAG = SyncInBackground.class.getSimpleName();
     private static SyncInBackground instance;
     private static boolean incorrectSyncSave;
     private Long syncFrom;
@@ -60,6 +62,7 @@ public class SyncInBackground {
         Thread thread = new Thread(() -> {
             try {
                 while (finished != 0) {
+                    //noinspection BusyWait
                     Thread.sleep(100);
                 }
                 LanguageRepository languageRepository = new LanguageRepositoryImpl(context);
@@ -68,11 +71,15 @@ public class SyncInBackground {
                     new ViewsDownloader(context, language).execute();
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logError(e);
             }
 
         });
         thread.start();
+    }
+
+    private static void logError(Exception e) {
+        Log.e(TAG, e.getMessage(), e);
     }
 
     private void sortSongs(List<Song> all) {
@@ -87,11 +94,12 @@ public class SyncInBackground {
         Thread thread = new Thread(() -> {
             try {
                 while (finished != 0) {
+                    //noinspection BusyWait
                     Thread.sleep(100);
                 }
                 new YoutubeUrlDownloader(context).execute();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logError(e);
             }
 
         });
@@ -118,7 +126,7 @@ public class SyncInBackground {
             List<Song> languageSongs = language.getSongs();
             sortSongs(languageSongs);
             long modifiedDate;
-            if (languageSongs.size() > 0) {
+            if (!languageSongs.isEmpty()) {
                 modifiedDate = languageSongs.get(0).getModifiedDate().getTime();
             } else {
                 modifiedDate = 0L;

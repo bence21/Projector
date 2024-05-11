@@ -1,6 +1,8 @@
 package com.bence.songbook.service;
 
 import android.content.Context;
+import android.util.Log;
+import android.widget.Toast;
 
 import com.bence.projector.common.dto.FavouriteSongDTO;
 import com.bence.songbook.api.FavouriteSongApiBean;
@@ -18,6 +20,7 @@ import java.util.List;
 
 public class FavouriteSongService {
 
+    private static final String TAG = FavouriteSongService.class.getName();
     private static FavouriteSongService instance;
 
     private FavouriteSongService() {
@@ -39,13 +42,13 @@ public class FavouriteSongService {
             FavouriteSongRepositoryImpl favouriteSongRepository = new FavouriteSongRepositoryImpl(context);
             List<FavouriteSong> favouriteSongs = favouriteSongRepository.findAll();
             List<FavouriteSong> notUploadedFavouriteSongs = getNotUploadedFavouriteSongs(favouriteSongs);
-            if (notUploadedFavouriteSongs.size() == 0) {
+            if (notUploadedFavouriteSongs.isEmpty()) {
                 return;
             }
             FavouriteSongApiBean favouriteSongApiBean = new FavouriteSongApiBean(context);
             List<FavouriteSongDTO> favouriteSongDTOS = favouriteSongApiBean.uploadFavouriteSongs(notUploadedFavouriteSongs);
             if (favouriteSongDTOS != null) {
-                setUploadedToServer(notUploadedFavouriteSongs, favouriteSongRepository);
+                setUploadedToServer(notUploadedFavouriteSongs, favouriteSongRepository, context);
             }
         });
         thread.start();
@@ -58,7 +61,7 @@ public class FavouriteSongService {
             Date serverModifiedDate = getServerModifiedDateByLanguages(selectedLanguages);
             List<FavouriteSongDTO> favouriteSongDTOS = favouriteSongApiBean.getFavouriteSongs(serverModifiedDate);
             if (favouriteSongDTOS != null) {
-                if (favouriteSongDTOS.size() > 0) {
+                if (!favouriteSongDTOS.isEmpty()) {
                     FavouriteSongRepositoryImpl favouriteSongRepository = new FavouriteSongRepositoryImpl(context);
                     List<FavouriteSong> favouriteSongs = favouriteSongRepository.findAll();
                     List<FavouriteSong> appliedFavouriteSongs = applyFavouriteSongs(favouriteSongs, favouriteSongDTOS, context);
@@ -81,14 +84,14 @@ public class FavouriteSongService {
                 selectedLanguages.add(language);
             }
         }
-        if (selectedLanguages.size() == 0) {
+        if (selectedLanguages.isEmpty()) {
             return languages;
         }
         return selectedLanguages;
     }
 
     private Date getServerModifiedDateByLanguages(List<Language> selectedLanguages) {
-        if (selectedLanguages.size() == 0) {
+        if (selectedLanguages.isEmpty()) {
             return new Date(0);
         }
         long serverModifiedDate = Long.MAX_VALUE;
@@ -162,11 +165,16 @@ public class FavouriteSongService {
         languageRepository.save(selectedLanguages);
     }
 
-    private void setUploadedToServer(List<FavouriteSong> favouriteSongs, FavouriteSongRepositoryImpl favouriteSongRepository) {
+    private void setUploadedToServer(List<FavouriteSong> favouriteSongs, FavouriteSongRepositoryImpl favouriteSongRepository, Context context) {
         for (FavouriteSong favouriteSong : favouriteSongs) {
             favouriteSong.setUploadedToServer(true);
         }
-        favouriteSongRepository.save(favouriteSongs);
+        try {
+            favouriteSongRepository.save(favouriteSongs);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+            Toast.makeText(context, "Could not save favourite!", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private List<FavouriteSong> getNotUploadedFavouriteSongs(List<FavouriteSong> favouriteSongs) {

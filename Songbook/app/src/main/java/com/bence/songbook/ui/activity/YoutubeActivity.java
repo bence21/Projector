@@ -170,6 +170,9 @@ public class YoutubeActivity extends AppCompatActivity {
 
                 @Override
                 public void performTouchLeftRight(MotionEvent event) {
+                    if (event == null || textView == null) {
+                        return;
+                    }
                     //noinspection IntegerDivisionInFloatingPointContext
                     if (event.getX() < textView.getWidth() / 2) {
                         setPreviousVerse();

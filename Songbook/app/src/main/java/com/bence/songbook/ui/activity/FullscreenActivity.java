@@ -205,6 +205,9 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
     }
 
     public static String getTextForTitleSlide(Song song) {
+        if (song == null) {
+            return "null";
+        }
         StringBuilder title = new StringBuilder();
         for (SongCollectionElement songCollectionElement : song.getSongCollectionElements()) {
             if (songCollectionElement != null) {

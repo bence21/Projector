@@ -140,7 +140,7 @@ public class Memory {
         if (queue == null) {
             queue = new ArrayList<>();
         }
-        if (queue.size() == 0) {
+        if (queue.isEmpty()) {
             queueIndex = 0;
         }
         queueSong.setQueueNumber(queue.size());
