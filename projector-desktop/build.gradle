@@ -99,7 +99,7 @@ runtime {
         installerOptions += ['--resource-dir', "src/main/resources"]
         installerOptions += ['--vendor', 'Bence']
         imageName = "Projector"
-        appVersion = "3.5.6.1"
+        appVersion = "3.5.7"
         jvmArgs = [
                 '-Djava.net.preferIPv4Stack=true'
         ]
