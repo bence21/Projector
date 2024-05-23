@@ -272,9 +272,9 @@ public class ProjectionScreenController {
         setPaneBackground(backgroundColor, paneForMargins);
     }
 
-    private void setPaneBackground(Color backgroundColor, BorderPane borderPane) {
+    private void setPaneBackground(Color backgroundColor, Pane pane) {
         BackgroundFill myBF = new BackgroundFill(backgroundColor, new CornerRadii(1), new Insets(0.0, 0.0, 0.0, 0.0));
-        borderPane.setBackground(new Background(myBF));
+        pane.setBackground(new Background(myBF));
     }
 
     private void setBackGroundImage() {
@@ -551,12 +551,12 @@ public class ProjectionScreenController {
             if (projectionType == ProjectionType.REFERENCE) {
                 textFlow1.setText2(newText, width, height);
                 double v = projectionScreenSettings.getMaxFont() * 0.7;
-                int textFlow1Size = textFlow1.getSize();
-                if (textFlow1Size < v && newText.length() > 100) {
+                if (textFlow1.getSize() < v && newText.length() > 100) {
                     String[] split = splitHalfByNewLine(newText);
                     textFlow.setText2(split[0], width / 2, height);
                     textFlow1.setText2(split[1], width / 2, height);
                     int textFlowSize = textFlow.getSize();
+                    int textFlow1Size = textFlow1.getSize();
                     if (textFlowSize > textFlow1Size) {
                         textFlow.setSizeAndAlign(textFlow1Size);
                     } else if (textFlowSize < textFlow1Size) {
