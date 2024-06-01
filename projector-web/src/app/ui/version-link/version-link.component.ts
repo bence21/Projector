@@ -6,8 +6,8 @@ import { ActivatedRoute, Router } from "@angular/router";
 import { SongLink } from "../../models/song-link";
 import { SongLinkDataService } from "../../services/song-link-data.service";
 import { Title } from "@angular/platform-browser";
-import { MatDialog } from "@angular/material";
-import { ErrorUtil, checkAuthenticationError, openAuthenticateDialog } from '../../util/error-util';
+import { MatDialog, MatSnackBar } from "@angular/material";
+import { ErrorUtil, generalError, openAuthenticateDialog } from '../../util/error-util';
 
 @Component({
   selector: 'app-version-link',
@@ -29,6 +29,7 @@ export class VersionLinkComponent implements OnInit, OnDestroy {
     private songService: SongService,
     public auth: AuthService,
     private router: Router,
+    private snackBar: MatSnackBar,
     private dialog: MatDialog,
   ) {
     auth.getUserFromLocalStorage();
@@ -58,7 +59,7 @@ export class VersionLinkComponent implements OnInit, OnDestroy {
           (err) => {
             this.isNull = ErrorUtil.isPossibleNull(err);
             this.songLink = undefined;
-            checkAuthenticationError(this.ngOnInit, this, err, this.dialog);
+            generalError(this.ngOnInit, this, err, this.dialog, this.snackBar);
           });
       }
     });
@@ -82,7 +83,7 @@ export class VersionLinkComponent implements OnInit, OnDestroy {
         this.router.navigate(['/versionLinks']);
       },
       (err) => {
-        checkAuthenticationError(this.uploadSongLinkAsApplied, this, err, this.dialog);
+        generalError(this.uploadSongLinkAsApplied, this, err, this.dialog, this.snackBar);
       }
     );
   }
@@ -99,7 +100,7 @@ export class VersionLinkComponent implements OnInit, OnDestroy {
         }
       },
       (err) => {
-        checkAuthenticationError(this.onMergeSongsButtonClick, this, err, this.dialog);
+        generalError(this.onMergeSongsButtonClick, this, err, this.dialog, this.snackBar);
       }
     );
   }

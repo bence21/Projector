@@ -748,16 +748,26 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (song.getLanguage() == null) {
             throw new ServiceException("No language", HttpStatus.PRECONDITION_FAILED);
         }
-        List<SongVerse> verses = new ArrayList<>(song.getVerses());
-        List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
-        songRepository.save(song);
-        songVerseService.deleteBySong(song);
-        songVerseService.save(verses);
-        song.setVerses(verses);
-        songVerseOrderListItemRepository.deleteBySong(song);
-        songVerseOrderListItemService.saveAllByRepository(songVerseOrderListItems);
-        song.setSongVerseOrderListItems(songVerseOrderListItems);
+        try {
+            List<SongVerse> verses = new ArrayList<>(song.getVerses());
+            List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
+            songRepository.save(song);
+            songVerseService.deleteBySong(song);
+            songVerseService.save(verses);
+            song.setVerses(verses);
+            songVerseOrderListItemRepository.deleteBySong(song);
+            songVerseOrderListItemService.saveAllByRepository(songVerseOrderListItems);
+            song.setSongVerseOrderListItems(songVerseOrderListItems);
+        } catch (Exception e) {
+            removeSongFromHashMap(song);
+            throw e;
+        }
         return song;
+    }
+
+    private void removeSongFromHashMap(Song song) {
+        String uuid = song.getUuid();
+        songsHashMap.remove(uuid);
     }
 
     private ArrayList<SongVerseOrderListItem> getCopyOfSongVerseOrderListItems(Song song) {
