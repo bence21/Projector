@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import { Component } from '@angular/core';
 import { AuthService } from './services/auth.service';
 
 @Component({
@@ -10,7 +10,7 @@ export class AppComponent {
   title = 'app';
 
   constructor(
-    public auth: AuthService, 
+    public auth: AuthService,
   ) {
     auth.getUserFromLocalStorage();
     setInterval(() => auth.getUserFromLocalStorage(), 2000);
