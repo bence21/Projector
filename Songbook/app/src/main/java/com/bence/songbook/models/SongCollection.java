@@ -1,5 +1,9 @@
 package com.bence.songbook.models;
 
+import static com.bence.songbook.ui.utils.StringUtils.stripAccents;
+
+import androidx.annotation.NonNull;
+
 import com.j256.ormlite.dao.ForeignCollection;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.field.ForeignCollectionField;
@@ -7,8 +11,6 @@ import com.j256.ormlite.field.ForeignCollectionField;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
-import static com.bence.songbook.ui.utils.StringUtils.stripAccents;
 
 public class SongCollection extends BaseEntity {
     @ForeignCollectionField
@@ -140,5 +142,11 @@ public class SongCollection extends BaseEntity {
             strippedName = stripAccents(name.toLowerCase());
         }
         return strippedName;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return getShortName() + " - " + getName();
     }
 }

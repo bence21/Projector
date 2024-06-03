@@ -2,6 +2,7 @@
 
 # compiled output
 /dist
+/distHttp
 /distSsl
 /tmp
 /out-tsc
