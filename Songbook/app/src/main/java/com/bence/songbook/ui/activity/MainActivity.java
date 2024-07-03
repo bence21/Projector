@@ -21,7 +21,6 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -693,9 +692,7 @@ public class MainActivity extends AppCompatActivity
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            addSongListLinkPopupWindow.setElevation(5.0f);
-        }
+        addSongListLinkPopupWindow.setElevation(5.0f);
         Button addButton = customView.findViewById(R.id.addToButton);
         addButton.setOnClickListener(view -> {
             List<SongListElement> songListElements = songList.getSongListElements();
@@ -1535,7 +1532,14 @@ public class MainActivity extends AppCompatActivity
         }
         final List<Song> tempSongList = new ArrayList<>();
         for (Song song : songList) {
-            boolean contains = song.getStrippedTitle().contains(text);
+            if (song == null) {
+                continue;
+            }
+            String strippedTitle = song.getStrippedTitle();
+            if (strippedTitle == null) {
+                continue;
+            }
+            boolean contains = strippedTitle.contains(text);
             if (!contains) {
                 for (SongVerse verse : song.getVerses()) {
                     if (verse.getStrippedText().contains(text)) {
@@ -1960,9 +1964,7 @@ public class MainActivity extends AppCompatActivity
             loadAll();
             sortPopupWindow.dismiss();
         });
-        if (Build.VERSION.SDK_INT >= 21) {
-            sortPopupWindow.setElevation(5.0f);
-        }
+        sortPopupWindow.setElevation(5.0f);
         sortPopupWindow.setBackgroundDrawable(new BitmapDrawable());
         sortPopupWindow.setOutsideTouchable(true);
     }
@@ -1990,9 +1992,7 @@ public class MainActivity extends AppCompatActivity
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            filterPopupWindow.setElevation(5.0f);
-        }
+        filterPopupWindow.setElevation(5.0f);
         ImageButton closeButton = customView.findViewById(R.id.closeButton);
         closeButton.setOnClickListener(view -> filterPopupWindow.dismiss());
         if (songCollections.isEmpty()) {
@@ -2050,9 +2050,7 @@ public class MainActivity extends AppCompatActivity
                 LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            collectionPopupWindow.setElevation(5.0f);
-        }
+        collectionPopupWindow.setElevation(5.0f);
         Button selectButton = customView.findViewById(R.id.selectButton);
         selectButton.setOnClickListener(view -> {
             filter();
@@ -2255,9 +2253,7 @@ public class MainActivity extends AppCompatActivity
                 LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            selectLanguagePopupWindow.setElevation(5.0f);
-        }
+        selectLanguagePopupWindow.setElevation(5.0f);
         Button selectButton = customView.findViewById(R.id.selectButton);
         selectButton.setOnClickListener(view -> {
             languageRepository.save(languages);
@@ -2407,9 +2403,7 @@ public class MainActivity extends AppCompatActivity
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            saveQueuePopupWindow.setElevation(5.0f);
-        }
+        saveQueuePopupWindow.setElevation(5.0f);
         Button closeButton = customView.findViewById(R.id.closeButton);
         closeButton.setOnClickListener(view1 -> saveQueuePopupWindow.dismiss());
         ListView listView = customView.findViewById(R.id.listView);
@@ -2485,9 +2479,7 @@ public class MainActivity extends AppCompatActivity
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            addDuplicatesPopupWindow.setElevation(5.0f);
-        }
+        addDuplicatesPopupWindow.setElevation(5.0f);
         Button skipButton = customView.findViewById(R.id.skipButton);
         skipButton.setOnClickListener(view -> {
             addQueueToList(songList, queue, true, hashMap);
