@@ -23,6 +23,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -40,7 +41,80 @@ public class TCPClient {
     private static Socket clientSocket;
     private static DataOutputStream outToServer;
     private static BufferedReader inFromServer;
-    private static String openIp;
+    private static final List<String> openIps = Collections.synchronizedList(new ArrayList<>());
+
+    private static List<String> getIps() {
+        List<String> ips = new ArrayList<>();
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+
+                // Skip loopback interfaces
+                if (networkInterface.isLoopback() || !networkInterface.isUp()) {
+                    continue;
+                }
+
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress inetAddress = addresses.nextElement();
+                    // Skip IPv6 addresses
+                    if (inetAddress.getAddress().length == 4) {
+                        String hostAddress = inetAddress.getHostAddress();
+                        ips.add(hostAddress);
+                    }
+                }
+            }
+        } catch (SocketException ignored) {
+        }
+        return ips;
+    }
+
+    private static void sortOpenIps() {
+        openIps.sort((ip1, ip2) -> {
+            boolean preferredIp1 = preferredIp(ip1);
+            boolean preferredIp2 = preferredIp(ip2);
+            if (preferredIp1 && !preferredIp2) {
+                return -1;
+            } else if (preferredIp2 && !preferredIp1) {
+                return 1;
+            }
+            return ip1.compareTo(ip2);
+        });
+    }
+
+    private static void printOpenIps() {
+        for (String ip : openIps) {
+            System.out.println(ip);
+        }
+    }
+
+    private static boolean preferredIp(String ip) {
+        return ip.matches("192.168.[12]?[0-9]{1,2}.[12]?[0-9]{1,2}");
+    }
+
+    private static void getOpenIps() throws InterruptedException {
+        List<String> ips = getIps();
+        List<Thread> threads = new ArrayList<>(ips.size() * 255);
+        openIps.clear();
+        for (String ip : ips) {
+            String[] split = ip.split("\\.");
+            String firstThree = split[0] + "." + split[1] + "." + split[2] + ".";
+            for (int i = 1; i <= 255; ++i) {
+                String ip1 = firstThree + i;
+                Thread thread = new Thread(() -> {
+                    if (isOpenAddress(ip1)) {
+                        openIps.add(ip1);
+                    }
+                });
+                thread.start();
+                threads.add(thread);
+            }
+        }
+        for (Thread thread : threads) {
+            thread.join(5000);
+        }
+    }
 
     public synchronized static void connectToShared(ProjectionScreenController projectionScreenController) {
         if (thread != null) {
@@ -48,41 +122,15 @@ public class TCPClient {
         }
         thread = new Thread(() -> {
             try {
-                Enumeration<NetworkInterface> enumeration = NetworkInterface.getNetworkInterfaces();
-                List<String> ips = new ArrayList<>();
-                while (enumeration.hasMoreElements()) {
-                    NetworkInterface n = enumeration.nextElement();
-                    Enumeration<InetAddress> ee = n.getInetAddresses();
-                    while (ee.hasMoreElements()) {
-                        InetAddress i = ee.nextElement();
-                        String hostAddress = i.getHostAddress();
-                        if (hostAddress.matches("192.168.[12]?[0-9]{1,2}.[12]?[0-9]{1,2}")) {
-                            ips.add(hostAddress);
-                            System.out.println(hostAddress);
-                        }
-                    }
+                getOpenIps();
+                sortOpenIps();
+                printOpenIps();
+                String openIp;
+                if (openIps.size() > 0) {
+                    openIp = openIps.get(0);
+                } else {
+                    openIp = null;
                 }
-                openIp = null;
-                List<Thread> threads = new ArrayList<>(ips.size() * 255);
-                for (String ip : ips) {
-                    String[] split = ip.split("\\.");
-                    String firstThree = split[0] + "." + split[1] + "." + split[2] + ".";
-                    for (int i = 1; i <= 255; ++i) {
-                        String ip1 = firstThree + i;
-                        Thread thread = new Thread(() -> {
-                            if (isOpenAddress(ip1)) {
-                                System.out.println("ip = " + ip1);
-                                openIp = ip1;
-                            }
-                        });
-                        thread.start();
-                        threads.add(thread);
-                    }
-                }
-                for (Thread thread : threads) {
-                    thread.join(5000);
-                }
-//                openIp = "192.168.43.175";
                 System.out.println("openIp = " + openIp);
                 if (openIp != null) {
                     TCPImageClient.connectToShared(projectionScreenController, openIp);
@@ -160,8 +208,7 @@ public class TCPClient {
             if (preferred == null) {
                 return originalText;
             }
-            text.append(getBibleVerseWithReferenceText(verseIndices, preferred,
-                    projectionDTO.getSelectedBook(), projectionDTO.getSelectedPart(), projectionDTO.getVerseIndicesByPart()));
+            text.append(getBibleVerseWithReferenceText(verseIndices, preferred, projectionDTO.getSelectedBook(), projectionDTO.getSelectedPart(), projectionDTO.getVerseIndicesByPart()));
             String s = text.toString().trim();
             if (s.isEmpty()) {
                 return originalText;
