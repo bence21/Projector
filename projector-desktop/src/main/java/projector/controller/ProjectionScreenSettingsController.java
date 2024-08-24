@@ -136,7 +136,10 @@ public class ProjectionScreenSettingsController {
         projectionScreenSettings.setBottomMargin(projectionScreenSettingsModel.getBottomMargin());
         projectionScreenSettings.setLeftMargin(projectionScreenSettingsModel.getLeftMargin());
         projectionScreenSettings.save();
-        projectionScreenHolder.getProjectionScreenController().onSettingsChanged();
+        ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
+        if (projectionScreenController != null) {
+            projectionScreenController.onSettingsChanged();
+        }
         stage.close();
     }
 
@@ -315,6 +318,9 @@ public class ProjectionScreenSettingsController {
             // textFlow.setText2(getPreviewText(), (int) width, (int) height);
             if (liveButton.isSelected()) {
                 ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
+                if (projectionScreenController == null) {
+                    return;
+                }
                 projectionScreenController.setProjectionScreenSettings(screenSettings);
                 projectionScreenController.onSettingsChanged();
             }
