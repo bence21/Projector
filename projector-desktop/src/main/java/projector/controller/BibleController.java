@@ -611,6 +611,7 @@ public class BibleController {
                             for (int i = 0; i < bible.getBooks().get(partListBookI).getChapters().size(); ++i) {
                                 partListView.getItems().add(i + 1);
                             }
+                            partListView.getFocusModel().focus(0);
                             searchSelected = 2;
                             bibleSearchController.setSearchSelected(searchSelected);
                             recentController.setSearchSelected(searchSelected);

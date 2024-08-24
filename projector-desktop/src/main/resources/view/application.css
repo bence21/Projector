@@ -80,6 +80,25 @@
     -fx-background-color: #d9d9d9;
 }
 
+#referenceTextArea,
+#bookListView,
+#partListView,
+#verseListView {
+    -fx-padding: 0.77; /* should be same (1) */
+}
+
+#referenceTextArea:focused,
+#bookListView:focused,
+#partListView:focused,
+#verseListView:focused {
+    -fx-border-color: -fx-focus-color;  /* Border color when focused */
+    -fx-border-width: 0.77; /* should be same (1) */
+    -fx-border-radius: 2, 2, 2, 2;
+    -fx-padding: 0;                     /* Add padding to counteract the border width */
+}
+
+#bookListView .list-cell:filled:focused,
+#partListView .list-cell:filled:focused,
 #verseListView .list-cell:filled:focused {
     -fx-border-color: #b1b1b1;
     -fx-border-width: 1;
