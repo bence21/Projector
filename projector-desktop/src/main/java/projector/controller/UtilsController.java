@@ -153,7 +153,7 @@ public class UtilsController {
         try {
             List<CountdownTime> countdownTimes = ServiceManager.getCountdownTimeService().findAll();
             if (!countdownTimes.isEmpty()) {
-                countdownTimes.sort((o1, o2) -> Long.compare(o2.getCounter(), o1.getCounter()));
+                sortCountdownTimes(countdownTimes);
                 if (setFirst) {
                     fillWithSelected(countdownTimes.get(0));
                 }
@@ -162,6 +162,57 @@ public class UtilsController {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
+    }
+
+    private static void sortCountdownTimes(List<CountdownTime> countdownTimes) {
+        Date now = new Date();
+        long maximumDiff = getMaximumDifference(countdownTimes, now);
+        long maximumCounter = getMaximumCounter(countdownTimes);
+        countdownTimes.sort((o1, o2) -> {
+            boolean expired1 = isExpired(o1, now);
+            boolean expired2 = isExpired(o2, now);
+            if (expired1) {
+                if (!expired2) {
+                    return 1;
+                }
+            } else {
+                if (expired2) {
+                    return -1;
+                }
+            }
+            return Double.compare(o2.getScore(now, maximumDiff, maximumCounter), o1.getScore(now, maximumDiff, maximumCounter));
+        });
+    }
+
+    private static long getMaximumCounter(List<CountdownTime> countdownTimes) {
+        long max = 0;
+        for (CountdownTime countdownTime : countdownTimes) {
+            if (countdownTime.getCounter() > max) {
+                max = countdownTime.getCounter();
+            }
+        }
+        return max;
+    }
+
+    private static long getMaximumDifference(List<CountdownTime> countdownTimes, Date now) {
+        long maximumDiff = 0;
+        long nowTime = now.getTime();
+        for (CountdownTime countdownTime : countdownTimes) {
+            Date date = countdownTime.getDate();
+            long diff = date.getTime() - nowTime;
+            if (diff > maximumDiff) {
+                maximumDiff = diff;
+            }
+        }
+        return maximumDiff;
+    }
+
+    private static boolean isExpired(CountdownTime countdownTime, Date now) {
+        Date dateByTimeText = countdownTime.getDate();
+        if (dateByTimeText == null) {
+            return true;
+        }
+        return dateByTimeText.before(now);
     }
 
     private void fillWithSelected(CountdownTime countdownTime) {
@@ -188,6 +239,15 @@ public class UtilsController {
     }
 
     private void createCountdownTimesMenu(List<CountdownTime> countdownTimes) {
+        timeTextField.setOnMouseClicked(event -> {
+            sortCountdownTimes(countdownTimes);
+            ContextMenu contextMenu = createContextMenu(countdownTimes);
+            contextMenu.show(timeTextField, Side.BOTTOM, 0, 0);
+            hideDeleteContextMenu();
+        });
+    }
+
+    private ContextMenu createContextMenu(List<CountdownTime> countdownTimes) {
         final ContextMenu contextMenu = new ContextMenu();
         setContextMenuHideAction(contextMenu, LOG);
         List<MenuItem> menuItems = new ArrayList<>();
@@ -207,10 +267,7 @@ public class UtilsController {
             menuItems.add(menuItem);
         }
         contextMenu.getItems().addAll(menuItems);
-        timeTextField.setOnMouseClicked(event -> {
-            contextMenu.show(timeTextField, Side.BOTTOM, 0, 0);
-            hideDeleteContextMenu();
-        });
+        return contextMenu;
     }
 
     private void createDeleteMenu(CountdownTime countdownTime, ContextMenu mainContextMenu, MenuItem menuItem) {
@@ -253,6 +310,14 @@ public class UtilsController {
     private Date getFinishDate() {
         try {
             String timeTextFieldText = getTimeTextFieldText();
+            return getDateByTimeText(timeTextFieldText);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static Date getDateByTimeText(String timeTextFieldText) {
+        try {
             String[] split = timeTextFieldText.split(":");
             if (split.length < 2) {
                 return null;
