@@ -44,6 +44,7 @@ import java.util.List;
 import static projector.controller.BibleController.setGeneralTextColor;
 import static projector.controller.song.SongController.setSongCollections;
 import static projector.controller.song.SongController.setTextFlowsText;
+import static projector.utils.ColorUtil.getGeneralTextColor;
 import static projector.utils.ColorUtil.getVisitedTextColor;
 import static projector.utils.ContextMenuUtil.initializeContextMenu;
 
@@ -197,7 +198,8 @@ public class ScheduleController {
         MenuItem removeMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Remove"));
         MenuItem saveMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Save"));
         MenuItem loadMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Load"));
-        cm.getItems().addAll(moveUpMenuItem, moveDownMenuItem, removeMenuItem, saveMenuItem, loadMenuItem);
+        MenuItem resetHighlightsMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Reset highlights"));
+        cm.getItems().addAll(moveUpMenuItem, moveDownMenuItem, removeMenuItem, saveMenuItem, loadMenuItem, resetHighlightsMenuItem);
         listView.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.SECONDARY) {
                 cm.show(listView, event.getScreenX(), event.getScreenY());
@@ -236,7 +238,7 @@ public class ScheduleController {
                     }
                     bw.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.error(e.getMessage(), e);
                 }
             }
         });
@@ -286,10 +288,11 @@ public class ScheduleController {
                         addSong(song);
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.error(e.getMessage(), e);
                 }
             }
         });
+        resetHighlightsMenuItem.setOnAction(event -> resetHighlights());
         listView.setOnKeyPressed(event -> {
             if (keyAltUp.match(event)) {
                 moveUp();
@@ -298,6 +301,12 @@ public class ScheduleController {
             }
         });
 
+    }
+
+    private void resetHighlights() {
+        for (ScheduleSong scheduleSong : listView.getItems()) {
+            setTextColor(scheduleSong, getGeneralTextColor());
+        }
     }
 
     private int getIndexFromDragBoard(Dragboard dragboard) {
