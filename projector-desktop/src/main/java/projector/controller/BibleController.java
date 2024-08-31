@@ -1430,6 +1430,7 @@ public class BibleController {
         selectBibleInListView(previouslySelectedBible);
         addAllBooks();
         historyController.setBible(bible);
+        bibleSearchController.setBibles(bibles);
     }
 
     private void selectBibleInListView(Bible previouslySelectedBible) {
@@ -1882,5 +1883,9 @@ public class BibleController {
                 sendProjectionScreenText.fire();
             }
         }
+    }
+
+    public void selectBible(Bible bible) {
+        bibleListView.getSelectionModel().select(bible);
     }
 }

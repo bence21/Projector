@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
@@ -10,11 +11,22 @@
     <center>
         <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
             <top>
-                <TextField fx:id="bibleSearchTextField" BorderPane.alignment="CENTER">
-                    <BorderPane.margin>
-                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
-                    </BorderPane.margin>
-                </TextField>
+                <BorderPane>
+                    <center>
+                        <TextField fx:id="bibleSearchTextField" BorderPane.alignment="CENTER">
+                            <BorderPane.margin>
+                                <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                            </BorderPane.margin>
+                        </TextField>
+                    </center>
+                    <right>
+                        <CheckBox fx:id="searchInAllCheckBox" text="%Search in all" BorderPane.alignment="CENTER">
+                            <BorderPane.margin>
+                                <Insets right="8.0"/>
+                            </BorderPane.margin>
+                        </CheckBox>
+                    </right>
+                </BorderPane>
             </top>
             <center>
                 <!--<Pane prefHeight="560" prefWidth="800" BorderPane.alignment="CENTER">-->
