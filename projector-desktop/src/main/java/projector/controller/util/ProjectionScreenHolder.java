@@ -122,8 +122,17 @@ public class ProjectionScreenHolder {
             return;
         }
         stage.titleProperty().addListener((observable, oldValue, newValue) -> {
-            projectionScreenSettings.changingName(newValue);
+            projectionScreenSettings.renameSettingsFile(newValue);
             setName(newValue);
         });
+    }
+
+    public boolean isNotWithScreen() {
+        return projectionScreenController == null || projectionScreenController.getScreen() == null;
+    }
+
+    public void reload() {
+        projectionScreenSettings.reload();
+        projectionScreenController.repaint();
     }
 }

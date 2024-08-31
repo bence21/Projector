@@ -18,14 +18,18 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import projector.application.PTextAlignment;
 import projector.application.ProjectionScreenSettings;
 import projector.application.Settings;
+import projector.controller.util.ProjectionScreenBunch;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.ui.NumberTextField;
 import projector.ui.ResetButton;
@@ -38,9 +42,12 @@ import static projector.controller.SettingsController.getFontWeightByString;
 import static projector.controller.SettingsController.getStrokeSizeFactory;
 import static projector.controller.SettingsController.imageBrowseWithTextFieldResult;
 import static projector.controller.SettingsController.initializeStrokeTypeComboBox_;
+import static projector.controller.UtilsController.handleProjectionScreensWithScreenComboBox;
 import static projector.utils.NumberUtil.getIntegerFromNumber;
 
 public class ProjectionScreenSettingsController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ProjectionScreenSettingsController.class);
     public BorderPane mainBorderPain;
     public ScrollPane scrollPane;
     public Slider maxFontSlider;
@@ -99,6 +106,8 @@ public class ProjectionScreenSettingsController {
     public NumberTextField leftMarginTextField;
     public CheckBox asPaddingCheckbox;
     public ResetButton marginsReset;
+    public ComboBox<ProjectionScreenBunch> screenComboBox;
+    public HBox swapScreenHBox;
     private Stage stage;
     private ProjectionScreenSettings projectionScreenSettings;
     private ProjectionScreenSettings projectionScreenSettingsModel;
@@ -138,6 +147,7 @@ public class ProjectionScreenSettingsController {
         projectionScreenSettings.save();
         ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
         if (projectionScreenController != null) {
+            projectionScreenController.setProjectionScreenSettings(projectionScreenSettings);
             projectionScreenController.onSettingsChanged();
         }
         stage.close();
@@ -195,7 +205,37 @@ public class ProjectionScreenSettingsController {
         // textFlow.setProjectionScreenSettings(projectionScreenSettingsModel);
         // previewPane.widthProperty().addListener(getChangeListener());
         // previewPane.heightProperty().addListener(getChangeListener());
+        initializeScreenComboBox();
         updatePreview();
+    }
+
+    private void initializeScreenComboBox() {
+        try {
+            handleProjectionScreensWithScreenComboBox(screenComboBox, projectionScreenHolder);
+            screenComboBox.getSelectionModel().selectedItemProperty().addListener((o, old, newValue) -> swapProjectionScreen(projectionScreenHolder, newValue.getProjectionScreenHolder()));
+            if (screenComboBox.getItems().size() == 0) {
+                swapScreenHBox.setVisible(false); // parent container is important for styleClass
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
+    private void swapProjectionScreen(ProjectionScreenHolder projectionScreenHolder1, ProjectionScreenHolder projectionScreenHolder2) {
+        try {
+            String temp = projectionScreenHolder1.getName();
+            String temporarySwappingScreen = "TemporarySwappingScreen";
+            ProjectionScreenSettings projectionScreenSettings1 = projectionScreenHolder1.getProjectionScreenSettings();
+            ProjectionScreenSettings projectionScreenSettings2 = projectionScreenHolder2.getProjectionScreenSettings();
+            projectionScreenSettings2.renameSettingsFile2(temporarySwappingScreen, true);
+            projectionScreenSettings1.renameSettingsFile2(projectionScreenHolder2.getName(), true);
+            projectionScreenSettings2.renameSettingsFile3(temporarySwappingScreen, temp, true);
+            projectionScreenHolder1.reload();
+            projectionScreenHolder2.reload();
+            stage.close();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
     }
 
     private void initializeVerticalAlignmentSlider(Settings settings) {

@@ -114,7 +114,14 @@ public class ProjectionScreenSettings {
     }
 
     public ProjectionScreenSettings(ProjectionScreenSettings projectionScreenSettings) {
-        this.settings = projectionScreenSettings.settings;
+        settings = copyFromOther(projectionScreenSettings);
+        this.projectionScreenHolder = projectionScreenSettings.projectionScreenHolder;
+        this.onChangedListener = projectionScreenSettings.onChangedListener;
+        this.useGlobalSettings = projectionScreenSettings.useGlobalSettings;
+    }
+
+    private Settings copyFromOther(ProjectionScreenSettings projectionScreenSettings) {
+        final Settings settings = projectionScreenSettings.settings;
         this.maxFont = projectionScreenSettings.maxFont;
         this.backgroundColor = projectionScreenSettings.backgroundColor;
         this.color = projectionScreenSettings.color;
@@ -131,14 +138,11 @@ public class ProjectionScreenSettings {
         this.showSongSecondText = projectionScreenSettings.showSongSecondText;
         this.songSecondTextColor = projectionScreenSettings.songSecondTextColor;
         this.progressLinePositionIsTop = projectionScreenSettings.progressLinePositionIsTop;
-        this.projectionScreenHolder = projectionScreenSettings.projectionScreenHolder;
-        this.useGlobalSettings = projectionScreenSettings.useGlobalSettings;
         this.strokeFont = projectionScreenSettings.strokeFont;
         this.screenProjectionTypes = copyList(projectionScreenSettings.screenProjectionTypes);
         this.strokeColor = projectionScreenSettings.strokeColor;
         this.strokeSize = projectionScreenSettings.strokeSize;
         this.strokeType = projectionScreenSettings.strokeType;
-        this.onChangedListener = projectionScreenSettings.onChangedListener;
         this.verticalAlignment = projectionScreenSettings.verticalAlignment;
         this.horizontalAlignment = projectionScreenSettings.horizontalAlignment;
         this.textAlignment = projectionScreenSettings.textAlignment;
@@ -149,6 +153,7 @@ public class ProjectionScreenSettings {
         this.asPadding = projectionScreenSettings.asPadding;
         this.focusOnSongPart = projectionScreenSettings.focusOnSongPart;
         // Also copy fromJson in load method!!!
+        return settings;
     }
 
     private static boolean isaBoolean(Boolean aBoolean) {
@@ -276,6 +281,20 @@ public class ProjectionScreenSettings {
             bw.write(json);
             bw.close();
         } catch (IOException e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
+    public void reload() {
+        try {
+            File file = new File(getFileName());
+            if (!file.exists()) {
+                copyFromOther(new ProjectionScreenSettings());
+            } else {
+                load();
+            }
+            onChanged();
+        } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
     }
@@ -523,14 +542,27 @@ public class ProjectionScreenSettings {
         this.onChangedListener = listener;
     }
 
-    public void changingName(String newValue) {
+    public void renameSettingsFile(String newValue) {
+        renameSettingsFile2(newValue, false);
+    }
+
+    public void renameSettingsFile2(String newValue, boolean ignoreFileNotExists) {
+        renameSettingsFile3(projectionScreenHolder.getName(), newValue, ignoreFileNotExists);
+    }
+
+    public void renameSettingsFile3(String oldFileName, String newValue, boolean ignoreFileNotExists) {
         try {
-            String fileName = getFileName();
-            File oldFile = new File(fileName);
+            File oldFile = new File(getFileName(oldFileName));
+            if (!oldFile.exists()) {
+                if (ignoreFileNotExists) {
+                    return;
+                }
+                LOG.warn("File not exists: {}", oldFileName);
+            }
             File newFile = new File(getFileName(newValue));
             boolean success = oldFile.renameTo(newFile);
             if (!success) {
-                LOG.warn("Could not rename: " + fileName + " to " + newValue);
+                LOG.warn("Could not rename: {} to {}", oldFileName, newValue);
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);

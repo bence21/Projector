@@ -103,14 +103,38 @@ public class UtilsController {
             ProjectionScreenBunch projectionScreenBunch = new ProjectionScreenBunch();
             projectionScreenBunch.setName(resourceBundle.getString("All"));
             projectionScreensComboBoxItems.add(projectionScreenBunch);
+            handleProjectionScreensComboBox(projectionScreensComboBox);
+            projectionScreensComboBox.getSelectionModel().select(0);
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
+    public static void handleProjectionScreensComboBox(ComboBox<ProjectionScreenBunch> projectionScreensComboBox) {
+        handleProjectionScreensComboBox_(projectionScreensComboBox, false, null);
+    }
+
+    public static void handleProjectionScreensWithScreenComboBox(ComboBox<ProjectionScreenBunch> projectionScreensComboBox, ProjectionScreenHolder projectionScreenHolder) {
+        handleProjectionScreensComboBox_(projectionScreensComboBox, true, projectionScreenHolder);
+    }
+
+    private static void handleProjectionScreensComboBox_(ComboBox<ProjectionScreenBunch> projectionScreensComboBox, boolean withScreen, ProjectionScreenHolder exceptProjectionScreenHolder) {
+        try {
+            ObservableList<ProjectionScreenBunch> projectionScreensComboBoxItems = projectionScreensComboBox.getItems();
             ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
             List<ProjectionScreenHolder> projectionScreenHolders = projectionScreensUtil.getProjectionScreenHolders();
             for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+                if (withScreenCondition(withScreen, projectionScreenHolder, exceptProjectionScreenHolder)) {
+                    continue;
+                }
                 addProjectionScreenHolderToItems(projectionScreenHolder, projectionScreensComboBoxItems);
             }
             projectionScreensUtil.addProjectionScreenListener(new ProjectionScreenListener() {
                 @Override
                 public void onNew(ProjectionScreenHolder projectionScreenHolder) {
+                    if (withScreenCondition(withScreen, projectionScreenHolder, exceptProjectionScreenHolder)) {
+                        return;
+                    }
                     addProjectionScreenHolderToItems(projectionScreenHolder, projectionScreensComboBoxItems);
                 }
 
@@ -128,13 +152,16 @@ public class UtilsController {
                     }
                 }
             });
-            projectionScreensComboBox.getSelectionModel().select(0);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
     }
 
-    private static void addProjectionScreenHolderToItems(ProjectionScreenHolder projectionScreenHolder, ObservableList<ProjectionScreenBunch> projectionScreensComboBoxItems) {
+    private static boolean withScreenCondition(boolean withScreen, ProjectionScreenHolder projectionScreenHolder, ProjectionScreenHolder exceptProjectionScreenHolder) {
+        return withScreen && (projectionScreenHolder.isNotWithScreen() || projectionScreenHolder.equals(exceptProjectionScreenHolder));
+    }
+
+    public static void addProjectionScreenHolderToItems(ProjectionScreenHolder projectionScreenHolder, ObservableList<ProjectionScreenBunch> projectionScreensComboBoxItems) {
         ProjectionScreenBunch projectionScreenBunch1 = new ProjectionScreenBunch();
         projectionScreenBunch1.setProjectionScreenHolder(projectionScreenHolder);
         projectionScreensComboBoxItems.add(projectionScreenBunch1);

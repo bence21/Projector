@@ -41,6 +41,9 @@ public class ScreenProjectionType {
     }
 
     public static List<ScreenProjectionType> copyList(List<ScreenProjectionType> screenProjectionTypes) {
+        if (screenProjectionTypes == null) {
+            return null;
+        }
         ArrayList<ScreenProjectionType> copiedList = new ArrayList<>(screenProjectionTypes.size());
         for (ScreenProjectionType screenProjectionType : screenProjectionTypes) {
             copiedList.add(new ScreenProjectionType(screenProjectionType));

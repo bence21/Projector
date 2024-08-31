@@ -225,16 +225,7 @@ public class ProjectionScreenController {
     private void initializeFromSettings() {
         progressLine.setStroke(projectionScreenSettings.getProgressLineColor());
         settings.showProgressLineProperty().addListener((observable, oldValue, newValue) -> progressLine.setVisible(newValue && projectionType == ProjectionType.SONG));
-        settings.progressLinePositionIsTopProperty().addListener((observable, oldValue, newValue) -> {
-            double endY;
-            if (newValue) {
-                endY = 1;
-            } else {
-                endY = contentPane.getHeight() - 1;
-            }
-            progressLine.setStartY(endY);
-            progressLine.setEndY(endY);
-        });
+        settings.progressLinePositionIsTopProperty().addListener((observable, oldValue, newValue) -> setProgressLineProperties());
         this.textFlow.setProjectionScreenSettings(projectionScreenSettings);
         this.textFlow1.setProjectionScreenSettings(projectionScreenSettings);
     }
@@ -344,15 +335,11 @@ public class ProjectionScreenController {
             }
             return;
         }
-        setText3(activeText, projectionType, projectionDTO, true);
+        setText5(activeText, projectionType, projectionDTO, true);
         setBackGroundColor2(true);
+        setProgressLineProperties();
         for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
             projectionScreenController.repaint();
-        }
-        if (!projectionScreenSettings.isProgressLinePositionIsTop()) {
-            double endY = contentPane.getHeight() - 1;
-            progressLine.setStartY(endY);
-            progressLine.setEndY(endY);
         }
     }
 
@@ -438,25 +425,25 @@ public class ProjectionScreenController {
     }
 
     public void setText(String newText, ProjectionType projectionType, ProjectionDTO projectionDTO) {
+        setText5(newText, projectionType, projectionDTO, false);
+    }
+
+    public void setText5(String newText, ProjectionType projectionType, ProjectionDTO projectionDTO, boolean onlyForRepaint) {
         if (projectionType == ProjectionType.SONG) {
-            setSongVerseProjection(projectionDTO, newText);
+            setSongVerseProjection(projectionDTO, newText, onlyForRepaint);
         } else {
-            setText4(newText, projectionType, projectionDTO);
+            setText3(newText, projectionType, projectionDTO, onlyForRepaint);
         }
     }
 
-    private void setText4(String newText, ProjectionType projectionType, ProjectionDTO projectionDTO) {
-        setText3(newText, projectionType, projectionDTO, false);
-    }
-
-    private void setSongVerseProjection(ProjectionDTO projectionDTO, String text) {
+    private void setSongVerseProjection(ProjectionDTO projectionDTO, String text, boolean onlyForRepaint) {
         if (projectionDTO != null) {
             List<SongVerseProjectionDTO> songVerseProjectionDTOS = projectionDTO.getSongVerseProjectionDTOS();
             if (songVerseProjectionDTOS != null) {
                 if (projectionScreenSettings.isFocusOnSongPart()) {
                     String focusedText = getFocusedText(songVerseProjectionDTOS);
                     if (!focusedText.isEmpty()) {
-                        setText4(focusedText, ProjectionType.SONG, projectionDTO);
+                        setText3(focusedText, ProjectionType.SONG, projectionDTO, onlyForRepaint);
                         return;
                     }
                 }
@@ -466,7 +453,7 @@ public class ProjectionScreenController {
                 }
             }
         }
-        setText4(text, ProjectionType.SONG, projectionDTO);
+        setText3(text, ProjectionType.SONG, projectionDTO, onlyForRepaint);
     }
 
     private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS) {
@@ -1136,11 +1123,7 @@ public class ProjectionScreenController {
 
     public void setScene(Scene scene) {
         this.scene = scene;
-        if (!projectionScreenSettings.isProgressLinePositionIsTop()) {
-            double endY = scene.getHeight() - 1;
-            progressLine.setStartY(endY);
-            progressLine.setEndY(endY);
-        }
+        setProgressLineProperties();
     }
 
     public void setLineSize(double size) {
@@ -1159,6 +1142,17 @@ public class ProjectionScreenController {
     }
 
     private void setLineSizeMain(double size) {
+        setProgressLineProperties();
+        if (size == 0) {
+            progressLine.setStrokeWidth(0);
+        } else {
+            setProgressLineStrokeWidth();
+        }
+        final double width = contentPane.getWidth();
+        progressLine.setEndX(width * size);
+    }
+
+    private void setProgressLineProperties() {
         double progressLineThickness = projectionScreenSettings.getProgressLineThickness();
         progressLine.setStrokeLineCap(StrokeLineCap.BUTT);
         if (!projectionScreenSettings.isProgressLinePositionIsTop()) {
@@ -1169,13 +1163,13 @@ public class ProjectionScreenController {
             progressLine.setStartY(1 + progressLineThickness / 2);
             progressLine.setEndY(1 + progressLineThickness / 2);
         }
-        if (size == 0) {
-            progressLine.setStrokeWidth(0);
-        } else {
-            progressLine.setStrokeWidth(progressLineThickness);
+        if (progressLine.getStrokeWidth() > 0) {
+            setProgressLineStrokeWidth();
         }
-        final double width = contentPane.getWidth();
-        progressLine.setEndX(width * size);
+    }
+
+    private void setProgressLineStrokeWidth() {
+        progressLine.setStrokeWidth(projectionScreenSettings.getProgressLineThickness());
     }
 
     private void setLineSizeForOther(double size) {
@@ -1538,7 +1532,7 @@ public class ProjectionScreenController {
     public static double getCircleYInterpretation(double x) {
         double radius = 1.0;
         if (x < -radius || x > radius) {
-            LOG.warn("Input contrast must be in the range [-1, 1]. Was contrast: " + x);
+            LOG.warn("Input contrast must be in the range [-1, 1]. Was contrast: {}", x);
             //noinspection SuspiciousNameCombination
             return x;
         }
