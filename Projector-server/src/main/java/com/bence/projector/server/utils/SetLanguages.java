@@ -57,10 +57,10 @@ public class SetLanguages {
     public static void printLanguagesWords(SongRepository songRepository, LanguageService languageService) {
         List<Language> languages = languageService.findAll();
         Iterable<Song> songRepositoryAll = songRepository.findAll();
-        printLanguageWords(songRepositoryAll, languages, languages.get(10));
+        getLanguageWords(songRepositoryAll, languages, languages.get(10));
     }
 
-    public static void printLanguageWords(Iterable<Song> songs, List<Language> languages, Language language) {
+    public static String getLanguageWords(Iterable<Song> songs, List<Language> languages, Language language) {
         List<Song> allWithLanguage = filterSongsContainingLanguage(songs);
         Map<Language, Collection<String>> languageMap = getLanguageCollectionMap(languages);
         for (Song song : allWithLanguage) {
@@ -68,20 +68,22 @@ public class SetLanguages {
                 addWordByAlreadySettedLanguage(languageMap, song);
             }
         }
-        printLanguageWords(language, languageMap);
+        return getLanguageWords(language, languageMap);
     }
 
-    private static void printLanguageWords(Language language, Map<Language, Collection<String>> languageMap) {
+    private static String getLanguageWords(Language language, Map<Language, Collection<String>> languageMap) {
         Collection<String> wordsCollection = languageMap.get(language);
         List<String> sortedWords = getList(wordsCollection);
         Collections.sort(sortedWords);
         String previous = null;
+        StringBuilder s = new StringBuilder();
         for (String word : sortedWords) {
             if (!word.equals(previous)) {
-                System.out.println(word);
+                s.append(word).append("<br>");
             }
             previous = word;
         }
+        return s.toString();
     }
 
     private static List<String> getList(Collection<String> stringCollection) {
@@ -349,7 +351,7 @@ public class SetLanguages {
         for (SongVerse songVerse : song.getVerses()) {
             String[] split = songVerse.getText().split("[\\s\\t\\n\\r]");
             for (String word : split) {
-                word = stripAccents(word.toLowerCase());
+                // word = stripAccents(word.toLowerCase());
                 if (word.isEmpty()) {
                     continue;
                 }

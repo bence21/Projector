@@ -217,6 +217,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             return;
         }
         deleteNotFavouriteFavouriteSongs(oneByUuid);
+        handleDeleteForBackup(oneByUuid);
         delete(oneByUuid.getId());
         ConcurrentHashMap<String, Song> songsHashMap = getSongsHashMap();
         if (songsHashMap != null) {
@@ -230,6 +231,22 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 songsHashMap.remove(id);
             }
         }
+    }
+
+    private void handleDeleteForBackup(Song song) {
+        if (!song.isBackUp()) {
+            return;
+        }
+        Song parentSong = songRepository.findByBackUp(song);
+        if (parentSong == null) {
+            return;
+        }
+        Song serviceParentSong = findOneByUuid(parentSong.getUuid());
+        if (serviceParentSong != null) {
+            parentSong = serviceParentSong;
+        }
+        parentSong.setBackUp(song.getBackUp());
+        songRepository.save(parentSong);
     }
 
     private void deleteNotFavouriteFavouriteSongs(Song song) {

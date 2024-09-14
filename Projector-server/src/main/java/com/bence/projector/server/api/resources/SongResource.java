@@ -23,6 +23,7 @@ import com.bence.projector.server.backend.service.StatisticsService;
 import com.bence.projector.server.backend.service.SuggestionService;
 import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.mailsending.MailSenderService;
+import com.bence.projector.server.utils.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,7 +46,7 @@ import java.util.List;
 
 import static com.bence.projector.server.api.resources.StatisticsResource.saveStatistics;
 import static com.bence.projector.server.api.resources.UserPropertiesResource.getUserFromPrincipalAndUserService;
-import static com.bence.projector.server.utils.SetLanguages.printLanguageWords;
+import static com.bence.projector.server.utils.SetLanguages.getLanguageWords;
 import static com.bence.projector.server.utils.SetLanguages.setLanguagesForUnknown;
 import static com.bence.projector.server.utils.SongUtil.getLastModifiedSong;
 
@@ -591,13 +592,60 @@ public class SongResource {
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/admin/printALanguageWord/{languageId}")
-    public void printALanguageWord(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+    public String printALanguageWord(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
         Language language = languageService.findOneByUuid(languageId);
         if (language == null) {
-            return;
+            return "Language not found";
         }
         List<Language> languages = languageService.findAll();
-        printLanguageWords(songService.findAllByLanguage(language.getUuid()), languages, language);
+        return getLanguageWords(songService.findAllByLanguage(language.getUuid()), languages, language);
+    }
+
+    // @Scheduled(fixedRate = 5 * 60 * 1000)
+    @SuppressWarnings("unused")
+    public void checkEmptySongs_runEvery5Minute_() {
+        List<Song> songsByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();
+        int size = songsByVersesIsEmpty.size();
+        if (size != 0) {
+            System.out.println("Warning: found " + size + " empty songs!");
+            mailSenderService.sendEmailEmptySongs(songsByVersesIsEmpty);
+        }
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/checkForEmptySongs")
+    public ResponseEntity<Object> checkForEmptySongs() {
+        List<Song> songsByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();
+        int size = songsByVersesIsEmpty.size();
+        if (size == 0) {
+            printNotEmptySongsFound();
+        } else {
+            String baseUrl = AppProperties.getInstance().baseUrl();
+            for (Song song : songsByVersesIsEmpty) {
+                System.out.println(baseUrl + "/#/song/" + song.getUuid() + " " + song.getTitle());
+            }
+            System.out.println(size);
+        }
+        return new ResponseEntity<>(songAssembler.createDtoList(songsByVersesIsEmpty), HttpStatus.ACCEPTED);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/deleteEmptySongs")
+    public String deleteEmptySongs() {
+        List<Song> songsByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();
+        int size = songsByVersesIsEmpty.size();
+        if (size == 0) {
+            printNotEmptySongsFound();
+        } else {
+            for (Song song : songsByVersesIsEmpty) {
+                if (song.isDeleted()) {
+                    songService.deleteByUuid(song.getUuid());
+                }
+            }
+        }
+        return "Deleted: " + size;
+    }
+
+    private static void printNotEmptySongsFound() {
+        System.out.println("No empty songs were found.");
     }
 
     private boolean songHasCollection(Song song) {

@@ -93,7 +93,7 @@ public class StackResource {
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         mailSenderService.setToAdmin(helper);
-        helper.setFrom(mailSenderService.getInternetAddress());
+        helper.setFrom(mailSenderService.getNoReplyInternetAddress());
         helper.setSubject("Stack trace");
 
         try {

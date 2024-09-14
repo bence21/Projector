@@ -179,7 +179,7 @@ public class SongLinkResource {
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         mailSenderService.setToAdmin(helper);
-        helper.setFrom(mailSenderService.getInternetAddress());
+        helper.setFrom(mailSenderService.getNoReplyInternetAddress());
         helper.setSubject("Új verzió összekötés");
 
         try {

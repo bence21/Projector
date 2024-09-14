@@ -258,7 +258,7 @@ public class SongCollectionResource {
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         mailSenderService.setToAdmin(helper);
-        helper.setFrom(mailSenderService.getInternetAddress());
+        helper.setFrom(mailSenderService.getNoReplyInternetAddress());
         helper.setSubject("Gyűjtemény frissítése");
         try {
             Template template = config.getTemplate(freemarkerName);

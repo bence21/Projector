@@ -32,4 +32,8 @@ public interface SongRepository extends CrudRepository<Song, Long> {
     List<Song> findAllByCreatedByEmail(String createdByEmail);
 
     List<Song> findAllByLanguageAndCreatedByEmail(Language language, String createdByEmail);
+
+    List<Song> findAllByVersesIsEmpty();
+
+    Song findByBackUp(Song song);
 }

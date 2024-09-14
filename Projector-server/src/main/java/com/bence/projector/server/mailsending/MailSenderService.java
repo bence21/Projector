@@ -2,12 +2,15 @@ package com.bence.projector.server.mailsending;
 
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.NotificationByLanguage;
+import com.bence.projector.server.backend.model.NotificationStatus;
+import com.bence.projector.server.backend.model.NotificationType;
 import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.model.Suggestion;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.model.UserProperties;
+import com.bence.projector.server.backend.repository.NotificationStatusRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.NotificationByLanguageService;
 import com.bence.projector.server.backend.service.SongService;
@@ -32,6 +35,7 @@ import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -54,6 +58,8 @@ public class MailSenderService {
     private NotificationByLanguageService notificationByLanguageService;
     @Autowired
     private UserPropertiesService userPropertiesService;
+    @Autowired
+    private NotificationStatusRepository notificationStatusRepository;
 
     public void sendEmailSuggestionToUser(Suggestion suggestion, User user) {
         try {
@@ -161,7 +167,7 @@ public class MailSenderService {
             MimeMessageHelper helper;
             helper = new MimeMessageHelper(message, true);
             helper.setTo(new InternetAddress(user.getEmail()));
-            helper.setFrom(getInternetAddress());
+            helper.setFrom(getNoReplyInternetAddress());
             String subject;
             if (suggestions.size() > 1) {
                 subject = "New suggestions (" + suggestions.size() + ")";
@@ -185,25 +191,29 @@ public class MailSenderService {
     }
 
     private void sendNewSongs(List<Song> songs, User user) {
+        String subject;
+        if (songs.size() > 1) {
+            subject = "New songs (" + songs.size() + ")";
+        } else {
+            subject = "New song";
+        }
+        subject += addLanguageToSubject(songs, user);
+        sendGeneralEmail(user, songs, FreemarkerConfiguration.NEW_SONG, subject);
+    }
+
+    private void sendGeneralEmail(User user, List<Song> songs, String ftlPage, String subject) {
         try {
             if (!AppProperties.getInstance().isProduction()) {
                 return;
             }
-            final String freemarkerName = FreemarkerConfiguration.NEW_SONG + ".ftl";
+            final String freemarkerName = ftlPage + ".ftl";
             freemarker.template.Configuration config = ConfigurationUtil.getConfiguration();
             config.setDefaultEncoding("UTF-8");
             MimeMessage message = sender.createMimeMessage();
             MimeMessageHelper helper;
             helper = new MimeMessageHelper(message, true);
             helper.setTo(new InternetAddress(user.getEmail()));
-            helper.setFrom(getInternetAddress());
-            String subject;
-            if (songs.size() > 1) {
-                subject = "New songs (" + songs.size() + ")";
-            } else {
-                subject = "New song";
-            }
-            subject += addLanguageToSubject(songs, user);
+            helper.setFrom(getNoReplyInternetAddress());
             helper.setSubject(subject);
 
             Template template = config.getTemplate(freemarkerName);
@@ -221,7 +231,7 @@ public class MailSenderService {
 
     private String addLanguageToSubject(List<Song> songs, User user) {
         try {
-            if (songs.size() < 1) {
+            if (songs.isEmpty()) {
                 return "";
             }
             Language language = songs.get(0).getLanguage();
@@ -234,7 +244,7 @@ public class MailSenderService {
 
     private String addLanguageToSubjectFromSuggestions(List<Suggestion> suggestions, User user) {
         try {
-            if (suggestions.size() < 1) {
+            if (suggestions.isEmpty()) {
                 return "";
             }
             Language language = suggestions.get(0).getSong().getLanguage();
@@ -255,7 +265,7 @@ public class MailSenderService {
         return "";
     }
 
-    public InternetAddress getInternetAddress() throws AddressException {
+    public InternetAddress getNoReplyInternetAddress() throws AddressException {
         InternetAddress from = new InternetAddress("noreply@songpraise.com");
         try {
             from.setPersonal("SongPraise");
@@ -289,7 +299,7 @@ public class MailSenderService {
                 suggestionType = "Title change";
             } else {
                 List<SongVerse> verses = suggestion.getVerses();
-                if (verses == null || verses.size() < 1 || verses.get(0).getText().trim().isEmpty()) {
+                if (verses == null || verses.isEmpty() || verses.get(0).getText().trim().isEmpty()) {
                     suggestionType = "Only description";
                 } else {
                     suggestionType = "";
@@ -312,7 +322,7 @@ public class MailSenderService {
             MimeMessageHelper helper;
             helper = new MimeMessageHelper(message, true);
             helper.setTo(new InternetAddress(email));
-            helper.setFrom(getInternetAddress());
+            helper.setFrom(getNoReplyInternetAddress());
             helper.setSubject("Forgotten password");
 
             Template template = config.getTemplate(freemarkerName);
@@ -338,5 +348,48 @@ public class MailSenderService {
         data.put("link", link);
 
         return data;
+    }
+
+    public void sendEmailEmptySongs(List<Song> songsByVersesIsEmpty) {
+        Date oneDayBefore = getOneDayBefore();
+        List<NotificationStatus> notifications = notificationStatusRepository.findAllByNotificationTypeAndDateAfter(NotificationType.SONG_EMPTY, oneDayBefore);
+        if (notifications != null && !notifications.isEmpty()) {
+            return;
+        }
+        List<User> admins = userService.findAllAdmins();
+        new Thread(() -> {
+            for (User admin : admins) {
+                sendEmailEmptySongsForAdmin(admin, songsByVersesIsEmpty);
+            }
+        }).start();
+        saveEmptySongNotification();
+    }
+
+    private void saveEmptySongNotification() {
+        NotificationStatus notificationStatus = new NotificationStatus();
+        notificationStatus.setNotificationType(NotificationType.SONG_EMPTY);
+        notificationStatus.setDate(new Date());
+        notificationStatusRepository.save(notificationStatus);
+    }
+
+    private static Date getOneDayBefore() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, -1);
+        return calendar.getTime();
+    }
+
+    private void sendEmailEmptySongsForAdmin(User admin, List<Song> songsByVersesIsEmpty) {
+        int size = songsByVersesIsEmpty.size();
+        String s;
+        String sizeText;
+        if (size > 1) {
+            s = "s";
+            sizeText = " (" + size + ")";
+        } else {
+            s = "";
+            sizeText = "";
+        }
+        String subject = "Empty song" + s + " warning!" + sizeText;
+        sendGeneralEmail(admin, songsByVersesIsEmpty, FreemarkerConfiguration.EMPTY_SONGS_PAGE, subject);
     }
 }

@@ -191,7 +191,7 @@ public class UserResource {
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         helper.setTo(new InternetAddress(user.getEmail()));
-        helper.setFrom(mailSenderService.getInternetAddress());
+        helper.setFrom(mailSenderService.getNoReplyInternetAddress());
         if (language.equals("hu")) {
             helper.setSubject("Aktiválás");
         } else if (language.equals("ro")) {
@@ -221,7 +221,7 @@ public class UserResource {
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         mailSenderService.setToAdmin(helper);
-        helper.setFrom(mailSenderService.getInternetAddress());
+        helper.setFrom(mailSenderService.getNoReplyInternetAddress());
         helper.setSubject("New user");
         helper.getMimeMessage().setContent(writer.toString(), "text/html;charset=utf-8");
         sender.send(message);
