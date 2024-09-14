@@ -340,14 +340,26 @@ public class MailSenderService {
 
     private Map<String, Object> createPatternForForgottenPassword(String link) {
         Map<String, Object> data = new HashMap<>();
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        DateFormat dateFormat = getDateFormat();
 
         final Date currentDate = new Date();
-        data.put("currentDate", dateFormat.format(currentDate));
+        data.put("currentDate", getDateFormatted(dateFormat, currentDate));
         data.put("tokenExpiryDate", dateFormat.format(currentDate.getTime() + TOKEN_DURATION));
         data.put("link", link);
 
         return data;
+    }
+
+    private static String getDateFormatted(DateFormat dateFormat, Date currentDate) {
+        return dateFormat.format(currentDate);
+    }
+
+    public static String getDateFormatted2(Date currentDate) {
+        return getDateFormat().format(currentDate);
+    }
+
+    private static DateFormat getDateFormat() {
+        return new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
     }
 
     public void sendEmailEmptySongs(List<Song> songsByVersesIsEmpty) {

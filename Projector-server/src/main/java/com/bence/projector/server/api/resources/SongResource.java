@@ -27,6 +27,7 @@ import com.bence.projector.server.utils.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,6 +47,7 @@ import java.util.List;
 
 import static com.bence.projector.server.api.resources.StatisticsResource.saveStatistics;
 import static com.bence.projector.server.api.resources.UserPropertiesResource.getUserFromPrincipalAndUserService;
+import static com.bence.projector.server.mailsending.MailSenderService.getDateFormatted2;
 import static com.bence.projector.server.utils.SetLanguages.getLanguageWords;
 import static com.bence.projector.server.utils.SetLanguages.setLanguagesForUnknown;
 import static com.bence.projector.server.utils.SongUtil.getLastModifiedSong;
@@ -601,13 +603,12 @@ public class SongResource {
         return getLanguageWords(songService.findAllByLanguage(language.getUuid()), languages, language);
     }
 
-    // @Scheduled(fixedRate = 5 * 60 * 1000)
-    @SuppressWarnings("unused")
+    @Scheduled(fixedRate = 5 * 60 * 1000)
     public void checkEmptySongs_runEvery5Minute_() {
         List<Song> songsByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();
         int size = songsByVersesIsEmpty.size();
         if (size != 0) {
-            System.out.println("Warning: found " + size + " empty songs!");
+            System.out.println("Warning: found " + size + " empty songs!\t" + getDateFormatted2(new Date()));
             mailSenderService.sendEmailEmptySongs(songsByVersesIsEmpty);
         }
     }
@@ -641,7 +642,9 @@ public class SongResource {
                 }
             }
         }
-        return "Deleted: " + size;
+        String s = "Deleted: " + size;
+        System.out.println(s);
+        return s;
     }
 
     private static void printNotEmptySongsFound() {
