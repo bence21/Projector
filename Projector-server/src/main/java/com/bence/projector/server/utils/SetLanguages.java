@@ -422,7 +422,7 @@ public class SetLanguages {
             String[] split = songVerse.getText().split("[\\s\\t\\n\\r]");
             for (String word : split) {
                 // word = stripAccents(word.toLowerCase());
-                word = word.replaceAll("[^\\p{L}]", "");
+                word = word.replaceAll("(^[^\\p{L}]+|[^\\p{L}]+$)", "");
                 if (word.isEmpty()) {
                     continue;
                 }
