@@ -1,5 +1,7 @@
 package com.bence.projector.server.backend.model;
 
+import com.bence.projector.server.utils.AppProperties;
+
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
@@ -442,5 +444,13 @@ public class Song extends AbstractModel {
             return favouriteSongs = getEmptyList();
         }
         return favouriteSongs;
+    }
+
+    public String getSongLinkWithTitle() {
+        return getSongLink() + " " + getTitle();
+    }
+
+    public String getSongLink() {
+        return AppProperties.getInstance().baseUrl() + "/#/song/" + getUuid();
     }
 }

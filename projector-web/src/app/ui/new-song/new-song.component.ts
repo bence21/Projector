@@ -116,16 +116,32 @@ export class NewSongComponent implements OnInit {
     this.createForm();
     this.loadLanguage(false);
     this.calculateUsedSectionTypes();
-    this.guidelines = this.guidelineDataService.getAll();
+    this.guidelines = this.guidelineDataService.getAllWithDefaultCheckedState(this.isAdmin());
     this.submitButtonOrPublish();
   }
 
-  private submitButtonOrPublish() {
+  private getUser() {
     const user = this.auth.getUser();
     if (user == undefined || user == null) {
+      return null;
+    }
+    return user;
+  }
+
+  private submitButtonOrPublish() {
+    const user = this.getUser();
+    if (user == null) {
       return;
     }
     this.publish = user.activated;
+  }
+
+  private isAdmin(): Boolean {
+    const user = this.getUser();
+    if (user == null) {
+      return false;
+    }
+    return user.isAdmin();
   }
 
   SubmitOrPublish() {

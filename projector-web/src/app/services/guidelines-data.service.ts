@@ -22,6 +22,16 @@ export class GuidelineDataService {
     return guidelines;
   }
 
+   getAllWithDefaultCheckedState(defaultState: Boolean) {
+    let guidelines = this.getAll();
+    if (defaultState) {
+      for (const guideLine of guidelines) {
+        guideLine.checkboxState = true;
+      }
+    }
+    return guidelines;
+  }
+
   addGuideline(guidelines: any[], title, text): Guideline {
     const guideline = new Guideline();
     guideline.title = title;

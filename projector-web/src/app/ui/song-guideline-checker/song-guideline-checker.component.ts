@@ -14,6 +14,7 @@ export class SongGuidelineCheckerComponent implements OnInit {
   @Input()
   set pGuideline(guideline: Guideline) {
     this.guideline = guideline;
+    this.checkboxState = guideline.checkboxState;
   }
 
   constructor() { }

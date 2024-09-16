@@ -55,6 +55,10 @@
               <button type="button" mat-icon-button (click)="addNewVerse()" matTooltip="Add a new section">
                 <mat-icon>add</mat-icon>
               </button>
+              <button *ngIf="refactorable()" type="button" mat-icon-button (click)="refactor()"
+                matTooltip="Automatic fixes">
+                <mat-icon svgIcon="magic_tool">magic_tool</mat-icon>
+              </button>
               <br>
               <br>
               <div cdkDropListGroup>
@@ -118,10 +122,6 @@
           </div>
           <button *ngIf="showSimilarities && similar.length > 0" class="btn btn-success" (click)="submitForm()">
             Check similarities
-          </button>
-          <button *ngIf="refactorable()" type="button" mat-icon-button (click)="refactor()"
-            matTooltip="Automatic fixes">
-            <mat-icon svgIcon="magic_tool">magic_tool</mat-icon>
           </button>
         </form>
       </div>

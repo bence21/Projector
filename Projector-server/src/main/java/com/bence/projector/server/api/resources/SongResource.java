@@ -23,7 +23,6 @@ import com.bence.projector.server.backend.service.StatisticsService;
 import com.bence.projector.server.backend.service.SuggestionService;
 import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.mailsending.MailSenderService;
-import com.bence.projector.server.utils.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -595,12 +594,21 @@ public class SongResource {
 
     @RequestMapping(method = RequestMethod.GET, value = "/admin/printALanguageWord/{languageId}")
     public String printALanguageWord(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+        return getLanguageWords_(languageId, true);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/printALanguageWordsSimple/{languageId}")
+    public String printALanguageWordsSimple(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+        return getLanguageWords_(languageId, false);
+    }
+
+    private String getLanguageWords_(String languageId, boolean table) {
         Language language = languageService.findOneByUuid(languageId);
         if (language == null) {
             return "Language not found";
         }
         List<Language> languages = languageService.findAll();
-        return getLanguageWords(songService.findAllByLanguage(language.getUuid()), languages, language);
+        return getLanguageWords(songService.findAllByLanguage(language.getUuid()), languages, language, table);
     }
 
     @Scheduled(fixedRate = 5 * 60 * 1000)
@@ -620,9 +628,8 @@ public class SongResource {
         if (size == 0) {
             printNotEmptySongsFound();
         } else {
-            String baseUrl = AppProperties.getInstance().baseUrl();
             for (Song song : songsByVersesIsEmpty) {
-                System.out.println(baseUrl + "/#/song/" + song.getUuid() + " " + song.getTitle());
+                System.out.println(song.getSongLinkWithTitle());
             }
             System.out.println(size);
         }

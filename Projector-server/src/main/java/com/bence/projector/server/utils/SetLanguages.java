@@ -5,6 +5,7 @@ import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.utils.models.WordBunch;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,6 +42,14 @@ public class SetLanguages {
         return languageMap;
     }
 
+    private static Map<Language, Map<String, WordBunch>> getLanguageCollectionMapWordBunch(List<Language> languages) {
+        Map<Language, Map<String, WordBunch>> languageMaps = new HashMap<>();
+        for (Language language : languages) {
+            languageMaps.put(language, new HashMap<>());
+        }
+        return languageMaps;
+    }
+
     public static void setLanguagesForUnknown(SongRepository songRepository, LanguageService languageService) {
         List<Language> languages = languageService.findAll();
         Iterable<Song> songs = songRepository.findAll();
@@ -54,23 +63,25 @@ public class SetLanguages {
         setLanguagesForUnknownSongs(songRepository, languages, songs, songHashMap, languageMap);
     }
 
+    @SuppressWarnings("unused")
     public static void printLanguagesWords(SongRepository songRepository, LanguageService languageService) {
         List<Language> languages = languageService.findAll();
         Iterable<Song> songRepositoryAll = songRepository.findAll();
-        getLanguageWords(songRepositoryAll, languages, languages.get(10));
+        getLanguageWords(songRepositoryAll, languages, languages.get(10), false);
     }
 
-    public static String getLanguageWords(Iterable<Song> songs, List<Language> languages, Language language) {
+    public static String getLanguageWords(Iterable<Song> songs, List<Language> languages, Language language, boolean table) {
         List<Song> allWithLanguage = filterSongsContainingLanguage(songs);
-        Map<Language, Collection<String>> languageMap = getLanguageCollectionMap(languages);
+        Map<Language, Map<String, WordBunch>> languageMap = getLanguageCollectionMapWordBunch(languages);
         for (Song song : allWithLanguage) {
             if (!song.isDeleted()) {
-                addWordByAlreadySettedLanguage(languageMap, song);
+                addWordByAlreadySetLanguage_wordBunch(languageMap, song);
             }
         }
-        return getLanguageWords(language, languageMap);
+        return getLanguageWords_wordBunch(language, languageMap, table);
     }
 
+    @SuppressWarnings("unused")
     private static String getLanguageWords(Language language, Map<Language, Collection<String>> languageMap) {
         Collection<String> wordsCollection = languageMap.get(language);
         List<String> sortedWords = getList(wordsCollection);
@@ -84,6 +95,43 @@ public class SetLanguages {
             previous = word;
         }
         return s.toString();
+    }
+
+    private static String getLanguageWords_wordBunch(Language language, Map<Language, Map<String, WordBunch>> languageMap, boolean table) {
+        Map<String, WordBunch> wordsBunch = languageMap.get(language);
+        List<String> sortedWords = getList(wordsBunch.keySet());
+        Collections.sort(sortedWords);
+        StringBuilder s = new StringBuilder();
+        if (table) {
+            s.append("<table>");
+        }
+        List<String> subList = sortedWords.subList(0, sortedWords.size());
+        for (String word : subList) {
+            WordBunch wordBunch = wordsBunch.get(word);
+            if (table) {
+                s.append("<tr><td>");
+            }
+            s.append(word);
+            if (table) {
+                s.append("</td><td>");
+            } else {
+                s.append(" ");
+            }
+            s.append(wordBunch.getCount());
+            if (table) {
+                s.append("</td><td>").append(getHtmlSongLinkWithTitle(wordBunch.getSongs().get(0))).append("</td></tr>\n");
+            } else {
+                s.append("\n");
+            }
+        }
+        if (table) {
+            s.append("</table>");
+        }
+        return s.toString();
+    }
+
+    private static String getHtmlSongLinkWithTitle(Song song) {
+        return "<a href=\"" + song.getSongLink() + "\" target=\"_blank\">" + song.getTitle() + "</a>";
     }
 
     private static List<String> getList(Collection<String> stringCollection) {
@@ -104,7 +152,7 @@ public class SetLanguages {
         for (Song song : songs) {
             Song song1 = songHashMap.get(song.getUuid());
             if (song1 != null) {
-                addWordByAlreadySettedLanguage(languageMap, song1);
+                addWordByAlreadySetLanguage(languageMap, song1);
             }
         }
     }
@@ -335,16 +383,38 @@ public class SetLanguages {
         }
     }
 
+    @SuppressWarnings("unused")
     private static void setAndSaveLanguage(SongRepository songRepository, Map<Language, Collection<String>> languageMap, Song song, Language language5) {
         song.setLanguage(language5);
         songRepository.save(song);
         //        addWordsInCollection(song, languageMap.get(song.getLanguage()));
     }
 
-    private static void addWordByAlreadySettedLanguage(Map<Language, Collection<String>> languageMap, Song song1) {
+    private static void addWordByAlreadySetLanguage(Map<Language, Collection<String>> languageMap, Song song1) {
         Language language = song1.getLanguage();
         Collection<String> words = languageMap.get(language);
         addWordsInCollection(song1, words);
+    }
+
+    private static void addWordByAlreadySetLanguage_wordBunch(Map<Language, Map<String, WordBunch>> languageMap, Song song) {
+        Language language = song.getLanguage();
+        Map<String, WordBunch> words = languageMap.get(language);
+        addWordsInCollection_wordBunch(song, words);
+    }
+
+    private static void addWordsInCollection_wordBunch(Song song, Map<String, WordBunch> wordsBunch) {
+        Collection<String> wordsCollection = new ArrayList<>();
+        addWordsInCollection(song, wordsCollection);
+        for (String word : wordsCollection) {
+            WordBunch wordBunch = wordsBunch.get(word);
+            if (wordBunch == null) {
+                wordBunch = new WordBunch();
+                wordsBunch.put(word, wordBunch);
+                wordBunch.setWord(word);
+            }
+            wordBunch.incCount();
+            wordBunch.addSong(song);
+        }
     }
 
     private static void addWordsInCollection(Song song, Collection<String> words) {
@@ -352,6 +422,7 @@ public class SetLanguages {
             String[] split = songVerse.getText().split("[\\s\\t\\n\\r]");
             for (String word : split) {
                 // word = stripAccents(word.toLowerCase());
+                word = word.replaceAll("[^\\p{L}]", "");
                 if (word.isEmpty()) {
                     continue;
                 }
@@ -360,6 +431,7 @@ public class SetLanguages {
         }
     }
 
+    @SuppressWarnings("unused")
     private static String stripAccents(String word) {
         String nfdNormalizedString = Normalizer.normalize(word, Normalizer.Form.NFD);
         word = pattern.matcher(nfdNormalizedString).replaceAll("");
