@@ -28,12 +28,12 @@ class StringBuilder {
   }
 }
 
-const WHITE_SPACES = ' \\t\\f\\r';
+const WHITE_SPACES = ' \\t\\f\\r\u00A0';
 const whiteSpace = `[ ${WHITE_SPACES}]`; // \s matches also to \n
 const nonLetters = '\\P{L}';
 const nonLetters_saved = `([${nonLetters}])`;
 const letters_saved = '(\\p{L})';
-const someSymbols_saved = '([.?!,:])';
+const someSymbols_saved = '([.?!,:()])';
 const dot = '\\.';
 const simpleQuotationMarks = "\"'";
 const simpleQuotationMarks_saved = getSaved(simpleQuotationMarks);
@@ -67,6 +67,8 @@ export function format(s: string): string {
   newValue = XRegExp.replace(newValue, XRegExp(`^${s1}`, 'g'), '$1');
   newValue = XRegExp.replace(newValue, XRegExp(`\n${s1}`, 'g'), '\n$1');
   newValue = XRegExp.replace(newValue, XRegExp(`${someSymbols_saved} +([${endQuotationMark}])`, 'g'), '$1$2');
+  newValue = XRegExp.replace(newValue, XRegExp(`${letters_saved}\\(`, 'g'), '$1 (');
+  newValue = XRegExp.replace(newValue, XRegExp(`\\) +${someSymbols_saved}`, 'g'), ')$1');
   newValue = dividerReplace(newValue, '/');
   newValue = dividerReplace(newValue, VERTICAL_LINE);
   newValue = dividerReplaceLeft(newValue);

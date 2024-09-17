@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import static com.bence.projector.server.utils.StringUtils.WHITE_SPACES;
+
 public class SetLanguages {
     private static final Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 
@@ -419,7 +421,7 @@ public class SetLanguages {
 
     private static void addWordsInCollection(Song song, Collection<String> words) {
         for (SongVerse songVerse : song.getVerses()) {
-            String[] split = songVerse.getText().split("[\\s\\t\\n\\r]");
+            String[] split = songVerse.getText().split("[\\s\\n" + WHITE_SPACES + "]");
             for (String word : split) {
                 // word = stripAccents(word.toLowerCase());
                 word = word.replaceAll("(^[^\\p{L}]+|[^\\p{L}]+$)", "");

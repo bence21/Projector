@@ -13,12 +13,12 @@ public class StringUtils {
 
     private static final int N = 2000;
     private static final Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-    private static final String WHITE_SPACES = " \\t\\f\\r";
+    public static final String WHITE_SPACES = " \\t\\f\\r\\u00A0";
     private static final String whiteSpace = "[" + WHITE_SPACES + "]"; // \s matches also to \n
     private static final String nonLetters = "\\P{L}";
     private static final String nonLetters_saved = "([" + nonLetters + "])";
     private static final String letters_saved = "(\\p{L})";
-    private static final String someSymbols_saved = "([.?!,:])";
+    private static final String someSymbols_saved = "([.?!,:()])";
     private static final String dot = "\\.";
     private static final String simpleQuotationMarks = "\"'";
     private static final String simpleQuotationMarks_saved = getSaved(simpleQuotationMarks);
@@ -179,6 +179,8 @@ public class StringUtils {
         newValue = newValue.replaceAll("^" + s1, "$1");
         newValue = newValue.replaceAll("\n" + s1, "\n$1");
         newValue = newValue.replaceAll(someSymbols_saved + " +([" + endQuotationMark + "])", "$1$2");
+        newValue = newValue.replaceAll(letters_saved + "\\(", "$1 (");
+        newValue = newValue.replaceAll("\\) +" + someSymbols_saved, ")$1");
         newValue = dividerReplace(newValue, "/");
         newValue = dividerReplace(newValue, "\\|");
         newValue = dividerReplaceLeft(newValue);
