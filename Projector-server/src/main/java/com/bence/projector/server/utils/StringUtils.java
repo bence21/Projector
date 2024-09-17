@@ -39,11 +39,25 @@ public class StringUtils {
     private static final String otherThenSomeSymbols_saved = "([^ \t\n" + symbols + "|])";
     private static int[][] t = null;
 
-    @SuppressWarnings("unused")
     public static String stripAccents(String s) {
         String nfdNormalizedString = Normalizer.normalize(s, Normalizer.Form.NFD);
         s = pattern.matcher(nfdNormalizedString).replaceAll("");
+        s = replaceAllOtherThenLetterAndNumber(s);
+        return s;
+    }
+
+    private static String replaceAllOtherThenLetterAndNumber(String s) {
         s = s.replaceAll("[^a-zA-Z0-9]", "");
+        return s;
+    }
+
+    public static String normalizeAccents(String s) {
+        s = s.toLowerCase();
+        s = s.replaceAll("í", "i");
+        s = s.replaceAll("ó", "o");
+        s = s.replaceAll("ő", "ö");
+        s = s.replaceAll("ú", "u");
+        s = s.replaceAll("ű", "u");
         return s;
     }
 

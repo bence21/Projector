@@ -5,27 +5,26 @@ import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.utils.models.NormalizedWordBunch;
 import com.bence.projector.server.utils.models.WordBunch;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.Normalizer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 import static com.bence.projector.server.utils.StringUtils.WHITE_SPACES;
 
 public class SetLanguages {
-    private static final Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 
     private static HashMap<String, Song> getStringSongHashMap(List<Song> allWithLanguage) {
         HashMap<String, Song> songHashMap = new HashMap<>();
@@ -101,27 +100,42 @@ public class SetLanguages {
 
     private static String getLanguageWords_wordBunch(Language language, Map<Language, Map<String, WordBunch>> languageMap, boolean table) {
         Map<String, WordBunch> wordsBunch = languageMap.get(language);
-        List<String> sortedWords = getList(wordsBunch.keySet());
-        Collections.sort(sortedWords);
+        List<WordBunch> wordBunches = getList(wordsBunch.values());
+        wordBunches.sort(Comparator.comparing(WordBunch::getStripWordWord)
+                .thenComparing(WordBunch::getNormalizedWord)
+                .thenComparing(WordBunch::getWord));
         StringBuilder s = new StringBuilder();
         if (table) {
             s.append("<table>");
         }
-        List<String> subList = sortedWords.subList(0, sortedWords.size());
-        for (String word : subList) {
-            WordBunch wordBunch = wordsBunch.get(word);
+        List<WordBunch> subList = wordBunches.subList(0, wordBunches.size());
+        Map<String, NormalizedWordBunch> normalizedMap = calculateNormalizedWordBunchMap(subList);
+        for (WordBunch wordBunch : subList) {
+            boolean wordProblematic = false;
             if (table) {
-                s.append("<tr><td>");
+                wordProblematic = wordBunch.isProblematic();
+                s.append("<tr>");
+                NormalizedWordBunch normalizedWordBunch = normalizedMap.get(wordBunch.getNormalizedWord());
+                s.append("<td>").append(getProblematicStringForWordBunch(wordBunch, normalizedWordBunch)).append("</td>");
+                s.append("<td>");
+                if (wordProblematic) {
+                    String colorHex = getRedIntesityColorString(normalizedWordBunch);
+                    s.append("<span style=\"color: ").append(colorHex).append(";\">");
+                }
             }
-            s.append(word);
+            s.append(wordBunch.getWord());
             if (table) {
+                if (wordProblematic) {
+                    s.append("</span>");
+                }
                 s.append("</td><td>");
             } else {
                 s.append(" ");
             }
             s.append(wordBunch.getCount());
             if (table) {
-                s.append("</td><td>").append(getHtmlSongLinkWithTitle(wordBunch.getSongs().get(0))).append("</td></tr>\n");
+                s.append("</td><td>").append(getHtmlSongLinkWithTitle(wordBunch.getSongs().get(0))).append("</td>");
+                s.append("</tr>\n");
             } else {
                 s.append("\n");
             }
@@ -132,11 +146,37 @@ public class SetLanguages {
         return s.toString();
     }
 
+    private static String getRedIntesityColorString(NormalizedWordBunch normalizedWordBunch) {
+        double ratio = normalizedWordBunch.getRatio();
+        int redIntensity = (int) (255 * (ratio / 100));
+        return String.format("#%02X%02X%02X", redIntensity, 0, 0);
+    }
+
+    private static String getProblematicStringForWordBunch(WordBunch wordBunch, NormalizedWordBunch normalizedWordBunch) {
+        if (wordBunch.isProblematic()) {
+            return normalizedWordBunch.getRatioS() + "% !!";
+        }
+        return "";
+    }
+
+    private static Map<String, NormalizedWordBunch> calculateNormalizedWordBunchMap(List<WordBunch> subList) {
+        Map<String, NormalizedWordBunch> normalizedMap = new HashMap<>();
+        for (WordBunch wordBunch : subList) {
+            String key = wordBunch.getNormalizedWord();
+            NormalizedWordBunch normalizedWordBunch = normalizedMap.computeIfAbsent(key, k -> new NormalizedWordBunch());
+            normalizedWordBunch.add(wordBunch);
+        }
+        for (NormalizedWordBunch normalizedWordBunch : normalizedMap.values()) {
+            normalizedWordBunch.calculateBest();
+        }
+        return normalizedMap;
+    }
+
     private static String getHtmlSongLinkWithTitle(Song song) {
         return "<a href=\"" + song.getSongLink() + "\" target=\"_blank\">" + song.getTitle() + "</a>";
     }
 
-    private static List<String> getList(Collection<String> stringCollection) {
+    private static <T> List<T> getList(Collection<T> stringCollection) {
         return new ArrayList<>(stringCollection);
     }
 
@@ -431,13 +471,5 @@ public class SetLanguages {
                 words.add(word);
             }
         }
-    }
-
-    @SuppressWarnings("unused")
-    private static String stripAccents(String word) {
-        String nfdNormalizedString = Normalizer.normalize(word, Normalizer.Form.NFD);
-        word = pattern.matcher(nfdNormalizedString).replaceAll("");
-        word = word.replaceAll("[^a-zA-Z0-9]", "");
-        return word;
     }
 }
