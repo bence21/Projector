@@ -57,7 +57,7 @@ public class StringUtils {
         s = s.replaceAll("ó", "o");
         s = s.replaceAll("ő", "ö");
         s = s.replaceAll("ú", "u");
-        s = s.replaceAll("ű", "u");
+        s = s.replaceAll("ű", "ü");
         return s;
     }
 
