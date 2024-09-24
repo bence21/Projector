@@ -74,14 +74,19 @@ public enum SectionType {
         return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
     }
 
-    public String getBackgroundColor(boolean darkTheme) {
+    public String getBackgroundColorHex(boolean darkTheme) {
+        Color color = getBackgroundColor(darkTheme);
+        return colorToHex(color);
+    }
+
+    private Color getBackgroundColor(boolean darkTheme) {
         Color color;
         if (darkTheme) {
             color = getBackgroundColorDark();
         } else {
             color = getBackgroundColorLight();
         }
-        return colorToHex(color);
+        return color;
     }
 
     private Color getBackgroundColorDark() {

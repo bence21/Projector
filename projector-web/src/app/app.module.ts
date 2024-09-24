@@ -103,6 +103,8 @@ import { SongGuidelinesComponent } from './ui/song-guidelines/song-guidelines.co
 import { SongGuidelinesCheckerComponent } from './ui/song-guidelines-checker/song-guidelines-checker.component';
 import { GuidelineDataService } from './services/guidelines-data.service';
 import { SongGuidelineCheckerComponent } from './ui/song-guideline-checker/song-guideline-checker.component';
+import { WordsSpellCheckerComponent } from './ui/words-spell-checker/words-spell-checker.component';
+import { NormalizedWordBunchDataService } from './services/normalized-word-bunch-data.service';
 
 @NgModule({
   exports: [
@@ -195,6 +197,7 @@ export class PlunkerMaterialModule {
     SongGuidelinesComponent,
     SongGuidelinesCheckerComponent,
     SongGuidelineCheckerComponent,
+    WordsSpellCheckerComponent,
   ],
   imports: [
     BrowserModule,
@@ -231,6 +234,7 @@ export class PlunkerMaterialModule {
     Title,
     SongLinkDataService,
     GuidelineDataService,
+    NormalizedWordBunchDataService,
   ],
   bootstrap: [AppComponent]
 })

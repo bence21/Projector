@@ -71,7 +71,7 @@ public class SetLanguages {
         getLanguageWords(songRepositoryAll, languages, languages.get(10), false);
     }
 
-    public static String getLanguageWords(Iterable<Song> songs, List<Language> languages, Language language, boolean table) {
+    private static Map<Language, Map<String, WordBunch>> getLanguageMapMap(Iterable<Song> songs, List<Language> languages) {
         List<Song> allWithLanguage = filterSongsContainingLanguage(songs);
         Map<Language, Map<String, WordBunch>> languageMap = getLanguageCollectionMapWordBunch(languages);
         for (Song song : allWithLanguage) {
@@ -79,7 +79,17 @@ public class SetLanguages {
                 addWordByAlreadySetLanguage_wordBunch(languageMap, song);
             }
         }
-        return getLanguageWords_wordBunch(language, languageMap, table);
+        return languageMap;
+    }
+
+    public static String getLanguageWords(Iterable<Song> songs, List<Language> languages, Language language, boolean table) {
+        List<NormalizedWordBunch> normalizedWordBunches = getNormalizedWordBunches(songs, languages, language);
+        return getLanguageWords_wordBunch(normalizedWordBunches, table);
+    }
+
+    public static List<NormalizedWordBunch> getNormalizedWordBunches(Iterable<Song> songs, List<Language> languages, Language language) {
+        Map<Language, Map<String, WordBunch>> languageMap = getLanguageMapMap(songs, languages);
+        return getSortedNormalizedWordBunches(language, languageMap);
     }
 
     @SuppressWarnings("unused")
@@ -98,24 +108,81 @@ public class SetLanguages {
         return s.toString();
     }
 
-    private static String getLanguageWords_wordBunch(Language language, Map<Language, Map<String, WordBunch>> languageMap, boolean table) {
+    private static String getLanguageWords_wordBunch(List<NormalizedWordBunch> normalizedWordBunches, boolean table) {
+        StringBuilder s = getTableFromNormalizedWordBunches(table, normalizedWordBunches);
+        return s.toString();
+    }
+
+    private static List<NormalizedWordBunch> getSortedNormalizedWordBunches(Language language, Map<Language, Map<String, WordBunch>> languageMap) {
         Map<String, WordBunch> wordsBunch = languageMap.get(language);
         List<WordBunch> wordBunches = getList(wordsBunch.values());
-        wordBunches.sort(Comparator.comparing(WordBunch::getStripWordWord)
-                .thenComparing(WordBunch::getNormalizedWord)
-                .thenComparing(WordBunch::getWord));
+        Map<String, NormalizedWordBunch> normalizedMap = calculateNormalizedWordBunchMap(wordBunches);
+        List<NormalizedWordBunch> normalizedWordBunches = getList(normalizedMap.values());
+        sortNormalizedWordBunches(normalizedWordBunches);
+        return normalizedWordBunches;
+    }
+
+    private static void sortNormalizedWordBunches(List<NormalizedWordBunch> normalizedWordBunches) {
+        Comparator<WordBunch> wordBunchComparator = getWordBunchComparator();
+        normalizedWordBunches.sort((o1, o2) -> {
+            int compareRatio = Double.compare(o2.getRatioForCompare(), o1.getRatioForCompare());
+            if (compareRatio != 0) {
+                return compareRatio;
+            }
+            return wordBunchComparator.compare(o1.getMaxBunch(), o2.getMaxBunch());
+        });
+        sortNormalized_wordBunches(normalizedWordBunches);
+    }
+
+    private static void sortNormalized_wordBunches(List<NormalizedWordBunch> normalizedWordBunches) {
+        Comparator<WordBunch> wordBunchComparator = getWordBunchComparator();
+        for (NormalizedWordBunch normalizedWordBunch : normalizedWordBunches) {
+            List<WordBunch> wordBunches = normalizedWordBunch.getWordBunches();
+            String bestWord = normalizedWordBunch.getBestWord();
+            wordBunches.sort((o1, o2) -> {
+                int o1BestWord = bestWord.equalsIgnoreCase(o1.getWord()) ? -1 : 0;
+                int o2BestWord = bestWord.equalsIgnoreCase(o2.getWord()) ? -1 : 0;
+                int bestWordCompare = Integer.compare(o1BestWord, o2BestWord);
+                if (bestWordCompare != 0) {
+                    return bestWordCompare;
+                }
+                return wordBunchComparator.compare(o1, o2);
+            });
+        }
+    }
+
+    private static StringBuilder getTableFromNormalizedWordBunches(boolean table, List<NormalizedWordBunch> normalizedWordBunches) {
+        Comparator<WordBunch> wordBunchComparator = getWordBunchComparator();
         StringBuilder s = new StringBuilder();
         if (table) {
             s.append("<table>");
         }
-        List<WordBunch> subList = wordBunches.subList(0, wordBunches.size());
-        Map<String, NormalizedWordBunch> normalizedMap = calculateNormalizedWordBunchMap(subList);
-        for (WordBunch wordBunch : subList) {
+        for (NormalizedWordBunch normalizedWordBunch : normalizedWordBunches) {
+            List<WordBunch> wordBunches = normalizedWordBunch.getWordBunches();
+            String bestWord = normalizedWordBunch.getBestWord();
+            wordBunches.sort((o1, o2) -> {
+                int o1BestWord = bestWord.equalsIgnoreCase(o1.getWord()) ? -1 : 0;
+                int o2BestWord = bestWord.equalsIgnoreCase(o2.getWord()) ? -1 : 0;
+                int bestWordCompare = Integer.compare(o1BestWord, o2BestWord);
+                if (bestWordCompare != 0) {
+                    return bestWordCompare;
+                }
+                return wordBunchComparator.compare(o1, o2);
+            });
+            addWordBunchesToTable(table, normalizedWordBunch, wordBunches, s);
+        }
+        if (table) {
+            s.append("</table>");
+        }
+        return s;
+    }
+
+    private static void addWordBunchesToTable(boolean table, NormalizedWordBunch normalizedWordBunch, List<WordBunch> wordBunches, StringBuilder s) {
+        for (WordBunch wordBunch : wordBunches) {
             boolean wordProblematic = false;
             if (table) {
                 wordProblematic = wordBunch.isProblematic();
                 s.append("<tr>");
-                NormalizedWordBunch normalizedWordBunch = normalizedMap.get(wordBunch.getNormalizedWord());
                 s.append("<td>").append(getProblematicStringForWordBunch(wordBunch, normalizedWordBunch)).append("</td>");
                 s.append("<td>");
                 if (wordProblematic) {
@@ -140,10 +207,12 @@ public class SetLanguages {
                 s.append("\n");
             }
         }
-        if (table) {
-            s.append("</table>");
-        }
-        return s.toString();
+    }
+
+    private static Comparator<WordBunch> getWordBunchComparator() {
+        return Comparator.comparing(WordBunch::getStripWord)
+                .thenComparing(WordBunch::getNormalizedWord)
+                .thenComparing(WordBunch::getWord);
     }
 
     private static String getRedIntesityColorString(NormalizedWordBunch normalizedWordBunch) {
@@ -159,9 +228,9 @@ public class SetLanguages {
         return "";
     }
 
-    private static Map<String, NormalizedWordBunch> calculateNormalizedWordBunchMap(List<WordBunch> subList) {
+    private static Map<String, NormalizedWordBunch> calculateNormalizedWordBunchMap(List<WordBunch> wordBunches) {
         Map<String, NormalizedWordBunch> normalizedMap = new HashMap<>();
-        for (WordBunch wordBunch : subList) {
+        for (WordBunch wordBunch : wordBunches) {
             String key = wordBunch.getNormalizedWord();
             NormalizedWordBunch normalizedWordBunch = normalizedMap.computeIfAbsent(key, k -> new NormalizedWordBunch());
             normalizedWordBunch.add(wordBunch);

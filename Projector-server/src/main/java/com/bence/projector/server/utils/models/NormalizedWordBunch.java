@@ -7,8 +7,10 @@ import java.util.Map;
 
 public class NormalizedWordBunch {
     private List<WordBunch> wordBunches;
-    private double ratio;
+    private double ratio = 1.0;
     private String ratioS;
+    private String bestWord;
+    private WordBunch maxBunch;
 
     public NormalizedWordBunch() {
     }
@@ -48,11 +50,12 @@ public class NormalizedWordBunch {
     }
 
     public void calculateBest() {
-        WordBunch maxBunch = getMaxWordBunch();
+        maxBunch = getMaxWordBunch();
         if (maxBunch != null) {
             int sum = 0;
             int totalSum = 0;
-            String bestWordLowerCase = maxBunch.getWord().toLowerCase();
+            this.bestWord = maxBunch.getWord();
+            String bestWordLowerCase = bestWord.toLowerCase();
             for (WordBunch wordBunch : wordBunches) {
                 int count = wordBunch.getCount();
                 wordBunch.setProblematic(!bestWordLowerCase.equals(wordBunch.getWord().toLowerCase()));
@@ -67,7 +70,22 @@ public class NormalizedWordBunch {
         }
     }
 
+    public WordBunch getMaxBunch() {
+        return maxBunch;
+    }
+
+    public String getBestWord() {
+        return bestWord;
+    }
+
     public double getRatio() {
+        return ratio;
+    }
+
+    public double getRatioForCompare() {
+        if (ratio >= 100) {
+            return 0;
+        }
         return ratio;
     }
 

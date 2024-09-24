@@ -1,3 +1,61 @@
 /* You can add global styles to this file, and also import other style files */
 /*@import "app/themes/blue.css";*/
 @import '~@angular/material/prebuilt-themes/deeppurple-amber.css';
+
+.dark-theme {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+/* Update the mat-header-cell and mat-cell for the dark theme */
+.dark-theme .mat-header-cell,
+.dark-theme .mat-cell {
+  color: #e0e0e0;
+  background-color: #1e1e1e;
+}
+
+.dark-theme .mat-row:HOVER {
+  background: #424242;
+}
+
+.dark-theme .mat-header-row {
+  background-color: #212121;
+}
+
+/* Override mat-sort-header icon color for dark theme */
+.dark-theme .mat-sort-header-button {
+  color: #e0e0e0;
+}
+
+.dark-theme .mat-elevation-z8 {
+  box-shadow: none;
+}
+
+/* Dark theme styles for mat-paginator */
+.dark-theme .mat-paginator {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+/* Style the paginator buttons */
+.dark-theme .mat-paginator-navigation-button {
+  color: #e0e0e0;
+}
+
+/* Style the page input and select elements */
+.dark-theme .mat-paginator .mat-select-value-text,
+.dark-theme .mat-paginator .mat-paginator-range-label,
+.dark-theme .mat-paginator .mat-form-field {
+  color: #e0e0e0;
+}
+
+/* Style the border and input background in dark mode */
+.dark-theme .mat-paginator .mat-form-field-underline,
+.dark-theme .mat-paginator .mat-select-trigger {
+  background-color: #424242;
+}
+
+/* Hover effect for paginator buttons */
+.dark-theme .mat-paginator-navigation-button:hover {
+  background-color: #424242;
+}

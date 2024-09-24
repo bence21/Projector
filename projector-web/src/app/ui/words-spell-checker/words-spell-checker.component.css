@@ -1,0 +1,63 @@
+.example-container {
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+}
+
+.example-header {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  padding-left: 24px;
+  font-size: 20px;
+}
+
+.mat-table {
+  display: table;
+  width: 100%;
+}
+
+.mat-table>.mat-header-row,
+.mat-table>.mat-row {
+  display: table-row;
+  padding: 0;
+  border: none;
+}
+
+.mat-table>.mat-header-row>.mat-header-cell,
+.mat-table>.mat-row>.mat-cell {
+  display: table-cell;
+  height: 48px;
+  vertical-align: middle;
+  padding: 0 0.5em;
+
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.mat-row:HOVER {
+  background: #dadada;
+}
+
+.correction-container {
+  display: flex;
+  align-items: center;
+  /* justify-content: space-between; */
+  /* If you want the button pushed to the right */
+}
+
+.change-all-button-dark {
+  background-color: #333;
+  /* Dark theme background */
+  color: white;
+  /* White text for contrast */
+}
+
+button.mat-raised-button {
+  margin-left: 12px;
+  /* Space between the text and the button */
+}
+
+button.mat-raised-button:hover {
+  background-color: #555;
+  /* Slightly lighter color on hover */
+}

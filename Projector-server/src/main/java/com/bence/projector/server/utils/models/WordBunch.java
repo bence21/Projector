@@ -32,7 +32,7 @@ public class WordBunch {
         return normalizedWord;
     }
 
-    public String getStripWordWord() {
+    public String getStripWord() {
         if (stripWord == null) {
             stripWord = stripAccents(word.toLowerCase());
         }

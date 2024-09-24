@@ -44,6 +44,7 @@ import { EditSongComponent } from './ui/edit-song/edit-song.component';
 import { YoutubeIdCheckComponent } from './ui/youtube-id-check/youtube-id-check.component';
 import { EditTitleComponent } from './ui/edit-title/edit-title.component';
 import { ReviewerStatisticsListComponent } from './ui/reviewer-statistics-list/reviewer-statistics-list.component';
+import { WordsSpellCheckerComponent } from './ui/words-spell-checker/words-spell-checker.component';
 
 describe('AppComponent', () => {
   beforeEach(async(() => {
@@ -86,6 +87,7 @@ describe('AppComponent', () => {
         // SongCollectionElementComponent,
         EditTitleComponent,
         YoutubeIdCheckComponent,
+        WordsSpellCheckerComponent,
       ],
       imports: [
         BrowserModule,

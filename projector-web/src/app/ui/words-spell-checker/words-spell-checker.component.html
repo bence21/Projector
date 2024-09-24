@@ -1,0 +1,61 @@
+<mat-card class="dark-theme">
+  <mat-card-content style="overflow-x: auto">
+    <div class="example-container mat-elevation-z8">
+
+      <mat-table #table [dataSource]="dataSource" class="example-table" matSort>
+
+        <ng-container matColumnDef="Nr">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell">Nr</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell"> {{row.nr}}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="confidencePercentage">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>
+            {{'Confidence percentage'}}</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">{{row.getConfidencePercentageS()}}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="word">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{'Word'}}</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">
+            <span *ngIf="row.wordBunch.problematic" [style.color]="getRedIntensityColorString(row)">{{row.word}}</span>
+            <span *ngIf="!row.wordBunch.problematic">{{row.word}}</span>
+          </mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="correction">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell"
+            mat-sort-header>{{'Correction'}}</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">
+            <div class="correction-container">
+              {{row.correction}}
+              <button *ngIf="row.wordBunch.problematic" mat-raised-button color="accent" class="change-all-button-dark" (click)="changeAll(row)">
+                Change all ({{row.count}})
+              </button>
+            </div>
+          </mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="count">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell">{{'Occurrence'}}</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell"> {{row.count}}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="song">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{'Song'}}</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">
+            <a [href]="row.getSongLink()" target="_blank">{{row.getSongTitle()}}</a>
+          </mat-cell>
+        </ng-container>
+
+        <mat-header-row *matHeaderRowDef="displayedColumns" class="example-header-row"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;" class="example-row">
+        </mat-row>
+      </mat-table>
+      <mat-paginator [length]="normalizedWordBunchRows.length" [pageSize]="pageE.pageSize"
+        [pageSizeOptions]="[5, 10, 25, 50, 100, 500]" [pageIndex]="pageE.pageIndex" (page)="pageEvent($event)">
+      </mat-paginator>
+    </div>
+
+  </mat-card-content>
+</mat-card>

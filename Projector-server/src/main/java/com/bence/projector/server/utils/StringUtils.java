@@ -7,6 +7,7 @@ import java.text.Normalizer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StringUtils {
@@ -437,5 +438,15 @@ public class StringUtils {
         String divider = "\\\\";
         newValue = newValue.replaceAll(" *:+ *" + divider + "+", " :/");
         return newValue;
+    }
+
+    public static int countMatches(String s, String regex) {
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(s);
+        int matchCount = 0;
+        while (matcher.find()) {
+            matchCount++;
+        }
+        return matchCount;
     }
 }
