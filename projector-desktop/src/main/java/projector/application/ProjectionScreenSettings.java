@@ -623,7 +623,7 @@ public class ProjectionScreenSettings {
         return padding == null || padding;
     }
 
-    public void setProgressBarHeight(double progressBarHeightSlider) {
+    public void setProgressBarHeight(Double progressBarHeightSlider) {
         this.progressBarHeight = progressBarHeightSlider;
         onChanged();
     }
