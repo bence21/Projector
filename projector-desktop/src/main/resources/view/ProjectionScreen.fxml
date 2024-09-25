@@ -15,33 +15,37 @@
             <center>
                 <BorderPane fx:id="paneForMargins">
                     <center>
-                        <BorderPane fx:id="paneForPadding">
-                            <center>
-                                <BorderPane fx:id="contentPane">
-                                    <center>
-                                        <Pane fx:id="pane" BorderPane.alignment="CENTER">
-                                            <Line fx:id="progressLine" layoutY="1.0" stroke="#ffffffd0"/>
-                                            <MyTextFlow fx:id="textFlow" textAlignment="CENTER">
-                                            </MyTextFlow>
-                                            <Canvas fx:id="canvas" BorderPane.alignment="CENTER">
-                                            </Canvas>
-                                        </Pane>
-                                    </center>
-                                    <right>
-                                        <Pane fx:id="pane1" minWidth="150" BorderPane.alignment="CENTER">
-                                            <MyTextFlow fx:id="textFlow1" textAlignment="CENTER">
-                                            </MyTextFlow>
-                                        </Pane>
-                                    </right>
-                                </BorderPane>
-                            </center>
-                            <bottom>
-                                <StackPane fx:id="progressBarStackPane">
-                                    <HBox fx:id="progressBarHBox">
-                                    </HBox>
-                                </StackPane>
-                            </bottom>
-                        </BorderPane>
+                        <StackPane fx:id="paneForPadding">
+                            <BorderPane>
+                                <center>
+                                    <BorderPane fx:id="contentPane">
+                                        <center>
+                                            <Pane fx:id="pane" BorderPane.alignment="CENTER">
+                                                <Line fx:id="progressLine" layoutY="1.0" stroke="#ffffffd0"/>
+                                                <MyTextFlow fx:id="textFlow" textAlignment="CENTER">
+                                                </MyTextFlow>
+                                                <Canvas fx:id="canvas" BorderPane.alignment="CENTER">
+                                                </Canvas>
+                                            </Pane>
+                                        </center>
+                                        <right>
+                                            <Pane fx:id="pane1" minWidth="150" BorderPane.alignment="CENTER">
+                                                <MyTextFlow fx:id="textFlow1" textAlignment="CENTER">
+                                                </MyTextFlow>
+                                            </Pane>
+                                        </right>
+                                    </BorderPane>
+                                </center>
+                                <bottom>
+                                    <StackPane fx:id="progressBarStackPane">
+                                        <BorderPane fx:id="progressBarBackgroundBlack"/>
+                                        <HBox fx:id="progressBarHBox">
+                                        </HBox>
+                                    </StackPane>
+                                </bottom>
+                            </BorderPane>
+                            <BorderPane fx:id="blackCoverPane" visible="false"/>
+                        </StackPane>
                     </center>
                 </BorderPane>
             </center>

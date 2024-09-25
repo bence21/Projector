@@ -19,12 +19,16 @@ public class ColorUtil {
         return getGeneralTextColor();
     }
 
-    public static Color getGeneralTextColor() {
-        if (settings.isDarkTheme()) {
+    public static Color getGeneralTextColorByTheme(boolean darkTheme) {
+        if (darkTheme) {
             return Color.rgb(255, 255, 255);
         } else {
             return Color.rgb(0, 0, 0);
         }
+    }
+
+    public static Color getGeneralTextColor() {
+        return getGeneralTextColorByTheme(settings.isDarkTheme());
     }
 
     public static Color getSubduedTextColor() {

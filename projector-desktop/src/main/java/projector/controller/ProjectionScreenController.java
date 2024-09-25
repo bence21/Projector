@@ -83,7 +83,7 @@ import static projector.controller.GalleryController.clearCanvas;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
 import static projector.utils.ColorUtil.getColorWithOpacity;
-import static projector.utils.ColorUtil.getGeneralTextColor;
+import static projector.utils.ColorUtil.getGeneralTextColorByTheme;
 import static projector.utils.CountDownTimerUtil.getDisplayTextFromDateTime;
 import static projector.utils.CountDownTimerUtil.getRemainedTime;
 import static projector.utils.CountDownTimerUtil.getTimeTextFromDate;
@@ -102,9 +102,11 @@ public class ProjectionScreenController {
     private final String INITIAL_DOT_TEXT = "<color=\"0xffffff0c\">.</color>";
     public BorderPane paneForMargins;
     public BorderPane contentPane;
-    public BorderPane paneForPadding;
+    public StackPane paneForPadding;
     public StackPane progressBarStackPane;
     public HBox progressBarHBox;
+    public BorderPane blackCoverPane;
+    public BorderPane progressBarBackgroundBlack;
     private ExecutorService executorService = null;
     @FXML
     private Canvas canvas;
@@ -200,6 +202,7 @@ public class ProjectionScreenController {
         contentPane.widthProperty().addListener(getContentPaneSizeChangeListener());
         contentPane.heightProperty().addListener(getContentPaneSizeChangeListener());
         setPaneBackground(Color.BLACK, paneForMargins);
+        setPaneBackground(Color.BLACK, progressBarBackgroundBlack);
         setProgressBarHeight();
     }
 
@@ -376,6 +379,8 @@ public class ProjectionScreenController {
         }
         pane.setVisible(!isBlank);
         pane1.setVisible(!isBlank);
+        blackCoverPane.setVisible(isBlank);
+        setPaneBackground(Color.BLACK, blackCoverPane);
         onViewChanged();
         onBlankChanged();
     }
@@ -741,7 +746,7 @@ public class ProjectionScreenController {
             pane.setPrefWidth(width);
             hBoxChildren.add(pane);
             SectionType sectionType = songVersePartTextFlow.getSongVerse().getSectionType();
-            Color backgroundColor = Color.web(sectionType.getBackgroundColorHex(settings.isDarkTheme()));
+            Color backgroundColor = Color.web(sectionType.getBackgroundColorHex(true));
             songVersePartTextFlow.opacityProperty().addListener((observableValue, oldValue, newValue) -> setPaneBackgroundWithOpacity(songVersePartTextFlow, backgroundColor, pane));
             setPaneBackgroundWithOpacity(songVersePartTextFlow, backgroundColor, pane);
         }
@@ -752,7 +757,7 @@ public class ProjectionScreenController {
         Text text = new Text(songVerse.getSectionTypeStringWithCount());
         int v = 80;
         text.setFont(Font.font(v));
-        text.setFill(getGeneralTextColor());
+        text.setFill(getGeneralTextColorByTheme(true));
         double scaleFactor = height / text.getBoundsInLocal().getHeight();
         if (scaleFactor < 1) {
             text.setFont(Font.font(v * scaleFactor));
@@ -816,6 +821,9 @@ public class ProjectionScreenController {
     }
 
     private void setPaneBackgroundWithOpacity(SongVersePartTextFlow songVersePartTextFlow, Color backgroundColor, Pane pane) {
+        if (isLock()) {
+            return;
+        }
         Color backgroundColorWithOpacity = getColorWithOpacity(backgroundColor, songVersePartTextFlow.getOpacity());
         setPaneBackground(backgroundColorWithOpacity, pane);
     }
@@ -1483,7 +1491,7 @@ public class ProjectionScreenController {
         return paneForPadding;
     }
 
-    private BorderPane getPaneForMargins() {
+    private Pane getPaneForMargins() {
         if (projectionScreenSettings.isAsPadding()) {
             return paneForPadding;
         }

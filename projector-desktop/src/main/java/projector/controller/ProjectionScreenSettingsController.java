@@ -147,6 +147,7 @@ public class ProjectionScreenSettingsController {
         projectionScreenSettings.setRightMargin(projectionScreenSettingsModel.getRightMargin());
         projectionScreenSettings.setBottomMargin(projectionScreenSettingsModel.getBottomMargin());
         projectionScreenSettings.setLeftMargin(projectionScreenSettingsModel.getLeftMargin());
+        projectionScreenSettings.setAsPadding(projectionScreenSettingsModel.getAsPadding());
         projectionScreenSettings.setProgressBar(projectionScreenSettingsModel.getProgressBar());
         projectionScreenSettings.setProgressBarHeight(projectionScreenSettingsModel.getProgressBarHeight());
         projectionScreenSettings.save();
