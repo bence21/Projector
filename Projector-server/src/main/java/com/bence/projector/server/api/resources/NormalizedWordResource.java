@@ -88,7 +88,7 @@ public class NormalizedWordResource {
             }
             song.setModifiedDate(modifiedDate);
         }
-        songService.save(songs);
+        songService.saveAllAndRemoveCache(songs);
         return new ResponseEntity<>(changeWordDTO, HttpStatus.ACCEPTED);
     }
 }

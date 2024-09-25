@@ -63,4 +63,6 @@ public interface SongService extends BaseService<Song> {
     Song reloadSong(Song song);
 
     List<Song> filterSongsByCreatedEmail(List<Song> songs, String createdByEmail);
+
+    void saveAllAndRemoveCache(List<Song> songs);
 }

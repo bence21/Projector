@@ -782,6 +782,18 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return song;
     }
 
+    @Override
+    public void saveAllAndRemoveCache(List<Song> songs) {
+        save(songs);
+        removeSongsFromHashMap(songs);
+    }
+
+    private void removeSongsFromHashMap(List<Song> songs) {
+        for (Song song : songs) {
+            removeSongFromHashMap(song);
+        }
+    }
+
     private void removeSongFromHashMap(Song song) {
         String uuid = song.getUuid();
         songsHashMap.remove(uuid);
