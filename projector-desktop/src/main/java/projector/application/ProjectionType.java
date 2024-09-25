@@ -7,7 +7,7 @@ public enum ProjectionType {
     CLIP_BOARD("Clipboard"),
     COUNTDOWN_TIMER("Countdown timer"),
     IMAGE("Image"),
-    ;
+    CLEAR("Clear");
 
     private final String text;
 

@@ -246,7 +246,7 @@ public class SettingsController {
         referenceVerseSorting.setSelected(settings.isReferenceVerseSorting());
         initializeProgressLine();
         initializeNetworkButtons();
-        progressLineThicknessSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, settings.getProgressLineThickness()));
+        progressLineThicknessSpinner.setValueFactory(getProgressLineSpinnerValueFactory(settings.getProgressLineThickness()));
         bibleShortNameCheckBox.setSelected(settings.getBibleShortName());
         automaticProjectionScreensCheckBox.setSelected(settings.isAutomaticProjectionScreens());
         shareOnLocalNetworkAutomaticallyCheckbox.setSelected(settings.isShareOnLocalNetworkAutomatically());
@@ -266,6 +266,10 @@ public class SettingsController {
             case "applicationDark.css" -> appearanceComboBox.getSelectionModel().select(1);
         }
         prepareChangeEvents();
+    }
+
+    public static SpinnerValueFactory.IntegerSpinnerValueFactory getProgressLineSpinnerValueFactory(Integer progressLineThickness) {
+        return new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 10, progressLineThickness);
     }
 
     private void initializeAlignmentComponents() {

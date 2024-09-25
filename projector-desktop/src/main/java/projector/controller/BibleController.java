@@ -49,6 +49,7 @@ import projector.application.ProjectionType;
 import projector.application.Reader;
 import projector.application.Settings;
 import projector.controller.eventHandler.NextButtonEventHandler;
+import projector.controller.util.ProjectionData;
 import projector.model.Bible;
 import projector.model.BibleVerse;
 import projector.model.Book;
@@ -176,6 +177,7 @@ public class BibleController {
     private static String stripAccents(String s) {
         try {
             s = Normalizer.normalize(s, Normalizer.Form.NFD);
+            //noinspection RegExpSimplifiable
             s = s.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -750,7 +752,7 @@ public class BibleController {
                                 verseTextField.setText(text);
                             } catch (Exception e) {
                                 LOG.error(e.getMessage(), e);
-                                LOG.error("Charachter: " + text);
+                                LOG.error("Charachter: {}", text);
                             }
                             verseTextField.requestFocus();
                             event.consume();
@@ -1675,7 +1677,9 @@ public class BibleController {
             int iVerse;
             iVerse = getFirstFromSelectedIndices(ob);
             String text = null;
+            ProjectionData projectionData = new ProjectionData();
             ProjectionDTO projectionDTO = new ProjectionDTO();
+            projectionData.setProjectionDTO(projectionDTO);
             if (selectedBook >= 0 && selectedPart >= 0 && iVerse >= 0) {
                 List<VerseIndex> verseIndices = new ArrayList<>();
                 List<BibleVerse> bibleVerses = new ArrayList<>(ob.size());
@@ -1707,7 +1711,7 @@ public class BibleController {
             if (!string.isEmpty()) {
                 if (!settings.isShowReferenceOnly()) {
                     //noinspection ConstantConditions
-                    projectionScreenController.setText(text, ProjectionType.BIBLE, projectionDTO);
+                    projectionScreenController.setText(text, ProjectionType.BIBLE, projectionData);
                 }
                 for (int i : ob) {
                     if (i == -1) {
@@ -1718,7 +1722,7 @@ public class BibleController {
                 }
                 refreshReferenceTextArea();
                 if (settings.isShowReferenceOnly()) {
-                    projectionScreenController.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, projectionDTO);
+                    projectionScreenController.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, projectionData);
                 }
             }
         } catch (Exception e) {

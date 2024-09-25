@@ -1,7 +1,7 @@
 package projector.application;
 
-import com.bence.projector.common.dto.ProjectionDTO;
 import com.google.gson.annotations.Expose;
+import projector.controller.util.ProjectionData;
 import projector.model.Language;
 import projector.model.Song;
 import projector.service.ServiceManager;
@@ -15,7 +15,7 @@ public class ProjectorState {
     private boolean isBlank;
     @Expose
     private ProjectionType projectionType;
-    private ProjectionDTO projectionDTO;
+    private ProjectionData projectionData;
     @Expose
     private String activeText;
     @Expose
@@ -49,12 +49,12 @@ public class ProjectorState {
         this.projectionType = projectionType;
     }
 
-    public ProjectionDTO getProjectionDTO() {
-        return projectionDTO;
+    public ProjectionData getProjectionData() {
+        return projectionData;
     }
 
-    public void setProjectionDTO(ProjectionDTO projectionDTO) {
-        this.projectionDTO = projectionDTO;
+    public void setProjectionData(ProjectionData projectionDTO) {
+        this.projectionData = projectionDTO;
     }
 
     public String getActiveText() {

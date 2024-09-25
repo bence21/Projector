@@ -2,7 +2,10 @@ package projector.controller;
 
 import com.bence.projector.common.dto.ProjectionDTO;
 import com.bence.projector.common.dto.SongVerseProjectionDTO;
+import com.bence.projector.common.model.SectionType;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -12,6 +15,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.ColorAdjust;
+import javafx.scene.effect.Glow;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Background;
@@ -20,13 +24,21 @@ import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
+import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Popup;
 import javafx.stage.Screen;
@@ -45,10 +57,15 @@ import projector.controller.listener.ViewChangedListener;
 import projector.controller.song.SongController;
 import projector.controller.util.AutomaticAction;
 import projector.controller.util.ImageCacheService;
+import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.model.CustomCanvas;
+import projector.model.Song;
+import projector.model.SongVerse;
+import projector.utils.SongVerseHolder;
 import projector.utils.scene.text.MyTextFlow;
+import projector.utils.scene.text.SongVersePartTextFlow;
 
 import java.io.IOException;
 import java.net.URL;
@@ -65,12 +82,15 @@ import static java.lang.Thread.sleep;
 import static projector.controller.GalleryController.clearCanvas;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
+import static projector.utils.ColorUtil.getColorWithOpacity;
+import static projector.utils.ColorUtil.getGeneralTextColor;
 import static projector.utils.CountDownTimerUtil.getDisplayTextFromDateTime;
 import static projector.utils.CountDownTimerUtil.getRemainedTime;
 import static projector.utils.CountDownTimerUtil.getTimeTextFromDate;
 import static projector.utils.SceneUtils.getAStage;
 import static projector.utils.SceneUtils.getCustomStage;
 import static projector.utils.SceneUtils.getTransparentStage;
+import static projector.utils.scene.text.SongVersePartTextFlow.setVisibility;
 import static projector.utils.scene.text.TextFlowUtils.getColoredText;
 import static projector.utils.scene.text.TextFlowUtils.getItalicText;
 
@@ -83,6 +103,8 @@ public class ProjectionScreenController {
     public BorderPane paneForMargins;
     public BorderPane contentPane;
     public BorderPane paneForPadding;
+    public StackPane progressBarStackPane;
+    public HBox progressBarHBox;
     private ExecutorService executorService = null;
     @FXML
     private Canvas canvas;
@@ -104,7 +126,7 @@ public class ProjectionScreenController {
     //    private List<Text> textsList;
     private BibleController bibleController;
     private ProjectionType projectionType = ProjectionType.BIBLE;
-    private ProjectionDTO projectionDTO;
+    private ProjectionData projectionData;
     private ProjectionScreenController parentProjectionScreenController;
     private ProjectionScreenController doubleProjectionScreenController;
     private ProjectionScreenController previewProjectionScreenController;
@@ -175,9 +197,57 @@ public class ProjectionScreenController {
         settings = Settings.getInstance();
         progressLine.setVisible(false);
         initializeMargins();
-        contentPane.widthProperty().addListener((observableValue, number, t1) -> repaint());
-        contentPane.heightProperty().addListener((observableValue, number, t1) -> repaint());
+        contentPane.widthProperty().addListener(getContentPaneSizeChangeListener());
+        contentPane.heightProperty().addListener(getContentPaneSizeChangeListener());
         setPaneBackground(Color.BLACK, paneForMargins);
+        setProgressBarHeight();
+    }
+
+    private ChangeListener<Number> getContentPaneSizeChangeListener() {
+        //noinspection CommentedOutCode
+        return (observableValue, oldNumber, newNumber) -> {
+            // if (false && !changedSignificantly(oldNumber, newNumber)) {
+            //     return;
+            // }
+            repaint();
+        };
+    }
+
+    @SuppressWarnings("unused")
+    private static boolean changedSignificantly(Number oldNumber, Number newNumber) {
+        if (oldNumber == null) {
+            return newNumber != null;
+        }
+        double oldValue = oldNumber.doubleValue();
+        double newValue = newNumber.doubleValue();
+        if (oldValue < newValue) {
+            return oldValue / newValue <= 0.99;
+        } else {
+            return newValue / oldValue <= 0.99;
+        }
+    }
+
+    private void setProgressBarHeight() {
+        double height = paneForPadding.getHeight() * projectionScreenSettings.getProgressBarHeightD();
+        List<HBox> hBoxes = getProgressBarHBoxes();
+        for (HBox hBox : hBoxes) {
+            setHBoxSizes(hBox, paneForPadding.getWidth(), height);
+        }
+    }
+
+    private void setHBoxSizes(HBox hBox, double width, double height) {
+        hBox.setPrefWidth(width);
+        hBox.setMaxWidth(width);
+        hBox.setPrefHeight(height);
+        hBox.setMaxHeight(height);
+    }
+
+    private ArrayList<HBox> getProgressBarHBoxes() {
+        ArrayList<HBox> hBoxes = new ArrayList<>();
+        // hBoxes.add(progressBarBackgroundHBox);
+        hBoxes.add(progressBarHBox);
+        // hBoxes.add(progressBarTopHBox);
+        return hBoxes;
     }
 
     public void setOnMainProjectionEvent() {
@@ -224,7 +294,11 @@ public class ProjectionScreenController {
 
     private void initializeFromSettings() {
         progressLine.setStroke(projectionScreenSettings.getProgressLineColor());
-        settings.showProgressLineProperty().addListener((observable, oldValue, newValue) -> progressLine.setVisible(newValue && projectionType == ProjectionType.SONG));
+        settings.showProgressLineProperty().addListener((observable, oldValue, newValue) -> {
+            boolean isSong = projectionType == ProjectionType.SONG;
+            progressLine.setVisible(newValue && isSong);
+            setVisibility(progressBarHBox, newValue && isSong);
+        });
         settings.progressLinePositionIsTopProperty().addListener((observable, oldValue, newValue) -> setProgressLineProperties());
         this.textFlow.setProjectionScreenSettings(projectionScreenSettings);
         this.textFlow1.setProjectionScreenSettings(projectionScreenSettings);
@@ -316,7 +390,7 @@ public class ProjectionScreenController {
         if (isLock) {
             return;
         }
-        setText(activeText, projectionType, projectionDTO);
+        setText(activeText, projectionType, projectionData);
         for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
             projectionScreenController.reload();
         }
@@ -335,9 +409,10 @@ public class ProjectionScreenController {
             }
             return;
         }
-        setText5(activeText, projectionType, projectionDTO, true);
+        setText5(activeText, projectionType, projectionData, true);
         setBackGroundColor2(true);
         setProgressLineProperties();
+        setProgressBarHeight();
         for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
             projectionScreenController.repaint();
         }
@@ -374,7 +449,7 @@ public class ProjectionScreenController {
                         Platform.runLater(() -> {
                             String s = timeTextFromDate;
                             s = addFinishTime(finishedDate, showFinishTime, s);
-                            setText(s, ProjectionType.COUNTDOWN_TIMER, projectionDTO);
+                            setText(s, ProjectionType.COUNTDOWN_TIMER, projectionData);
                         });
                     }
                     //noinspection BusyWait
@@ -414,7 +489,7 @@ public class ProjectionScreenController {
         }
         Platform.runLater(() -> {
             switch (automaticAction) {
-                case EMPTY -> setText("", ProjectionType.SONG, projectionDTO);
+                case EMPTY -> setText("", ProjectionType.SONG, projectionData);
                 case SONG_TITLE -> getSongController().selectSongTitle();
             }
         });
@@ -424,26 +499,34 @@ public class ProjectionScreenController {
         setText(newText, projectionType, null);
     }
 
-    public void setText(String newText, ProjectionType projectionType, ProjectionDTO projectionDTO) {
-        setText5(newText, projectionType, projectionDTO, false);
+    public void clearText() {
+        setText2("", ProjectionType.CLEAR); // this should send also over network. The simple clear button not
     }
 
-    public void setText5(String newText, ProjectionType projectionType, ProjectionDTO projectionDTO, boolean onlyForRepaint) {
+    public void setText(String newText, ProjectionType projectionType, ProjectionData projectionData) {
+        setText5(newText, projectionType, projectionData, false);
+    }
+
+    public void setText5(String newText, ProjectionType projectionType, ProjectionData projectionData, boolean onlyForRepaint) {
         if (projectionType == ProjectionType.SONG) {
-            setSongVerseProjection(projectionDTO, newText, onlyForRepaint);
+            setSongVerseProjection(projectionData, newText, onlyForRepaint);
         } else {
-            setText3(newText, projectionType, projectionDTO, onlyForRepaint);
+            setText3(newText, projectionType, projectionData, onlyForRepaint);
         }
     }
 
-    private void setSongVerseProjection(ProjectionDTO projectionDTO, String text, boolean onlyForRepaint) {
-        if (projectionDTO != null) {
-            List<SongVerseProjectionDTO> songVerseProjectionDTOS = projectionDTO.getSongVerseProjectionDTOS();
+    private void setSongVerseProjection(ProjectionData projectionData, String text, boolean onlyForRepaint) {
+        if (projectionData != null) {
+            List<SongVerseProjectionDTO> songVerseProjectionDTOS = null;
+            ProjectionDTO projectionDTO = projectionData.getProjectionDTO();
+            if (projectionDTO != null) {
+                songVerseProjectionDTOS = projectionDTO.getSongVerseProjectionDTOS();
+            }
             if (songVerseProjectionDTOS != null) {
                 if (projectionScreenSettings.isFocusOnSongPart()) {
                     String focusedText = getFocusedText(songVerseProjectionDTOS);
                     if (!focusedText.isEmpty()) {
-                        setText3(focusedText, ProjectionType.SONG, projectionDTO, onlyForRepaint);
+                        setText3(focusedText, ProjectionType.SONG, projectionData, onlyForRepaint);
                         return;
                     }
                 }
@@ -453,7 +536,7 @@ public class ProjectionScreenController {
                 }
             }
         }
-        setText3(text, ProjectionType.SONG, projectionDTO, onlyForRepaint);
+        setText3(text, ProjectionType.SONG, projectionData, onlyForRepaint);
     }
 
     private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS) {
@@ -497,7 +580,7 @@ public class ProjectionScreenController {
         return focusedText.toString();
     }
 
-    private void setText3(String newText, ProjectionType projectionType, ProjectionDTO projectionDTO, boolean onlyForRepaint) {
+    private void setText3(String newText, ProjectionType projectionType, ProjectionData projectionData, boolean onlyForRepaint) {
         if (!newText.equals(INITIAL_DOT_TEXT)) {
             this.setTextCalled = true;
         }
@@ -513,20 +596,21 @@ public class ProjectionScreenController {
             hideImageIfNotImageType(projectionType);
             this.projectionType = projectionType;
             activeText = newText;
-            this.projectionDTO = projectionDTO;
+            this.projectionData = projectionData;
             if (previewProjectionScreenController != null && !onlyForRepaint) {
-                previewProjectionScreenController.setText(newText, projectionType, projectionDTO);
+                previewProjectionScreenController.setText(newText, projectionType, projectionData);
             }
             if (isLock) {
                 return;
             }
+            handleSongProgressBar(projectionType);
             if (!onlyForRepaint) {
                 for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-                    projectionScreenController.setText(newText, projectionType, projectionDTO);
+                    projectionScreenController.setText(newText, projectionType, projectionData);
                 }
                 if (projectionTextChangeListeners != null) {
                     for (ProjectionTextChangeListener projectionTextChangeListener : projectionTextChangeListeners) {
-                        projectionTextChangeListener.onSetText(newText, projectionType, projectionDTO);
+                        projectionTextChangeListener.onSetText(newText, projectionType, projectionData);
                     }
                 }
             }
@@ -563,6 +647,177 @@ public class ProjectionScreenController {
             textFlow1.setText2("", 0, height);
             onViewChanged();
         });
+    }
+
+    private Song getSong() {
+        if (projectionData == null) {
+            return null;
+        }
+        return projectionData.getSong();
+    }
+
+    private void handleSongProgressBar(ProjectionType projectionType) {
+        List<HBox> hBoxes = getProgressBarHBoxes();
+        for (HBox hBox : hBoxes) {
+            hBox.getChildren().clear();
+        }
+        Song song = getSong();
+        boolean visible = projectionType == ProjectionType.SONG && song != null && projectionScreenSettings.isProgressBar() && settings.isShowProgressLine();
+        if (visible) {
+            List<SongVersePartTextFlow> songVersePartTextFlows = projectionData.getSongVersePartTextFlows();
+            int n = songVersePartTextFlows.size();
+            progressBarHBox.setPrefWidth(paneForPadding.getWidth());
+            double width = paneForPadding.getWidth() / n;
+            double height = progressBarHBox.getPrefHeight();
+            List<SongVerse> songVerses = song.getSongVersesByVerseOrder();
+            if (songVerses == null) {
+                return;
+            }
+            createProgressBarPanes(song, width, height);
+        }
+        if (projectionType == ProjectionType.CLEAR) {
+            progressBarHBox.setVisible(false);
+        } else {
+            setVisibility(progressBarHBox, visible);
+        }
+    }
+
+    private void createProgressBarPanes(Song song, double width, double height) {
+        ObservableList<Node> progressBarHBoxChildren = progressBarHBox.getChildren();
+        int i = 0;
+        List<SongVerseHolder> songVerseHolders = song.getSongVerseHolders();
+        for (SongVerseHolder songVerseHolder : songVerseHolders) {
+            SongVerse songVerse = songVerseHolder.getSongVerse();
+            double currentSongVerseWidth = width * songVerse.getSplitTexts().size();
+            StackPane stackPane = new StackPane();
+            stackPane.setPrefWidth(currentSongVerseWidth);
+            stackPane.setPrefHeight(height);
+            stackPane.setMaxWidth(currentSongVerseWidth);
+            stackPane.setMaxHeight(height);
+            Pane pane = new Pane();
+            pane.setPrefWidth(currentSongVerseWidth);
+            pane.setMaxWidth(currentSongVerseWidth);
+            pane.setPrefHeight(height);
+            pane.setMaxHeight(height);
+            pane.getChildren().add(stackPane);
+            pane.setClip(new Rectangle(currentSongVerseWidth, height));
+            progressBarHBoxChildren.add(pane);
+            List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+            ObservableList<Node> stackPaneChildren = stackPane.getChildren();
+
+            createProgressBarBackgroundPane(songVersePartTextFlows, currentSongVerseWidth, width, stackPaneChildren);
+            addSectionText(height, songVerse, currentSongVerseWidth, stackPaneChildren);
+
+            SongVersePartTextFlow previousLast = getLastSongVersePartTextFlow(getFromList(songVerseHolders, i - 1));
+            SongVersePartTextFlow nextFirst = getFirstSongVersePartTextFlow(getFromList(songVerseHolders, i + 1));
+            createProgressBarTopPane(songVersePartTextFlows, currentSongVerseWidth, width, stackPaneChildren, previousLast, nextFirst);
+            ++i;
+        }
+    }
+
+    private SongVersePartTextFlow getFirstSongVersePartTextFlow(SongVerseHolder songVerseHolder) {
+        if (songVerseHolder == null) {
+            return null;
+        }
+        List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+        return getFromList(songVersePartTextFlows, 0);
+    }
+
+    private SongVersePartTextFlow getLastSongVersePartTextFlow(SongVerseHolder songVerseHolder) {
+        if (songVerseHolder == null) {
+            return null;
+        }
+        List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+        return getFromList(songVersePartTextFlows, songVersePartTextFlows.size() - 1);
+    }
+
+    private void createProgressBarBackgroundPane(List<SongVersePartTextFlow> songVersePartTextFlows, double currentSongVerseWidth, double width, ObservableList<Node> stackPaneChildren) {
+        HBox hBox = new HBox();
+        setHBoxSizes(hBox, currentSongVerseWidth, progressBarHBox.getPrefHeight());
+        hBox.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(1))));
+        ObservableList<Node> hBoxChildren = hBox.getChildren();
+        for (SongVersePartTextFlow songVersePartTextFlow : songVersePartTextFlows) {
+            Pane pane = new Pane();
+            pane.setPrefWidth(width);
+            hBoxChildren.add(pane);
+            SectionType sectionType = songVersePartTextFlow.getSongVerse().getSectionType();
+            Color backgroundColor = Color.web(sectionType.getBackgroundColorHex(settings.isDarkTheme()));
+            songVersePartTextFlow.opacityProperty().addListener((observableValue, oldValue, newValue) -> setPaneBackgroundWithOpacity(songVersePartTextFlow, backgroundColor, pane));
+            setPaneBackgroundWithOpacity(songVersePartTextFlow, backgroundColor, pane);
+        }
+        stackPaneChildren.add(hBox);
+    }
+
+    private static void addSectionText(double height, SongVerse songVerse, double currentSongVerseWidth, ObservableList<Node> stackPaneChildren) {
+        Text text = new Text(songVerse.getSectionTypeStringWithCount());
+        int v = 80;
+        text.setFont(Font.font(v));
+        text.setFill(getGeneralTextColor());
+        double scaleFactor = height / text.getBoundsInLocal().getHeight();
+        if (scaleFactor < 1) {
+            text.setFont(Font.font(v * scaleFactor));
+        }
+        scaleFactor = currentSongVerseWidth / text.getBoundsInLocal().getWidth();
+        if (scaleFactor < 1) //noinspection CommentedOutCode
+        {
+            text.setFont(Font.font(text.getFont().getSize() * scaleFactor));
+            // leaves a black space
+            // text.setTranslateX(-(text.getBoundsInLocal().getWidth() - currentSongVerseWidth) / 2);
+            // text.setScaleX(scaleFactor);
+        }
+        stackPaneChildren.add(text);
+    }
+
+    private void createProgressBarTopPane(List<SongVersePartTextFlow> songVersePartTextFlows, double currentSongVerseWidth, double width, ObservableList<Node> stackPaneChildren, SongVersePartTextFlow previousLast, SongVersePartTextFlow nextFirst) {
+        double progressBarSelectionBorderWidth = 21.0 * projectionScreenSettings.getProgressBarHeightD();
+        HBox hBox = new HBox();
+        setHBoxSizes(hBox, currentSongVerseWidth, progressBarHBox.getPrefHeight());
+        ObservableList<Node> hBoxChildren = hBox.getChildren();
+        int i = -1;
+        for (SongVersePartTextFlow songVersePartTextFlow : songVersePartTextFlows) {
+            ++i;
+            Pane pane = new Pane();
+            pane.setPrefWidth(width);
+            hBoxChildren.add(pane);
+            if (songVersePartTextFlow.isSelected()) {
+                Glow glow = new Glow();
+                glow.setLevel(0.5);
+                pane.setEffect(glow);
+                SongVersePartTextFlow previousSongVersePartTextFlow = getFromListWithDefault(songVersePartTextFlows, i - 1, previousLast);
+                SongVersePartTextFlow nextSongVersePartTextFlow = getFromListWithDefault(songVersePartTextFlows, i + 1, nextFirst);
+                double leftBorderWidth = isSongVersePartTextFlowSelected(previousSongVersePartTextFlow) ? 0 : progressBarSelectionBorderWidth;
+                double rightBorderWidth = isSongVersePartTextFlowSelected(nextSongVersePartTextFlow) ? 0 : progressBarSelectionBorderWidth;
+                pane.setBorder(new Border(new BorderStroke(settings.getProgressLineColor(), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(progressBarSelectionBorderWidth, rightBorderWidth, progressBarSelectionBorderWidth, leftBorderWidth))));
+            }
+        }
+        stackPaneChildren.add(hBox);
+    }
+
+    private boolean isSongVersePartTextFlowSelected(SongVersePartTextFlow songVersePartTextFlow) {
+        if (songVersePartTextFlow == null) {
+            return false;
+        }
+        return songVersePartTextFlow.isSelected();
+    }
+
+    private <T> T getFromList(List<T> songVersePartTextFlows, int i) {
+        if (songVersePartTextFlows.size() <= i || i < 0) {
+            return null;
+        }
+        return songVersePartTextFlows.get(i);
+    }
+
+    private SongVersePartTextFlow getFromListWithDefault(List<SongVersePartTextFlow> songVersePartTextFlows, int i, SongVersePartTextFlow defaultSongVersePart) {
+        SongVersePartTextFlow songVersePartTextFlow = getFromList(songVersePartTextFlows, i);
+        if (songVersePartTextFlow == null) {
+            return defaultSongVersePart;
+        }
+        return songVersePartTextFlow;
+    }
+
+    private void setPaneBackgroundWithOpacity(SongVersePartTextFlow songVersePartTextFlow, Color backgroundColor, Pane pane) {
+        Color backgroundColorWithOpacity = getColorWithOpacity(backgroundColor, songVersePartTextFlow.getOpacity());
+        setPaneBackground(backgroundColorWithOpacity, pane);
     }
 
     private static double getHorizontalCorrigateByTextAlignment(TextAlignment textAlignment) {
@@ -614,6 +869,7 @@ public class ProjectionScreenController {
         textFlow.setText2("", 0, 10);
         textFlow1.setText2("", 0, 10);
         progressLine.setVisible(false);
+        progressBarHBox.setVisible(false);
         hideCanvas();
         onViewChanged();
     }
@@ -775,7 +1031,7 @@ public class ProjectionScreenController {
     private void setSomeInitializationForDoubleProjectionScreenController() {
         doubleProjectionScreenController.setBlank(isBlank);
         doubleProjectionScreenController.setParentProjectionScreenController(doubleProjectionScreenController);
-        doubleProjectionScreenController.setText(activeText, projectionType, projectionDTO);
+        doubleProjectionScreenController.setText(activeText, projectionType, projectionData);
     }
 
     public void createCustomStageWithIterator(Iterator<CustomCanvas> iterator) {
@@ -858,7 +1114,7 @@ public class ProjectionScreenController {
                 });
                 customCanvasClose(stage2, customCanvas);
                 customStageController.setBlank(isBlank);
-                customStageController.setText(activeText, projectionType, projectionDTO);
+                customStageController.setText(activeText, projectionType, projectionData);
                 customCanvas.setStage(stage2);
                 customStageController.createCustomStageWithIterator(iterator);
             } catch (IOException e) {
@@ -957,7 +1213,7 @@ public class ProjectionScreenController {
             stage.show();
         }
         if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.setText(activeText, projectionType, projectionDTO);
+            previewProjectionScreenController.setText(activeText, projectionType, projectionData);
         }
     }
 
@@ -988,7 +1244,7 @@ public class ProjectionScreenController {
     }
 
     public void loadEmpty() {
-        setText("", projectionType, projectionDTO);
+        setText("", projectionType, projectionData);
         setBackGroundColor();
     }
 
@@ -1126,9 +1382,9 @@ public class ProjectionScreenController {
         setProgressLineProperties();
     }
 
-    public void setLineSize(double size) {
+    public void setProgress(double size) {
         if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.setLineSize(size);
+            previewProjectionScreenController.setProgress(size);
         }
         if (!isLock) {
             if (contentPane == null) {
@@ -1174,19 +1430,7 @@ public class ProjectionScreenController {
 
     private void setLineSizeForOther(double size) {
         for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.setLineSize(size);
-        }
-    }
-
-    public void progressLineSetVisible(boolean newValue) {
-        if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.progressLineSetVisible(newValue);
-        }
-        if (!isLock) {
-            progressLine.setVisible(newValue);
-            for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-                projectionScreenController.progressLineSetVisible(newValue);
-            }
+            projectionScreenController.setProgress(size);
         }
     }
 
@@ -1195,7 +1439,7 @@ public class ProjectionScreenController {
             projectionTextChangeListeners = new ArrayList<>();
         }
         projectionTextChangeListeners.add(projectionTextChangeListener);
-        projectionTextChangeListener.onSetText(activeText, projectionType, projectionDTO);
+        projectionTextChangeListener.onSetText(activeText, projectionType, projectionData);
     }
 
     public void removeProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
@@ -1342,7 +1586,7 @@ public class ProjectionScreenController {
     }
 
     public void setInitialDotText() {
-        setText(INITIAL_DOT_TEXT, ProjectionType.REFERENCE, projectionDTO);
+        setText(INITIAL_DOT_TEXT, ProjectionType.REFERENCE, projectionData);
     }
 
     private List<ProjectionScreenController> getDoubleAndCanvasProjectionScreenController() {
@@ -1395,7 +1639,7 @@ public class ProjectionScreenController {
 
     public void updateProjectorState(ProjectorState projectorState) {
         projectorState.setProjectionType(projectionType);
-        projectorState.setProjectionDTO(projectionDTO);
+        projectorState.setProjectionData(projectionData);
         projectorState.setActiveText(activeText);
     }
 
@@ -1403,7 +1647,7 @@ public class ProjectionScreenController {
         String s = projectorState.getActiveText();
         ProjectionType stateProjectionType = projectorState.getProjectionType();
         if (s != null && stateProjectionType != null) {
-            setText(s, stateProjectionType, projectorState.getProjectionDTO());
+            setText(s, stateProjectionType, projectorState.getProjectionData());
         }
     }
 
@@ -1493,7 +1737,7 @@ public class ProjectionScreenController {
             //noinspection ForLoopReplaceableByForEach
             for (int i = 0; i < projectionTextChangeListeners.size(); ++i) {
                 ProjectionTextChangeListener projectionTextChangeListener = projectionTextChangeListeners.get(i);
-                projectionTextChangeListener.onImageChanged(image, projectionType, projectionDTO);
+                projectionTextChangeListener.onImageChanged(image, projectionType, projectionData);
             }
         }
     }

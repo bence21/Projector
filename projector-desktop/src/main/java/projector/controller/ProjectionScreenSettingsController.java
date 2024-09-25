@@ -39,6 +39,7 @@ import java.util.function.DoubleConsumer;
 import static projector.controller.SettingsController.addFonts;
 import static projector.controller.SettingsController.getDoubleFromTextField;
 import static projector.controller.SettingsController.getFontWeightByString;
+import static projector.controller.SettingsController.getProgressLineSpinnerValueFactory;
 import static projector.controller.SettingsController.getStrokeSizeFactory;
 import static projector.controller.SettingsController.imageBrowseWithTextFieldResult;
 import static projector.controller.SettingsController.initializeStrokeTypeComboBox_;
@@ -108,6 +109,8 @@ public class ProjectionScreenSettingsController {
     public ResetButton marginsReset;
     public ComboBox<ProjectionScreenBunch> screenComboBox;
     public HBox swapScreenHBox;
+    public CheckBox progressBarCheckbox;
+    public Slider progressBarHeightSlider;
     private Stage stage;
     private ProjectionScreenSettings projectionScreenSettings;
     private ProjectionScreenSettings projectionScreenSettingsModel;
@@ -144,6 +147,8 @@ public class ProjectionScreenSettingsController {
         projectionScreenSettings.setRightMargin(projectionScreenSettingsModel.getRightMargin());
         projectionScreenSettings.setBottomMargin(projectionScreenSettingsModel.getBottomMargin());
         projectionScreenSettings.setLeftMargin(projectionScreenSettingsModel.getLeftMargin());
+        projectionScreenSettings.setProgressBar(projectionScreenSettingsModel.getProgressBar());
+        projectionScreenSettings.setProgressBarHeight(projectionScreenSettingsModel.getProgressBarHeight());
         projectionScreenSettings.save();
         ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
         if (projectionScreenController != null) {
@@ -199,6 +204,7 @@ public class ProjectionScreenSettingsController {
         initializeShowSongSecondTextCheckBox(settings);
         initializeSongSecondTextColorPicker(settings);
         initializeFontListView(settings);
+        initializeProgressBar();
         showSongSecondTextCheckBox.setSelected(projectionScreenSettings.isShowSongSecondText());
         songSecondTextColorPicker.setValue(projectionScreenSettings.getSongSecondTextColor());
         projectionScreenSettingsModel.setOnChangedListener(this::updatePreview);
@@ -270,6 +276,31 @@ public class ProjectionScreenSettingsController {
 
     private void setHorizontalAlignmentResetVisibility() {
         horizontalAlignmentSliderReset.setVisible(projectionScreenSettingsModel.getHorizontalAlignment() != null);
+    }
+
+    private void initializeProgressBar() {
+        progressBarCheckbox.setSelected(projectionScreenSettings.isProgressBar());
+        progressBarCheckbox.selectedProperty().addListener((observableValue, oldValue, newValue) ->
+                projectionScreenSettingsModel.setProgressBar(newValue));
+        progressBarHeightSlider.setOnKeyPressed(event -> {
+            switch (event.getCode()) {
+                case UP:
+                case RIGHT:
+                    changeSliderValue(0.1);
+                    break;
+                case DOWN:
+                case LEFT:
+                    changeSliderValue(-0.1);
+                    break;
+            }
+        });
+        progressBarHeightSlider.setValue(projectionScreenSettings.getProgressBarHeightD() * 100);
+        progressBarHeightSlider.valueProperty().addListener((observable, oldValue, newValue) ->
+                projectionScreenSettingsModel.setProgressBarHeight(newValue.doubleValue() / 100));
+    }
+
+    private void changeSliderValue(double v) {
+        progressBarHeightSlider.setValue(progressBarHeightSlider.getValue() + v);
     }
 
     private void initializeTextAlignment(Settings settings) {
@@ -493,7 +524,7 @@ public class ProjectionScreenSettingsController {
     }
 
     private void initializeProgressLineThicknessSpinner(Settings settings) {
-        SpinnerValueFactory.IntegerSpinnerValueFactory spinnerValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, projectionScreenSettings.getProgressLineThickness());
+        SpinnerValueFactory.IntegerSpinnerValueFactory spinnerValueFactory = getProgressLineSpinnerValueFactory(projectionScreenSettings.getProgressLineThickness());
         progressLineThicknessSpinner.setValueFactory(spinnerValueFactory);
         setProgressLineThicknessResetVisibility();
         progressLineThicknessSpinnerReset.setOnAction2(event -> {

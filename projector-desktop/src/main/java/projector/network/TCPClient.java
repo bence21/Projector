@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
 import projector.application.Settings;
 import projector.controller.ProjectionScreenController;
+import projector.controller.util.ProjectionData;
 import projector.model.Bible;
 import projector.model.VerseIndex;
 import projector.service.ServiceManager;
@@ -168,7 +169,7 @@ public class TCPClient {
                                         String projectionTypeName = inFromServer.readLine();
                                         fromServer = inFromServer.readLine();
                                         if (fromServer.equals("end 'projectionType'")) {
-                                            projectionScreenController.setText(text, ProjectionType.valueOf(projectionTypeName), projectionDTO);
+                                            projectionScreenController.setText(text, ProjectionType.valueOf(projectionTypeName), getProjectionData(projectionDTO));
                                         }
                                     }
                                 }
@@ -190,6 +191,12 @@ public class TCPClient {
             }
         });
         thread.start();
+    }
+
+    private static ProjectionData getProjectionData(ProjectionDTO projectionDTO) {
+        ProjectionData projectionData = new ProjectionData();
+        projectionData.setProjectionDTO(projectionDTO);
+        return projectionData;
     }
 
     private static String getTextFromProjectionDTO(ProjectionDTO projectionDTO, String originalText) {

@@ -1,6 +1,5 @@
 package projector.remote;
 
-import com.bence.projector.common.dto.ProjectionDTO;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import javafx.collections.ObservableList;
@@ -12,6 +11,7 @@ import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.song.SongController;
 import projector.controller.song.util.SearchedSong;
+import projector.controller.util.ProjectionData;
 import projector.model.Song;
 import projector.utils.scene.text.SongVersePartTextFlow;
 
@@ -41,7 +41,7 @@ public class Sender {
         writer = new Thread(() -> {
             ProjectionTextChangeListener projectionTextChangeListener = new ProjectionTextChangeListener() {
                 @Override
-                public void onSetText(String text, ProjectionType projectionType, ProjectionDTO projectionDTO) {
+                public void onSetText(String text, ProjectionType projectionType, ProjectionData projectionData) {
                     try {
                         String s = "start 'text'\n"
                                 + text + "\n"
@@ -69,7 +69,7 @@ public class Sender {
                 }
 
                 @Override
-                public void onImageChanged(Image image, ProjectionType projectionType, ProjectionDTO projectionDTO) {
+                public void onImageChanged(Image image, ProjectionType projectionType, ProjectionData projectionData) {
 
                 }
             };

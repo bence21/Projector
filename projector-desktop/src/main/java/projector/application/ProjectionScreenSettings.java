@@ -100,6 +100,10 @@ public class ProjectionScreenSettings {
     private Boolean asPadding;
     @Expose
     private Boolean focusOnSongPart;
+    @Expose
+    private Boolean progressBar;
+    @Expose
+    private Double progressBarHeight;
     // check for copy constructor!
     private Listener onChangedListener = null;
 
@@ -152,6 +156,8 @@ public class ProjectionScreenSettings {
         this.leftMargin = projectionScreenSettings.leftMargin;
         this.asPadding = projectionScreenSettings.asPadding;
         this.focusOnSongPart = projectionScreenSettings.focusOnSongPart;
+        this.progressBar = projectionScreenSettings.progressBar;
+        this.progressBarHeight = projectionScreenSettings.progressBarHeight;
         // Also copy fromJson in load method!!!
         return settings;
     }
@@ -349,6 +355,8 @@ public class ProjectionScreenSettings {
             this.bottomMargin = fromJson.bottomMargin;
             this.leftMargin = fromJson.leftMargin;
             this.focusOnSongPart = fromJson.focusOnSongPart;
+            this.progressBar = fromJson.progressBar;
+            this.progressBarHeight = fromJson.progressBarHeight;
         } catch (FileNotFoundException ignored) {
         } catch (IOException e) {
             LOG.error(e.getMessage(), e);
@@ -514,6 +522,10 @@ public class ProjectionScreenSettings {
         return get_double(getStrokeSize());
     }
 
+    private static boolean get_boolean(Boolean aBoolean) {
+        return aBoolean != null ? aBoolean : false;
+    }
+
     private static double get_double(Double aDouble) {
         if (aDouble == null) {
             return 0;
@@ -609,6 +621,36 @@ public class ProjectionScreenSettings {
     public boolean isAsPadding() {
         Boolean padding = getAsPadding();
         return padding == null || padding;
+    }
+
+    public void setProgressBarHeight(double progressBarHeightSlider) {
+        this.progressBarHeight = progressBarHeightSlider;
+        onChanged();
+    }
+
+    public Double getProgressBarHeight() {
+        return progressBarHeight;
+    }
+
+    public double getProgressBarHeightD() {
+        Double progressBarHeight = getProgressBarHeight();
+        if (progressBarHeight == null) {
+            return 0.08; // default value
+        }
+        return get_double(progressBarHeight);
+    }
+
+    public boolean isProgressBar() {
+        return get_boolean(progressBar);
+    }
+
+    public void setProgressBar(Boolean progressBar) {
+        this.progressBar = progressBar;
+        onChanged();
+    }
+
+    public Boolean getProgressBar() {
+        return progressBar;
     }
 
     public interface Listener {

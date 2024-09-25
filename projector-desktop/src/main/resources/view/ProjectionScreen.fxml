@@ -2,11 +2,13 @@
 
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.shape.Line?>
 <?import projector.utils.scene.text.MyTextFlow?>
-<BorderPane xmlns:fx="http://javafx.com/fxml/1" styleClass="background"
-            stylesheets="@ProjectionScreen.css" xmlns="http://javafx.com/javafx/8"
+<BorderPane styleClass="background" stylesheets="@ProjectionScreen.css"
+            xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="projector.controller.ProjectionScreenController">
     <center>
         <BorderPane fx:id="mainPane">
@@ -33,6 +35,12 @@
                                     </right>
                                 </BorderPane>
                             </center>
+                            <bottom>
+                                <StackPane fx:id="progressBarStackPane">
+                                    <HBox fx:id="progressBarHBox">
+                                    </HBox>
+                                </StackPane>
+                            </bottom>
                         </BorderPane>
                     </center>
                 </BorderPane>

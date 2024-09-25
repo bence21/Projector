@@ -73,7 +73,7 @@ public class Settings {
     private OrderMethod songOrderMethod = OrderMethod.RELEVANCE;
     private boolean breakLines = false;
     private int breakAfter = 77;
-    private Integer progressLineThickness = 5;
+    private Integer progressLineThickness = 0;
     private Language songSelectedLanguage;
     private boolean bibleShortName = false;
     private boolean checkLanguages = false;

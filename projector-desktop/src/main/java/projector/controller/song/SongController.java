@@ -80,6 +80,7 @@ import projector.controller.song.util.OrderMethod;
 import projector.controller.song.util.ScheduleSong;
 import projector.controller.song.util.SearchedSong;
 import projector.controller.song.util.SongTextFlow;
+import projector.controller.util.ProjectionData;
 import projector.controller.util.UserService;
 import projector.model.FavouriteSong;
 import projector.model.Language;
@@ -97,6 +98,7 @@ import projector.service.SongCollectionService;
 import projector.service.SongService;
 import projector.utils.CustomProperties;
 import projector.utils.IntegerFilter;
+import projector.utils.SongVerseHolder;
 import projector.utils.scene.text.MyTextFlow;
 import projector.utils.scene.text.SongVersePartTextFlow;
 
@@ -547,8 +549,10 @@ public class SongController {
             songVersePartTextFlow.setText2(selectedSongTitle.toString(), width1, size);
             songListViewItems.add(songVersePartTextFlow);
             int songVerseIndex = 0;
+            List<SongVerseHolder> songVerseHolders = new ArrayList<>();
+            selectedSong.setSongVerseHolders(songVerseHolders);
             for (SongVerse songVerse : selectedSongVerseList) {
-                addSongVerseParts(songVerse, size, width, height, songListViewItems, songVerseIndex++);
+                addSongVerseParts(songVerse, size, width, height, songListViewItems, songVerseHolders, songVerseIndex++);
             }
             songLastSlide(size, songListViewItems, width, height);
             onSongSelectedEnd(songListViewItems);
@@ -571,8 +575,14 @@ public class SongController {
         return getWidthForSongVersePartText(aspectRatioCheckBox.isSelected(), size, width, height);
     }
 
-    private void addSongVerseParts(SongVerse songVerse, int size, int width, int height, ObservableList<SongVersePartTextFlow> songListViewItems, int songVerseIndex) {
+    private void addSongVerseParts(SongVerse songVerse, int size, int width, int height, ObservableList<SongVersePartTextFlow> songListViewItems, List<SongVerseHolder> songVerseHolders, int songVerseIndex) {
         List<String> texts = getTextByMaxLine(songVerse);
+        songVerse.setSplitTexts(texts);
+        List<SongVersePartTextFlow> songVersePartTextFlows = new ArrayList<>();
+        SongVerseHolder songVerseHolder = new SongVerseHolder();
+        songVerseHolder.setSongVerse(songVerse);
+        songVerseHolder.setSongVersePartTextFlows(songVersePartTextFlows);
+        songVerseHolders.add(songVerseHolder);
         int k = 0;
         boolean textsSplit = texts.size() > 1;
         for (String text : texts) {
@@ -583,9 +593,10 @@ public class SongController {
             songVerseProjectionDTO.setLastOne(texts.size() == k + 1);
             songVerseProjectionDTO.setFocusedText(text);
             songVerseProjectionDTO.setSongVerseIndex(songVerseIndex);
-            addSongVersePart(songVerse, size, width, height, songListViewItems, songVerseProjectionDTO);
+            addSongVersePart(songVerse, size, width, height, songVersePartTextFlows, songVerseProjectionDTO);
             ++k;
         }
+        songListViewItems.addAll(songVersePartTextFlows);
     }
 
     private List<String> getTextByMaxLine(SongVerse songVerse) {
@@ -651,7 +662,7 @@ public class SongController {
         return partTexts;
     }
 
-    private void addSongVersePart(SongVerse songVerse, int size, int width, int height, ObservableList<SongVersePartTextFlow> songListViewItems, SongVerseProjectionDTO songVerseProjectionDTO) {
+    private void addSongVersePart(SongVerse songVerse, int size, int width, int height, List<SongVersePartTextFlow> songListViewItems, SongVerseProjectionDTO songVerseProjectionDTO) {
         SongVersePartTextFlow songVersePartTextFlow = new SongVersePartTextFlow();
         songVersePartTextFlow.setSongVerseProjectionDTO(songVerseProjectionDTO);
         songVersePartTextFlow.setSongVerse(songVerse);
@@ -816,6 +827,7 @@ public class SongController {
         MultipleSelectionModel<SongVersePartTextFlow> songListViewSelectionModel = songListView.getSelectionModel();
         songListViewSelectionModel.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> {
             try {
+                markSelected();
                 ObservableList<Integer> ob = songListViewSelectionModel.getSelectedIndices();
                 synchronizedSelectVerseOrderListView(ob);
                 if (ob.size() == 1) {
@@ -843,17 +855,17 @@ public class SongController {
                     SongVersePartTextFlow songVersePartTextFlow = songListViewItems.get(selectedIndex);
                     String text = songVersePartTextFlow.getMyTextFlow().getRawText();
                     text = getWithSecondText(songVersePartTextFlow, text);
-                    setSongVerseProjection1(songVersePartTextFlow, text);
+                    setSongVerseProjection1(songVersePartTextFlow, text, this.selectedSong);
                     previousSelectedVerseIndex = selectedIndex;
                     if (selectedIndex + 1 == songListViewItems.size()) {
-                        projectionScreenController.progressLineSetVisible(false);
-                        projectionScreenController.setLineSize(0);
+                        projectionScreenController.clearText();
+                        projectionScreenController.setProgress(0);
                     } else {
-                        projectionScreenController.setLineSize((double) selectedIndex / (songListViewItems.size() - 2));
+                        projectionScreenController.setProgress((double) selectedIndex / (songListViewItems.size() - 2));
                     }
                 } else if (ob.size() > 1) {
                     int lastIndex = setSongVerseProjectionBySelectedParts();
-                    projectionScreenController.setLineSize((double) lastIndex / (songListViewItems.size() - 2));
+                    projectionScreenController.setProgress((double) lastIndex / (songListViewItems.size() - 2));
                 }
                 if (recentController != null && !recentController.getLastItemText().equals(activeSongVerseTime.getSongTitle()) && !ob.isEmpty()) {
                     recentController.addRecentSong(activeSongVerseTime.getSongTitle(), ProjectionType.SONG);
@@ -863,6 +875,19 @@ public class SongController {
                 LOG.error(e.getMessage(), e);
             }
         });
+    }
+
+    private void markSelected() {
+        setSongVersePartSelected(songListView.getItems(), false);
+        MultipleSelectionModel<SongVersePartTextFlow> songListViewSelectionModel = songListView.getSelectionModel();
+        ObservableList<SongVersePartTextFlow> songVersePartTextFlows = songListViewSelectionModel.getSelectedItems();
+        setSongVersePartSelected(songVersePartTextFlows, true);
+    }
+
+    private static void setSongVersePartSelected(ObservableList<SongVersePartTextFlow> songVersePartTextFlows, boolean selected) {
+        for (SongVersePartTextFlow songVersePartTextFlow : songVersePartTextFlows) {
+            songVersePartTextFlow.setSelected(selected);
+        }
     }
 
     private int setSongVerseProjectionBySelectedParts() {
@@ -888,19 +913,34 @@ public class SongController {
                 }
             }
         }
-        setSongVerseProjection(songVersePartTextFlows, tmpTextBuffer.toString());
+        setSongVerseProjection(songVersePartTextFlows, tmpTextBuffer.toString(), this.selectedSong);
         return lastIndex;
     }
 
-    private void setSongVerseProjection1(SongVersePartTextFlow songVersePartTextFlow, String text) {
+    private void setSongVerseProjection1(SongVersePartTextFlow songVersePartTextFlow, String text, Song song) {
         List<SongVersePartTextFlow> songVersePartTextFlows = new ArrayList<>(1);
         songVersePartTextFlows.add(songVersePartTextFlow);
-        setSongVerseProjection(songVersePartTextFlows, text);
+        setSongVerseProjection(songVersePartTextFlows, text, song);
     }
 
-    private void setSongVerseProjection(List<SongVersePartTextFlow> songVersePartTextFlows, String text) {
+    private void setSongVerseProjection(List<SongVersePartTextFlow> songVersePartTextFlows, String text, Song song) {
         ProjectionDTO projectionDTO = getProjectionDTOForSongVersePart(songVersePartTextFlows);
-        projectionScreenController.setText(text, ProjectionType.SONG, projectionDTO);
+        ProjectionData projectionData = new ProjectionData();
+        projectionData.setProjectionDTO(projectionDTO);
+        projectionData.setSong(song);
+        projectionData.setSongVersePartTextFlows(getSongVersePartTextFlowsByOnlySongVerse());
+        projectionScreenController.setText(text, ProjectionType.SONG, projectionData);
+    }
+
+    private List<SongVersePartTextFlow> getSongVersePartTextFlowsByOnlySongVerse() {
+        ObservableList<SongVersePartTextFlow> songListViewItems = songListView.getItems();
+        ArrayList<SongVersePartTextFlow> songVersePartTextFlows = new ArrayList<>();
+        for (SongVersePartTextFlow songVersePartTextFlow : songListViewItems) {
+            if (songVersePartTextFlow.getSongVerse() != null) {
+                songVersePartTextFlows.add(songVersePartTextFlow);
+            }
+        }
+        return songVersePartTextFlows;
     }
 
     private static ProjectionDTO getProjectionDTOForSongVersePart(List<SongVersePartTextFlow> songVersePartTextFlows) {
@@ -942,12 +982,14 @@ public class SongController {
                         double elapsedSeconds = System.currentTimeMillis() - timeStart;
                         elapsedSeconds /= 1000;
                         double estimatedSeconds = 0.0;
-                        for (SongVersePartTextFlow songListViewItem : inCalculationSongVersePartTextFlows) {
+                        // Create a copy of the list to avoid ConcurrentModificationException
+                        List<SongVersePartTextFlow> songVersePartTextFlows = new ArrayList<>(inCalculationSongVersePartTextFlows);
+                        for (SongVersePartTextFlow songListViewItem : songVersePartTextFlows) {
                             estimatedSeconds += songListViewItem.getEstimatedSeconds();
                         }
                         double z = 1.0 - minOpacity;
                         final double v = z * elapsedSeconds / estimatedSeconds;
-                        for (SongVersePartTextFlow songListViewItem : inCalculationSongVersePartTextFlows) {
+                        for (SongVersePartTextFlow songListViewItem : songVersePartTextFlows) {
                             double opacity = minOpacity + v;
                             if (opacity > 1) {
                                 opacity = 1;

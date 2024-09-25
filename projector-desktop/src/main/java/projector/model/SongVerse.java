@@ -32,6 +32,7 @@ public class SongVerse extends BaseEntity {
     @DatabaseField
     private Integer sectionTypeData;
     private SectionType sectionType;
+    private List<String> splitTexts;
 
     public SongVerse() {
     }
@@ -47,6 +48,7 @@ public class SongVerse extends BaseEntity {
         this.mainSong = songVerse.mainSong;
         this.sectionTypeData = songVerse.sectionTypeData;
         this.sectionType = songVerse.sectionType;
+        this.splitTexts = new ArrayList<>(songVerse.splitTexts);
     }
 
     static List<SongVerse> cloneList(List<SongVerse> songVerses) {
@@ -229,4 +231,13 @@ public class SongVerse extends BaseEntity {
         }
         return 0;
     }
+
+    public List<String> getSplitTexts() {
+        return splitTexts;
+    }
+
+    public void setSplitTexts(List<String> splitTexts) {
+        this.splitTexts = splitTexts;
+    }
 }
+

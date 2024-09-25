@@ -67,11 +67,21 @@ public class ColorUtil {
         }
     }
 
+    @SuppressWarnings("unused")
     public static Color getSubduedColor(Color color) {
         if (settings.isDarkTheme()) {
             return color.darker();
         } else {
             return color.brighter();
         }
+    }
+
+    public static Color getColorWithOpacity(Color color, double opacity) {
+        return new Color(
+                color.getRed(),
+                color.getGreen(),
+                color.getBlue(),
+                opacity
+        );
     }
 }

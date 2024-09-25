@@ -10,6 +10,7 @@ import projector.application.ProjectionType;
 import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.song.SongController;
+import projector.controller.util.ProjectionData;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -42,15 +43,15 @@ public class Sender {
         writer = new Thread(() -> {
             ProjectionTextChangeListener projectionTextChangeListener = new ProjectionTextChangeListener() {
                 @Override
-                public void onSetText(String text, ProjectionType projectionType, ProjectionDTO projectionDTO) {
+                public void onSetText(String text, ProjectionType projectionType, ProjectionData projectionData) {
                     if (senderType != SenderType.TEXT) {
                         return;
                     }
-                    sendTextInThread(text, projectionType, projectionDTO, this, projectionScreenController);
+                    sendTextInThread(text, projectionType, projectionData, this, projectionScreenController);
                 }
 
                 @Override
-                public void onImageChanged(Image image, ProjectionType projectionType, ProjectionDTO projectionDTO) {
+                public void onImageChanged(Image image, ProjectionType projectionType, ProjectionData projectionData) {
                     if (senderType != SenderType.IMAGE) {
                         return;
                     }
@@ -81,7 +82,7 @@ public class Sender {
         reader.start();
     }
 
-    private void sendTextInThread(String text, ProjectionType projectionType, ProjectionDTO projectionDTO,
+    private void sendTextInThread(String text, ProjectionType projectionType, ProjectionData projectionData,
                                   ProjectionTextChangeListener projectionTextChangeListener, ProjectionScreenController projectionScreenController) {
         waitPreviousThread();
         thread = new Thread(() -> {
@@ -90,7 +91,7 @@ public class Sender {
                         + text + "\n"
                         + "end 'text'\n"
                         + START_PROJECTION_DTO + "\n"
-                        + getProjectionJson(projectionDTO) + "\n"
+                        + getProjectionJson(projectionData) + "\n"
                         + END_PROJECTION_DTO + "\n"
                         + "start 'projectionType'\n"
                         + projectionType.name() + "\n"
@@ -161,9 +162,17 @@ public class Sender {
 
     private final BufferedReader inFromClient;
 
-    private String getProjectionJson(ProjectionDTO projectionDTO) {
+    private ProjectionDTO getProjectionDTO(ProjectionData projectionData) {
+        if (projectionData == null) {
+            return null;
+        } else {
+            return projectionData.getProjectionDTO();
+        }
+    }
+
+    private String getProjectionJson(ProjectionData projectionData) {
         Gson gson = getGson();
-        return gson.toJson(projectionDTO);
+        return gson.toJson(getProjectionDTO(projectionData));
     }
 
     public void close() {

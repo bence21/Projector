@@ -80,6 +80,8 @@ public class MyTextFlow extends TextFlow {
     private boolean autoHeight = false;
     private boolean disabledStrokeFont = false;
     private Integer maxFontSize;
+    private boolean withCustomFontSize = false;
+    private int customFontSize = 12;
 
     public MyTextFlow() {
         projectionScreenSettings = new ProjectionScreenSettings();
@@ -496,7 +498,7 @@ public class MyTextFlow extends TextFlow {
 
     private void calculateMaxSize(int trueWidth, int height) {
         int w, h;
-        int maxFont = projectionScreenSettings.getMaxFont();
+        int maxFont = getMaxFontSize();
         size = (int) getRelativeHeightValue(height, maxFont);
         int size2 = (int) getRelativeWidthValue(trueWidth, maxFont);
         if (size2 > size) {
@@ -578,6 +580,20 @@ public class MyTextFlow extends TextFlow {
                 }
             } while (true);
         }
+    }
+
+    private Integer getMaxFontSize() {
+        if (!withCustomFontSize) {
+            return projectionScreenSettings.getMaxFont();
+        } else {
+            return customFontSize;
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public void setCustomFontSize(int customFontSize) {
+        this.customFontSize = customFontSize;
+        this.withCustomFontSize = true;
     }
 
     private int getMaxFont() {
@@ -710,6 +726,8 @@ public class MyTextFlow extends TextFlow {
         if (tmpTextFlow == null) {
             tmpTextFlow = new MyTextFlow(true);
             tmpTextFlow.setProjectionScreenSettings(projectionScreenSettings);
+            tmpTextFlow.withCustomFontSize = this.withCustomFontSize;
+            tmpTextFlow.customFontSize = this.customFontSize;
         }
     }
 

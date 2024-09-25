@@ -38,6 +38,7 @@ public class SongVersePartTextFlow extends HBox {
     private final Settings settings = Settings.getInstance();
     private final ImageView timerImageView;
     private double estimatedSeconds;
+    private boolean selected;
 
     public SongVersePartTextFlow() {
         ObservableList<Node> nodes = getChildren();
@@ -96,7 +97,7 @@ public class SongVersePartTextFlow extends HBox {
         return getImageView(21, 21, imageName, getClass());
     }
 
-    private void setVisibility(Node node, boolean visible) {
+    public static void setVisibility(Node node, boolean visible) {
         node.setVisible(visible);
         node.setManaged(visible);
     }
@@ -106,7 +107,7 @@ public class SongVersePartTextFlow extends HBox {
         this.songVerse = songVerse;
         if (songVerse != null) {
             descriptionBorderPane.setStyle("-fx-background-color: " +
-                    songVerse.getSectionType().getBackgroundColor(settings.isDarkTheme()) + ";");
+                    songVerse.getSectionType().getBackgroundColorHex(settings.isDarkTheme()) + ";");
             sectionTypeText.setText(songVerse.getSectionTypeStringWithCount());
             if (songVerseProjectionDTO != null) {
                 Integer focusedTextIndex = songVerseProjectionDTO.getFocusedTextIndex();
@@ -185,5 +186,13 @@ public class SongVersePartTextFlow extends HBox {
 
     public double getEstimatedSeconds() {
         return estimatedSeconds;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+    }
+
+    public boolean isSelected() {
+        return selected;
     }
 }
