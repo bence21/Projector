@@ -25,7 +25,7 @@
 </style>
 <div th:each="song : ${songs}">
   <h4>
-    <a th:href="${song.beforeId + song.uuid}" th:text="${song.title}" target="_blank"></a>
+    <a th:href="${song.getSongLink()}" th:text="${song.title}" target="_blank"></a>
   </h4>
 </div>
 </body>

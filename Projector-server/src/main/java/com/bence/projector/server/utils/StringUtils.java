@@ -17,6 +17,7 @@ public class StringUtils {
     public static final String WHITE_SPACES = " \\t\\f\\r\\u00A0";
     private static final String whiteSpace = "[" + WHITE_SPACES + "]"; // \s matches also to \n
     private static final String nonLetters = "\\P{L}";
+    private static final String nonLettersExceptPeriod = "[^\\p{L}.]";
     private static final String nonLetters_saved = "([" + nonLetters + "])";
     private static final String letters_saved = "(\\p{L})";
     private static final String someSymbols_saved = "([.?!,:()])";
@@ -49,6 +50,11 @@ public class StringUtils {
 
     private static String replaceAllOtherThenLetterAndNumber(String s) {
         s = s.replaceAll("[^a-zA-Z0-9]", "");
+        return s;
+    }
+
+    public static String replaceAllOtherThenLetterAndNumber2(String s) {
+        s = s.replaceAll(nonLettersExceptPeriod, "");
         return s;
     }
 
@@ -162,7 +168,7 @@ public class StringUtils {
         return changed;
     }
 
-    private static boolean isSongVerseChanged(boolean changed, SongVerse songVerse, String text) {
+    public static boolean isSongVerseChanged(boolean changed, SongVerse songVerse, String text) {
         return isChanged(changed, text, songVerse.getText());
     }
 

@@ -12,20 +12,23 @@ import com.bence.projector.server.utils.models.NormalizedWordBunch;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import static com.bence.projector.server.utils.SetLanguages.getNormalizedWordBunches;
 import static com.bence.projector.server.utils.StringUtils.countMatches;
 
-@RestController
+@Controller
 public class NormalizedWordResource {
 
     private final SongRepository songRepository;
@@ -57,20 +60,55 @@ public class NormalizedWordResource {
         return new ResponseEntity<>(normalizedWordBunchAssembler.createDtoList(normalizedWordBunches), HttpStatus.ACCEPTED);
     }
 
+    @RequestMapping(method = RequestMethod.GET, value = "/api/normalizedWordBunch/{languageId}/getSongs")
+    public String getSongsContainingWord(
+            @PathVariable final String languageId,
+            @RequestParam("word") String word,
+            Model model) {
+        List<Song> containsInSongs = getContainsInSongs(languageId, word);
+        model.addAttribute("songs", containsInSongs);
+        return "queue";
+    }
+
+    private List<Song> getContainsInSongs(String languageId, String word) {
+        Language language = languageService.findOneByUuid(languageId);
+        List<Song> containsInSongs = new ArrayList<>();
+        if (language == null) {
+            return containsInSongs;
+        }
+        String regex = getWordMatchRegex(word);
+        List<Song> songs = songRepository.findAllByLanguageAndVersesTextContains(language.getId(), regex);
+        for (Song song : songs) {
+            if (containsInSong(song, regex)) {
+                containsInSongs.add(song);
+            }
+        }
+        return containsInSongs;
+    }
+
+    private static String getWordMatchRegex(String word) {
+        return "\\b" + word + "\\b";
+    }
+
+    private static boolean containsInSong(Song song, String regex) {
+        for (SongVerse songVerse : song.getVerses()) {
+            if (countMatches(songVerse.getText(), regex) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @RequestMapping(method = RequestMethod.POST, value = "/admin/api/normalizedWordBunch/changeAll/{languageId}")
     public ResponseEntity<Object> changeAll(
             @RequestBody final ChangeWordDTO changeWordDTO,
             HttpServletRequest httpServletRequest,
             @PathVariable final String languageId
     ) {
-        Language language = languageService.findOneByUuid(languageId);
-        if (language == null) {
-            return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
-        }
         String word = changeWordDTO.getWord();
-        String regex = "\\b" + word + "\\b";
-        List<Song> songs = songRepository.findAllByLanguageAndVersesTextContains(language.getId(), regex);
+        List<Song> songs = getContainsInSongs(languageId, word);
 
+        String regex = getWordMatchRegex(word);
         long count = 0;
         for (Song song : songs) {
             for (SongVerse songVerse : song.getVerses()) {

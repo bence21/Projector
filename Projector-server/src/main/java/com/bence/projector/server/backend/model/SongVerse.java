@@ -23,6 +23,8 @@ public class SongVerse extends BaseEntity implements MatchesInterface<SongVerse>
     private Suggestion suggestion;
     @Transient
     private List<String> lines;
+    @Transient
+    private Short index;
 
     public SongVerse() {
     }
@@ -33,6 +35,7 @@ public class SongVerse extends BaseEntity implements MatchesInterface<SongVerse>
         this.sectionType = songVerse.sectionType;
         this.song = songVerse.song;
         this.suggestion = songVerse.suggestion;
+        this.index = songVerse.index;
     }
 
     public String getText() {
@@ -88,5 +91,13 @@ public class SongVerse extends BaseEntity implements MatchesInterface<SongVerse>
 
     public void setLines(List<String> lines) {
         this.lines = lines;
+    }
+
+    public void setIndex(Short index) {
+        this.index = index;
+    }
+
+    public Short getIndex() {
+        return index;
     }
 }

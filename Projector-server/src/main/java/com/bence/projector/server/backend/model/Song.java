@@ -12,6 +12,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import static com.bence.projector.server.utils.MemoryUtil.getEmptyList;
@@ -255,6 +256,49 @@ public class Song extends AbstractModel {
         this.author = author;
     }
 
+    public List<Short> getVerseOrderListOld() {
+        String[] split = getVerseOrder().split(" ");
+        List<Short> verseOrderList = new ArrayList<>(split.length);
+        for (String s : split) {
+            short index = 0;
+            List<SongVerse> songVerses = getVerses();
+            for (SongVerse songVerse : songVerses) {
+                String type = songVerse.getType();
+                if (type != null && type.equalsIgnoreCase(s)) {
+                    verseOrderList.add(index);
+                    break;
+                }
+                ++index;
+            }
+            if (index == songVerses.size()) {
+                String substring = s.substring(1);
+                short count = 1;
+                if (substring.contains("X")) {
+                    String x = substring.substring(substring.indexOf("X") + 1);
+                    count = Short.parseShort(x);
+                    substring = substring.substring(0, substring.indexOf("X"));
+                }
+                index = Short.parseShort(substring);
+                --index;
+                for (int i = 0; i < count; ++i) {
+                    verseOrderList.add(index);
+                }
+            }
+        }
+        return verseOrderList;
+    }
+
+    public List<Short> getVerseOrderListWithOld() {
+        List<Short> verseOrderList = getVerseOrderList();
+        if (getVerseOrder() != null && verseOrderWasNotSaved()) {
+            try {
+                verseOrderList = getVerseOrderListOld();
+            } catch (Exception ignored) {
+            }
+        }
+        return verseOrderList;
+    }
+
     public List<Short> getVerseOrderList() {
         if (verses != null && verseOrderWasSaved()) {
             for (short index = 0; index < verses.size(); ++index) {
@@ -417,11 +461,13 @@ public class Song extends AbstractModel {
         return songListElements;
     }
 
-    @SuppressWarnings("unused")
     public List<SongVerse> getSongVersesByVerseOrder() {
-        List<Short> verseOrderList = getVerseOrderList();
-        List<SongVerse> songVerses = new ArrayList<>(verseOrderList.size());
+        List<Short> verseOrderList = getVerseOrderListWithOld();
         List<SongVerse> verses = getVerses();
+        if (verseOrderList == null) {
+            return verses;
+        }
+        List<SongVerse> songVerses = new ArrayList<>(verseOrderList.size());
         int size = verses.size();
         for (Short index : verseOrderList) {
             if (size > index) {
@@ -452,5 +498,41 @@ public class Song extends AbstractModel {
 
     public String getSongLink() {
         return AppProperties.getInstance().baseUrl() + "/#/song/" + getUuid();
+    }
+
+    public void setVersesAndCheckVerseOderList(List<SongVerse> songVerses) {
+        List<Short> verseOrderListWithOld = getVerseOrderListWithOld();
+        if (verseOrderListWithOld == null) {
+            setVerses(songVerses);
+            // we only calculate the new order if it was already
+        } else {
+            setVersesAndCalculateVerseOderList(songVerses);
+        }
+    }
+
+    private void setVersesAndCalculateVerseOderList(List<SongVerse> songVerses) {
+        HashMap<String, SongVerse> songVerseHashMap = new HashMap<>();
+        short k = 0;
+        List<SongVerseOrderListItem> songVerseOrderListItems = new ArrayList<>(songVerses.size());
+        List<SongVerse> uniqueSongVerses = new ArrayList<>();
+        for (SongVerse songVerse : songVerses) {
+            String key = songVerse.getText();
+            short position;
+            SongVerse currentSongVerse;
+            if (songVerseHashMap.containsKey(key)) {
+                currentSongVerse = songVerseHashMap.get(key);
+            } else {
+                songVerseHashMap.put(key, songVerse);
+                songVerse.setIndex(k++);
+                uniqueSongVerses.add(songVerse);
+                currentSongVerse = songVerse;
+            }
+            position = currentSongVerse.getIndex();
+            SongVerseOrderListItem songVerseOrderListItem = new SongVerseOrderListItem();
+            songVerseOrderListItem.setPosition(position);
+            songVerseOrderListItems.add(songVerseOrderListItem);
+        }
+        setVerses(uniqueSongVerses);
+        setSongVerseOrderListItems(songVerseOrderListItems);
     }
 }

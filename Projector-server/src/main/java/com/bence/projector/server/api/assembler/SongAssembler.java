@@ -9,7 +9,6 @@ import com.bence.projector.server.backend.service.SongService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -50,40 +49,7 @@ public class SongAssembler implements GeneralAssembler<Song, SongDTO> {
         songDTO.setYoutubeUrl(song.getYoutubeUrl());
         String verseOrder = song.getVerseOrder();
         songDTO.setVerseOrder(verseOrder);
-        songDTO.setVerseOrderList(song.getVerseOrderList());
-        if (verseOrder != null && song.verseOrderWasNotSaved()) {
-            try {
-                String[] split = verseOrder.split(" ");
-                List<Short> verseOrderList = new ArrayList<>(split.length);
-                for (String s : split) {
-                    short index = 0;
-                    for (SongVerse songVerse : song.getVerses()) {
-                        String type = songVerse.getType();
-                        if (type != null && type.equalsIgnoreCase(s)) {
-                            verseOrderList.add(index);
-                            break;
-                        }
-                        ++index;
-                    }
-                    if (index == song.getVerses().size()) {
-                        String substring = s.substring(1);
-                        short count = 1;
-                        if (substring.contains("X")) {
-                            String x = substring.substring(substring.indexOf("X") + 1);
-                            count = Short.parseShort(x);
-                            substring = substring.substring(0, substring.indexOf("X"));
-                        }
-                        index = Short.parseShort(substring);
-                        --index;
-                        for (int i = 0; i < count; ++i) {
-                            verseOrderList.add(index);
-                        }
-                    }
-                }
-                songDTO.setVerseOrderList(verseOrderList);
-            } catch (Exception ignored) {
-            }
-        }
+        songDTO.setVerseOrderList(song.getVerseOrderListWithOld());
         songDTO.setAuthor(song.getAuthor());
         songDTO.setReviewerErased(song.isReviewerErased());
         Song backUp = song.getBackUp();
