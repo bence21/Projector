@@ -443,7 +443,7 @@ export class EditSongComponent implements OnInit {
         let verse = verseI;
         for (const sectionType of this.sectionTypes) {
           const sectionString = "[" + sectionType.name + "]\n";
-          if (verse.startsWith(sectionString)) {
+          if (verse.toLowerCase().startsWith(sectionString.toLowerCase())) {
             songVerse.type = sectionType.type;
             verse = verseI.substring(sectionString.length, verseI.length);
           }

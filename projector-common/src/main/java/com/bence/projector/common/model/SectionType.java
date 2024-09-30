@@ -35,16 +35,17 @@ public enum SectionType {
     }
 
     public static SectionType getValueFromString(String s) {
-        switch (s) {
-            case "[INTRO]":
+        String lowerCase = s.toLowerCase();
+        switch (lowerCase) {
+            case "[intro]":
                 return INTRO;
-            case "[PRE_CHORUS]":
+            case "[pre_chorus]":
                 return PRE_CHORUS;
-            case "[CHORUS]":
+            case "[chorus]":
                 return CHORUS;
-            case "[BRIDGE]":
+            case "[bridge]":
                 return BRIDGE;
-            case "[CODA]":
+            case "[coda]":
                 return CODA;
         }
         return VERSE;
