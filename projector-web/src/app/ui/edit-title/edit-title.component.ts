@@ -3,7 +3,8 @@ import { FormGroup } from '@angular/forms';
 import { MatIconRegistry } from '@angular/material';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Language } from '../../models/language';
-import { Song } from '../../services/song-service.service';
+import { replace, valueRefactorable } from '../new-song/new-song.component';
+import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-edit-title',
@@ -16,6 +17,7 @@ export class EditTitleComponent implements OnInit {
   selectedLanguage: Language;
   @Input()
   form: FormGroup;
+  refactorable: boolean = false;
 
   constructor(
     iconRegistry: MatIconRegistry,
@@ -27,8 +29,13 @@ export class EditTitleComponent implements OnInit {
   }
 
   ngOnInit() {
+    const titleControl = this.getTitleControl();
+    if (titleControl != null) {
+      titleControl.valueChanges.pipe(debounceTime(700)).subscribe(() => {
+          this.refactorable = this.refactorableTitle();
+      });
+    }
   }
-
 
   private capitalize(s: string): string {
     try {
@@ -148,19 +155,47 @@ export class EditTitleComponent implements OnInit {
   }
 
   refactorTitleCase() {
+    let newValue = this.changeCase(this.getTitleValue());
+    this.setValue(newValue);
+  }
+
+  private getTitleControl() {
     const formValue = this.form.value;
     for (const key in formValue) {
       const aKey = 'title';
       if (formValue.hasOwnProperty(key) && key.startsWith(aKey)) {
-        let newValue = this.changeCase(this.getTitleValue());
-        this.form.controls[aKey].setValue(newValue);
-        this.form.controls[aKey].updateValueAndValidity();
-        break;
+        return this.form.controls[aKey];
       }
     }
+    return null;
+  }
+
+  private setValue(newValue: string) {
+    const titleControl = this.getTitleControl();
+    if (titleControl != null) {
+        titleControl.setValue(newValue);
+        titleControl.updateValueAndValidity();
+      }
   }
 
   getTitleCaseToolTip(): string {
     return 'Changes case to: ' + this.changeCase(this.getTitleValue());
   }
+
+  private refactorableTitle(): boolean {
+    return valueRefactorable(this.getTitleValue());
+  }
+
+  private getRefactoredTitleValue(): string {
+    return replace(this.getTitleValue());
+  }
+
+  refactorTitle() {
+    this.setValue(this.getRefactoredTitleValue());
+  }
+
+  getTitleCaseRefactorToolTip(): string {
+    return 'Change to: ' + this.getRefactoredTitleValue();
+  }
 }
+

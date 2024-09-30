@@ -6,12 +6,13 @@ import { LanguageDataService } from "../../services/language-data.service";
 import { NewLanguageComponent } from "../new-language/new-language.component";
 import { MatDialog, MatIconRegistry, MatSnackBar } from "@angular/material";
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
-import { SubmitOrPublish, replace } from "../new-song/new-song.component";
+import { SubmitOrPublish, replace, valueRefactorable } from "../new-song/new-song.component";
 import { AuthenticateComponent } from "../authenticate/authenticate.component";
 import { CdkDragDrop, moveItemInArray, copyArrayItem } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth.service';
 import { addNewVerse_, calculateOrder_ } from '../../util/song.utils';
 import { Language } from '../../models/language';
+import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-edit-song',
@@ -35,11 +36,11 @@ export class EditSongComponent implements OnInit {
   verseControls: FormControl[];
   languages = [];
   selectedLanguage: Language;
-  originalLanguage;
+  originalLanguage: Language;
   @Input()
   song: Song;
   editorType = 'verse';
-  public youtubeUrl;
+  public youtubeUrl: string;
   public safeUrl: SafeResourceUrl = null;
   private songTextFormControl: FormControl;
   sectionTypes: {
@@ -262,7 +263,8 @@ export class EditSongComponent implements OnInit {
   }
 
   addNewVerse() {
-    addNewVerse_(this.verses, this.verseControls, this.form, this.song);
+    const control = addNewVerse_(this.verses, this.verseControls, this.form, this.song);
+    this.addSectionControlValueChangeListener(control, this.verseControls.length - 1);
     this.calculateUsedSectionTypes();
   }
 
@@ -447,7 +449,7 @@ export class EditSongComponent implements OnInit {
           }
         }
         songVerse.text = verse;
-        let verseIndex;
+        let verseIndex: number;
         if (verseMap.has(verse)) {
           verseIndex = verseMap.get(verse).verseIndex;
         } else {
@@ -479,16 +481,38 @@ export class EditSongComponent implements OnInit {
       let i = 0;
       for (const key in formValue) {
         if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
-          let newValue = replace(formValue[key]);
-          this.form.controls['verse' + i].setValue(newValue);
-          this.form.controls['verse' + i].updateValueAndValidity();
+          this.refactorSectionFormValue(formValue, key, i);
           i = i + 1;
         }
         const aKey = 'title';
         if (formValue.hasOwnProperty(key) && key.startsWith(aKey)) {
-          let newValue = replace(formValue[key]);
-          this.form.controls[aKey].setValue(newValue);
-          this.form.controls[aKey].updateValueAndValidity();
+          this.refactorFormValue(formValue, key, aKey);
+        }
+      }
+    }
+  }
+
+  private refactorFormValue(formValue: any, key: string, aKey: string) {
+    let newValue = replace(formValue[key]);
+    this.form.controls[aKey].setValue(newValue);
+    this.form.controls[aKey].updateValueAndValidity();
+  }
+
+  private refactorSectionFormValue(formValue: any, key: string, i: number) {
+    this.refactorFormValue(formValue, key, 'verse' + i);
+  }
+
+  isThisSection(key: string, formValue, i: number): boolean {
+    return formValue.hasOwnProperty(key) && key.startsWith('verse' + i) && !key.startsWith('verseOrder');
+  }
+
+  refactorSection(i: number) {
+    if (this.editorType !== 'raw') {
+      const formValue = this.form.value;
+      for (const key in formValue) {
+        if (this.isThisSection(key, formValue, i)) {
+          this.refactorSectionFormValue(formValue, key, i);
+          break;
         }
       }
     }
@@ -499,19 +523,51 @@ export class EditSongComponent implements OnInit {
       const formValue = this.form.value;
       for (const key in formValue) {
         if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
-          const value = formValue[key];
-          if (value != replace(value)) {
+          if (valueRefactorable(formValue[key])) {
             return true;
           }
         }
         const aKey = 'title';
         if (formValue.hasOwnProperty(key) && key.startsWith(aKey)) {
-          const value = formValue[key];
-          if (value != replace(value)) {
+          if (valueRefactorable(formValue[key])) {
             return true;
           }
         }
       }
+    }
+    return false;
+  }
+
+  refactorableSections: boolean[] = [];
+
+  private addSectionControlValueChangeListener(control: FormControl, i: number) {
+    this.refactorableSections.push(false);
+    control.valueChanges.pipe(debounceTime(700)).subscribe(() => {
+      if (this.inRefactorableSectionsRange(i)) {
+        this.refactorableSections[i] = this.checkRefactorableSection(i);
+      }
+    });
+  }
+
+  private checkRefactorableSection(i: number): boolean {
+    if (this.editorType !== 'raw') {
+      const formValue = this.form.value;
+      for (const key in formValue) {
+        if (this.isThisSection(key, formValue, i)) {
+          return valueRefactorable(formValue[key]);
+        }
+      }
+    }
+    return false;
+  }
+
+  private inRefactorableSectionsRange(i: number): boolean {
+    return i >= 0 && i < this.refactorableSections.length;
+  }
+
+  refactorableSection(i: number): boolean {
+    if (this.inRefactorableSectionsRange(i)) {
+      return this.refactorableSections[i];
     }
     return false;
   }
@@ -563,8 +619,12 @@ export class EditSongComponent implements OnInit {
   }
 
   private addVerses() {
+    let i = 0;
+    this.refactorableSections = [];
     for (const songVerse of this.song.songVerseDTOS) {
       const control = new FormControl('');
+      this.addSectionControlValueChangeListener(control, i);
+      i = i + 1;
       control.setValue(songVerse.text);
       const songVerseUI = new SongVerseUI();
       songVerseUI.chorus = songVerse.chorus;

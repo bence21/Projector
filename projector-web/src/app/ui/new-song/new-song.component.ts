@@ -14,11 +14,16 @@ import { AuthService } from '../../services/auth.service';
 import { format } from '../../util/string-util';
 import { GuidelineDataService } from '../../services/guidelines-data.service';
 import { Guideline, YOU_TUBE_LINKING } from '../../models/guideline';
+import { debounceTime } from 'rxjs/operators';
 
 export function replace(value: string) {
   let newValue = replaceMatch(value, / /g, ' '); // NBSP - replaces non breaking space characters with space
   newValue = format(newValue);
   return newValue;
+}
+
+export function valueRefactorable(value: string): boolean {
+  return value != replace(value);
 }
 
 function replaceMatch(newValue: string, matcher, replaceValue) {
@@ -269,7 +274,8 @@ export class NewSongComponent implements OnInit {
   }
 
   addNewVerse() {
-    addNewVerse_(this.verses, this.verseControls, this.form, this.song);
+    const control = addNewVerse_(this.verses, this.verseControls, this.form, this.song);
+    this.addSectionControlValueChangeListener(control, this.verseControls.length - 1);
     this.calculateUsedSectionTypes();
   }
 
@@ -503,16 +509,38 @@ export class NewSongComponent implements OnInit {
       let i = 0;
       for (const key in formValue) {
         if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
-          let newValue = replace(formValue[key]);
-          this.form.controls['verse' + i].setValue(newValue);
-          this.form.controls['verse' + i].updateValueAndValidity();
+          this.refactorSectionFormValue(formValue, key, i);
           i = i + 1;
         }
         const aKey = 'title';
         if (formValue.hasOwnProperty(key) && key.startsWith(aKey)) {
-          let newValue = replace(formValue[key]);
-          this.form.controls[aKey].setValue(newValue);
-          this.form.controls[aKey].updateValueAndValidity();
+          this.refactorFormValue(formValue, key, aKey);
+        }
+      }
+    }
+  }
+
+  private refactorFormValue(formValue: any, key: string, aKey: string) {
+    let newValue = replace(formValue[key]);
+    this.form.controls[aKey].setValue(newValue);
+    this.form.controls[aKey].updateValueAndValidity();
+  }
+
+  private refactorSectionFormValue(formValue: any, key: string, i: number) {
+    this.refactorFormValue(formValue, key, 'verse' + i);
+  }
+
+  isThisSection(key: string, formValue, i: number): boolean {
+    return formValue.hasOwnProperty(key) && key.startsWith('verse' + i) && !key.startsWith('verseOrder');
+  }
+
+  refactorSection(i: number) {
+    if (this.editorType !== 'raw') {
+      const formValue = this.form.value;
+      for (const key in formValue) {
+        if (this.isThisSection(key, formValue, i)) {
+          this.refactorSectionFormValue(formValue, key, i);
+          break;
         }
       }
     }
@@ -536,6 +564,40 @@ export class NewSongComponent implements OnInit {
           }
         }
       }
+    }
+    return false;
+  }
+
+  refactorableSections: boolean[] = [];
+
+  private addSectionControlValueChangeListener(control: FormControl, i: number) {
+    this.refactorableSections.push(false);
+    control.valueChanges.pipe(debounceTime(700)).subscribe(() => {
+      if (this.inRefactorableSectionsRange(i)) {
+        this.refactorableSections[i] = this.checkRefactorableSection(i);
+      }
+    });
+  }
+
+  private checkRefactorableSection(i: number): boolean {
+    if (this.editorType !== 'raw') {
+      const formValue = this.form.value;
+      for (const key in formValue) {
+        if (this.isThisSection(key, formValue, i)) {
+          return valueRefactorable(formValue[key]);
+        }
+      }
+    }
+    return false;
+  }
+
+  private inRefactorableSectionsRange(i: number): boolean {
+    return i >= 0 && i < this.refactorableSections.length;
+  }
+
+  refactorableSection(i: number): boolean {
+    if (this.inRefactorableSectionsRange(i)) {
+      return this.refactorableSections[i];
     }
     return false;
   }

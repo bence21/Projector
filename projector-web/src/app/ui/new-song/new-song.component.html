@@ -46,6 +46,10 @@
                     color="primary" [value]="getSectionName(chip, verse, i)" [selectable]="true">
                     {{getSectionName(chip, verse, i)}}
                   </mat-chip>
+                  <button *ngIf="refactorableSection(i)" type="button" mat-icon-button (click)="refactorSection(i)"
+                    matTooltip="Automatic fixes">
+                    <mat-icon svgIcon="magic_tool">magic_tool</mat-icon>
+                  </button>
                 </mat-chip-list>
                 <mat-form-field class="example-full-width">
                   <textarea matInput matTextareaAutosize placeholder="Section {{i+1}}." [matAutosizeMinRows]="2"

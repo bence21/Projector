@@ -39,7 +39,7 @@ export function calculateOrder_(customSectionOrder: boolean, song: Song, usedSec
   return sectionOrder;
 }
 
-export function addNewVerse_(verses: SongVerseUI[], verseControls: FormControl[], form: FormGroup, song: Song) {
+export function addNewVerse_(verses: SongVerseUI[], verseControls: FormControl[], form: FormGroup, song: Song): FormControl {
   const control = new FormControl('');
   let section = new SongVerseUI();
   section.type = SectionType.Verse;
@@ -51,4 +51,5 @@ export function addNewVerse_(verses: SongVerseUI[], verseControls: FormControl[]
     song.verseOrderList = [];
   }
   song.verseOrderList.push(index);
+  return control;
 }
