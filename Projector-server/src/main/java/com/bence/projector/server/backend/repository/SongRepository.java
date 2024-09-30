@@ -35,6 +35,19 @@ public interface SongRepository extends CrudRepository<Song, Long> {
 
     List<Song> findAllByLanguageAndCreatedByEmail(Language language, String createdByEmail);
 
+    @Query(value = "SELECT DISTINCT s.* FROM song s " +
+            "JOIN song_verse v ON s.id = v.song_id " +
+            "WHERE (s.is_back_up <> 1 or s.is_back_up is null)" +
+            " AND (s.reviewer_erased <> 1 or s.reviewer_erased is null)" +
+            " AND (s.deleted <> 1 or s.deleted is null)" +
+            "AND NOT EXISTS (" +
+            "  SELECT 1 FROM song_verse v " +
+            "  WHERE v.song_id = s.id " +
+            "  AND LENGTH(v.text) >= 10" +
+            ")",
+            nativeQuery = true)
+    List<Song> findAllByVersesIsShort();
+
     List<Song> findAllByVersesIsEmpty();
 
     Song findByBackUp(Song song);

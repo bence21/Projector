@@ -29,6 +29,7 @@ public class SongVerse extends BaseEntity implements MatchesInterface<SongVerse>
     public SongVerse() {
     }
 
+    @SuppressWarnings("CopyConstructorMissesField")
     public SongVerse(SongVerse songVerse) {
         this.text = songVerse.text;
         this.type = songVerse.type;

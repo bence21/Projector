@@ -613,7 +613,7 @@ public class SongResource {
 
     @Scheduled(fixedRate = 5 * 60 * 1000)
     public void checkEmptySongs_runEvery5Minute_() {
-        List<Song> songsByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();
+        List<Song> songsByVersesIsEmpty = getAllByVersesIsEmptyOrShort();
         int size = songsByVersesIsEmpty.size();
         if (size != 0) {
             System.out.println("Warning: found " + size + " empty songs!\t" + getDateFormatted2(new Date()));
@@ -621,9 +621,16 @@ public class SongResource {
         }
     }
 
+    private List<Song> getAllByVersesIsEmptyOrShort() {
+        List<Song> allByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();
+        List<Song> shortSongs = songRepository.findAllByVersesIsShort();
+        allByVersesIsEmpty.addAll(shortSongs);
+        return allByVersesIsEmpty;
+    }
+
     @RequestMapping(method = RequestMethod.GET, value = "/admin/checkForEmptySongs")
     public ResponseEntity<Object> checkForEmptySongs() {
-        List<Song> songsByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();
+        List<Song> songsByVersesIsEmpty = getAllByVersesIsEmptyOrShort();
         int size = songsByVersesIsEmpty.size();
         if (size == 0) {
             printNotEmptySongsFound();
