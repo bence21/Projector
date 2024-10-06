@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import static com.bence.projector.server.utils.StringUtils.WHITE_SPACES;
+import static com.bence.projector.server.utils.StringUtils.NON_BREAKING_SPACE;
 
 public class SetLanguages {
 
@@ -75,7 +75,7 @@ public class SetLanguages {
         List<Song> allWithLanguage = filterSongsContainingLanguage(songs);
         Map<Language, Map<String, WordBunch>> languageMap = getLanguageCollectionMapWordBunch(languages);
         for (Song song : allWithLanguage) {
-            if (!song.isDeleted()) {
+            if (song.isPublic()) {
                 addWordByAlreadySetLanguage_wordBunch(languageMap, song);
             }
         }
@@ -514,8 +514,7 @@ public class SetLanguages {
     }
 
     private static void addWordsInCollection_wordBunch(Song song, Map<String, WordBunch> wordsBunch) {
-        Collection<String> wordsCollection = new ArrayList<>();
-        addWordsInCollection(song, wordsCollection);
+        Collection<String> wordsCollection = getSongWords(song);
         for (String word : wordsCollection) {
             WordBunch wordBunch = wordsBunch.get(word);
             if (wordBunch == null) {
@@ -528,17 +527,121 @@ public class SetLanguages {
         }
     }
 
+    public static Collection<String> getSongWords(Song song) {
+        Collection<String> wordsCollection = new ArrayList<>();
+        addWordsInCollection(song, wordsCollection);
+        return wordsCollection;
+    }
+
+    public static List<String> splitOnWhitespace(String text) {
+        List<String> result = new ArrayList<>();
+        StringBuilder currentPart = new StringBuilder();
+        boolean inWhitespace = false;
+        for (int i = 0; i < text.length(); ++i) {
+            char currentChar = text.charAt(i);
+            if (isWhitespace(currentChar)) {
+                if (!inWhitespace) {
+                    addResultAndClearTheBuffer(result, currentPart);
+                }
+                inWhitespace = true;
+            } else {
+                // If transitioning out of whitespace, add the whitespace part (if any)
+                if (inWhitespace) {
+                    addResultAndClearTheBuffer(result, currentPart);
+                }
+                inWhitespace = false;
+            }
+            // Add the current character to the buffer (whether it's part of a word or whitespace)
+            currentPart.append(currentChar);
+        }
+        // Add the last part (word or whitespace) if not empty
+        if (!currentPart.isEmpty()) {
+            result.add(currentPart.toString());
+        }
+        return result;
+    }
+
+    private static void addResultAndClearTheBuffer(List<String> result, StringBuilder currentPart) {
+        if (currentPart.isEmpty()) {
+            return;
+        }
+        result.add(currentPart.toString());
+        currentPart.setLength(0);  // Clear the buffer
+    }
+
+    private static boolean isWhitespace(char currentChar) {
+        return Character.isWhitespace(currentChar) || currentChar == NON_BREAKING_SPACE;
+    }
+
     private static void addWordsInCollection(Song song, Collection<String> words) {
         for (SongVerse songVerse : song.getVerses()) {
-            String[] split = songVerse.getText().split("[\\s\\n" + WHITE_SPACES + "]");
-            for (String word : split) {
-                // word = stripAccents(word.toLowerCase());
-                word = word.replaceAll("(^[^\\p{L}]+|[^\\p{L}]+$)", "");
-                if (word.isEmpty()) {
-                    continue;
-                }
-                words.add(word);
+            addWordsFromSongVerse(words, songVerse);
+        }
+    }
+
+    private static void addWordsFromSongVerse(Collection<String> words, SongVerse songVerse) {
+        List<String> split = splitOnWhitespace(songVerse.getText());
+        for (String word : split) {
+            int start = 0;
+            int end = word.length() - 1;
+            // Find the first letter (skip leading non-letter characters)
+            while (start <= end && !Character.isLetter(word.charAt(start))) {
+                start++;
+            }
+            // Find the last letter (skip trailing non-letter characters)
+            while (end >= start && !Character.isLetter(word.charAt(end))) {
+                end--;
+            }
+            // If we found a valid range with at least one letter
+            if (start <= end) {
+                String wordWithoutNonLetters = getWordWithoutNonLetters(word, start, end);
+                words.add(wordWithoutNonLetters);
             }
         }
     }
+
+    public static void changeWordsInSongVerse(SongVerse songVerse, String from, String to) {
+        String originalText = songVerse.getText();
+        List<String> split = splitOnWhitespace(originalText);
+        StringBuilder text = new StringBuilder();
+        for (String word : split) {
+            int start = 0;
+            int length = word.length();
+            int end = length - 1;
+            // Find the first letter (skip leading non-letter characters)
+            while (start <= end && !Character.isLetter(word.charAt(start))) {
+                text.append(word.charAt(start));
+                ++start;
+            }
+            // Find the last letter (skip trailing non-letter characters)
+            while (end >= start && !Character.isLetter(word.charAt(end))) {
+                --end;
+            }
+            // If we found a valid range with at least one letter
+            if (start <= end) {
+                String wordWithoutNonLetters = getWordWithoutNonLetters(word, start, end);
+                if (wordWithoutNonLetters.equals(from)) {
+                    text.append(to);
+                } else {
+                    text.append(wordWithoutNonLetters);
+                }
+                for (int i = end + 1; i < length; ++i) {
+                    text.append(word.charAt(i));
+                }
+            }
+        }
+        songVerse.setText(text.toString());
+    }
+
+    private static String getWordWithoutNonLetters(String word, int start, int end) {
+        StringBuilder wordWithoutNonLetters = new StringBuilder();
+        // Traverse through the word from 'start' to 'end'
+        for (int i = start; i <= end; i++) {
+            char currentChar = word.charAt(i);
+            wordWithoutNonLetters.append(currentChar);
+        }
+        // Add the result to the list
+        return wordWithoutNonLetters.toString();
+    }
+
 }

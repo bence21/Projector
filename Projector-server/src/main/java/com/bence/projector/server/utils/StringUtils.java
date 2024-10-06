@@ -7,14 +7,14 @@ import java.text.Normalizer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StringUtils {
 
     private static final int N = 2000;
     private static final Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-    public static final String WHITE_SPACES = " \\t\\f\\r\\u00A0";
+    public static final char NON_BREAKING_SPACE = '\u00A0';
+    public static final String WHITE_SPACES = " \\t\\f\\r" + NON_BREAKING_SPACE;
     private static final String whiteSpace = "[" + WHITE_SPACES + "]"; // \s matches also to \n
     private static final String nonLetters = "\\P{L}";
     private static final String nonLettersExceptPeriod = "[^\\p{L}.]";
@@ -199,6 +199,7 @@ public class StringUtils {
         String s1 = "([" + withoutEndQuotationMark + "])" + whiteSpace + "*";
         newValue = newValue.replaceAll("^" + s1, "$1");
         newValue = newValue.replaceAll("\n" + s1, "\n$1");
+        //noinspection RegExpSimplifiable
         newValue = newValue.replaceAll(someSymbols_saved + " +([" + endQuotationMark + "])", "$1$2");
         newValue = newValue.replaceAll(letters_saved + "\\(", "$1 (");
         newValue = newValue.replaceAll("\\) +" + someSymbols_saved, ")$1");
@@ -446,13 +447,4 @@ public class StringUtils {
         return newValue;
     }
 
-    public static int countMatches(String s, String regex) {
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(s);
-        int matchCount = 0;
-        while (matcher.find()) {
-            matchCount++;
-        }
-        return matchCount;
-    }
 }

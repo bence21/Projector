@@ -714,6 +714,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (uuid == null) {
             return;
         }
+        ConcurrentHashMap<String, Song> songsHashMap = getSongsHashMap();
         new Thread(() -> {
             if (songsHashMap.containsKey(uuid)) {
                 songsHashMap.put(uuid, songRepository.findOneByUuid(uuid));
@@ -795,6 +796,9 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     private void removeSongFromHashMap(Song song) {
+        if (songsHashMap == null) {
+            return;
+        }
         String uuid = song.getUuid();
         songsHashMap.remove(uuid);
     }

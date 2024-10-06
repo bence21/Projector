@@ -22,11 +22,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
+import static com.bence.projector.server.utils.SetLanguages.changeWordsInSongVerse;
 import static com.bence.projector.server.utils.SetLanguages.getNormalizedWordBunches;
-import static com.bence.projector.server.utils.StringUtils.countMatches;
+import static com.bence.projector.server.utils.SetLanguages.getSongWords;
 
 @Controller
 public class NormalizedWordResource {
@@ -79,7 +81,7 @@ public class NormalizedWordResource {
         String regex = getWordMatchRegex(word);
         List<Song> songs = songRepository.findAllByLanguageAndVersesTextContains(language.getId(), regex);
         for (Song song : songs) {
-            if (containsInSong(song, regex)) {
+            if (containsInSong(song, word)) {
                 containsInSongs.add(song);
             }
         }
@@ -90,9 +92,10 @@ public class NormalizedWordResource {
         return "\\b" + word + "\\b";
     }
 
-    private static boolean containsInSong(Song song, String regex) {
-        for (SongVerse songVerse : song.getVerses()) {
-            if (countMatches(songVerse.getText(), regex) > 0) {
+    private static boolean containsInSong(Song song, String word) {
+        Collection<String> songWords = getSongWords(song);
+        for (String songWord : songWords) {
+            if (songWord.equals(word)) {
                 return true;
             }
         }
@@ -108,13 +111,7 @@ public class NormalizedWordResource {
         String word = changeWordDTO.getWord();
         List<Song> songs = getContainsInSongs(languageId, word);
 
-        String regex = getWordMatchRegex(word);
-        long count = 0;
-        for (Song song : songs) {
-            for (SongVerse songVerse : song.getVerses()) {
-                count += countMatches(songVerse.getText(), regex);
-            }
-        }
+        long count = getWordCountInSongs(songs, word);
         if (count != changeWordDTO.getOccurrence()) {
             return new ResponseEntity<>("Found matches: " + count + " not equals " + changeWordDTO.getOccurrence(), HttpStatus.NOT_ACCEPTABLE);
         }
@@ -122,11 +119,24 @@ public class NormalizedWordResource {
         Date modifiedDate = new Date();
         for (Song song : songs) {
             for (SongVerse songVerse : song.getVerses()) {
-                songVerse.setText(songVerse.getText().replaceAll(regex, correction));
+                changeWordsInSongVerse(songVerse, word, correction);
             }
             song.setModifiedDate(modifiedDate);
         }
         songService.saveAllAndRemoveCache(songs);
         return new ResponseEntity<>(changeWordDTO, HttpStatus.ACCEPTED);
+    }
+
+    private static long getWordCountInSongs(List<Song> songs, String word) {
+        long count = 0;
+        for (Song song : songs) {
+            Collection<String> songWords = getSongWords(song);
+            for (String songWord : songWords) {
+                if (songWord.equals(word)) {
+                    ++count;
+                }
+            }
+        }
+        return count;
     }
 }
