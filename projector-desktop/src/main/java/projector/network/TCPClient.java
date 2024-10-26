@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
 import projector.application.Settings;
+import projector.controller.util.AutomaticAction;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.model.Bible;
@@ -25,6 +26,7 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -170,7 +172,16 @@ public class TCPClient {
                                         String projectionTypeName = inFromServer.readLine();
                                         fromServer = inFromServer.readLine();
                                         if (fromServer.equals("end 'projectionType'")) {
-                                            projectionScreensUtil.setText(text, ProjectionType.valueOf(projectionTypeName), getProjectionData(projectionDTO));
+                                            ProjectionType projectionType = ProjectionType.valueOf(projectionTypeName);
+                                            ProjectionData projectionData = getProjectionData(projectionDTO);
+                                            if (projectionType == ProjectionType.COUNTDOWN_TIMER && projectionDTO != null) {
+                                                Date finishDate = projectionDTO.getFinishDate();
+                                                if (finishDate != null) {
+                                                    projectionScreensUtil.setCountDownTimer(null, finishDate, getAutomaticAction(projectionDTO), projectionDTO.isShowFinishTime());
+                                                }
+                                            } else {
+                                                projectionScreensUtil.setText(text, projectionType, projectionData);
+                                            }
                                         }
                                     }
                                 }
@@ -192,6 +203,10 @@ public class TCPClient {
             }
         });
         thread.start();
+    }
+
+    private static AutomaticAction getAutomaticAction(ProjectionDTO projectionDTO) {
+        return AutomaticAction.getFromOrdinal(projectionDTO.getSelectedAction());
     }
 
     private static ProjectionData getProjectionData(ProjectionDTO projectionDTO) {

@@ -164,6 +164,9 @@ public class ProjectionScreensUtil {
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
             projectionScreenHolder.setText(text, projectionType, projectionData);
         }
+        for (ProjectionTextChangeListener projectionTextChangeListener : getProjectionTextChangeListeners()) {
+            projectionTextChangeListener.onSetText(text, projectionType, projectionData);
+        }
     }
 
     public void drawImage(Image image) {
@@ -209,6 +212,9 @@ public class ProjectionScreensUtil {
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
             projectionScreenHolder.clearAll();
         }
+        for (ProjectionTextChangeListener projectionTextChangeListener : getProjectionTextChangeListeners()) {
+            projectionTextChangeListener.onSetText("", ProjectionType.CLEAR, projectionData);
+        }
     }
 
     public void onClose() {
@@ -223,6 +229,9 @@ public class ProjectionScreensUtil {
             stopOtherCountDownTimer();
             for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
                 projectionScreenHolder.setCountDownTimer(finishDate, selectedAction, showFinishTime);
+            }
+            for (ProjectionTextChangeListener projectionTextChangeListener : getProjectionTextChangeListeners()) {
+                projectionTextChangeListener.onSetCountDownTimer(finishDate, selectedAction, showFinishTime);
             }
         } else {
             selectedProjectionScreenController.setCountDownTimer(finishDate, selectedAction, showFinishTime);

@@ -2,6 +2,7 @@ package com.bence.projector.common.dto;
 
 import com.google.gson.annotations.Expose;
 
+import java.util.Date;
 import java.util.List;
 
 public class ProjectionDTO {
@@ -20,6 +21,12 @@ public class ProjectionDTO {
     private List<Integer> verseIndicesByPart;
     @Expose
     private List<SongVerseProjectionDTO> songVerseProjectionDTOS;
+    @Expose
+    private Integer selectedAction;
+    @Expose
+    private Boolean showFinishTime;
+    @Expose
+    private Date finishDate;
 
     public List<Long> getVerseIndices() {
         return verseIndices;
@@ -75,5 +82,29 @@ public class ProjectionDTO {
 
     public void setSongVerseProjectionDTOS(List<SongVerseProjectionDTO> songVerseProjectionDTO) {
         this.songVerseProjectionDTOS = songVerseProjectionDTO;
+    }
+
+    public void setSelectedAction(Integer selectedAction) {
+        this.selectedAction = selectedAction;
+    }
+
+    public Integer getSelectedAction() {
+        return selectedAction;
+    }
+
+    public void setShowFinishTime(boolean showFinishTime) {
+        this.showFinishTime = showFinishTime;
+    }
+
+    public boolean isShowFinishTime() {
+        return showFinishTime;
+    }
+
+    public void setFinishDate(Date finishDate) {
+        this.finishDate = finishDate;
+    }
+
+    public Date getFinishDate() {
+        return finishDate;
     }
 }

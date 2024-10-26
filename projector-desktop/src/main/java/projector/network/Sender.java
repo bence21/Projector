@@ -10,6 +10,7 @@ import projector.application.ProjectionType;
 import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.song.SongController;
+import projector.controller.util.AutomaticAction;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreensUtil;
 
@@ -23,6 +24,7 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 import static projector.controller.util.FileUtil.getGson;
 
@@ -58,6 +60,20 @@ public class Sender {
                     }
                     sendImageInThread(image, this);
                 }
+
+                @Override
+                public void onSetCountDownTimer(Date finishDate, AutomaticAction selectedAction, boolean showFinishTime) {
+                    if (senderType != SenderType.TEXT) {
+                        return;
+                    }
+                    ProjectionData projectionData = new ProjectionData();
+                    ProjectionDTO projectionDTO = new ProjectionDTO();
+                    projectionDTO.setFinishDate(finishDate);
+                    projectionDTO.setSelectedAction(selectedAction.ordinal());
+                    projectionDTO.setShowFinishTime(showFinishTime);
+                    projectionData.setProjectionDTO(projectionDTO);
+                    sendTextInThread("", ProjectionType.COUNTDOWN_TIMER, projectionData, this);
+                }
             };
             ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
             projectionScreensUtil.addProjectionTextChangeListener(projectionTextChangeListener);
@@ -89,6 +105,9 @@ public class Sender {
 
     private void sendTextInThread(String text, ProjectionType projectionType, ProjectionData projectionData,
                                   ProjectionTextChangeListener projectionTextChangeListener) {
+        if (text == null || projectionType == null) {
+            return;
+        }
         waitPreviousThread();
         thread = new Thread(() -> {
             try {

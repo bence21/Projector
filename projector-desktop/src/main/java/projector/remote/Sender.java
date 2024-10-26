@@ -10,6 +10,7 @@ import projector.application.ProjectionType;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.song.SongController;
 import projector.controller.song.util.SearchedSong;
+import projector.controller.util.AutomaticAction;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.model.Song;
@@ -23,6 +24,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class Sender {
@@ -71,6 +73,11 @@ public class Sender {
 
                 @Override
                 public void onImageChanged(Image image, ProjectionType projectionType, ProjectionData projectionData) {
+
+                }
+
+                @Override
+                public void onSetCountDownTimer(Date finishDate, AutomaticAction selectedAction, boolean showFinishTime) {
 
                 }
             };
