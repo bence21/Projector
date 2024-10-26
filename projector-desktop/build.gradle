@@ -101,7 +101,8 @@ runtime {
         imageName = "Projector"
         appVersion = "3.5.10"
         jvmArgs = [
-                '-Djava.net.preferIPv4Stack=true'
+                '-Djava.net.preferIPv4Stack=true',
+                '-Dprism.maxvram=4096m'
         ]
 
         if (currentOs.windows) {
