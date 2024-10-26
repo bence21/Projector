@@ -225,7 +225,7 @@ public class ProjectionScreensUtil {
 
     public void setCountDownTimer(ProjectionScreenController selectedProjectionScreenController, Date finishDate, AutomaticAction selectedAction, boolean showFinishTime) {
         ProjectionScreenController mainProjectionController = MyController.getInstance().getProjectionScreenController();
-        if (selectedProjectionScreenController == mainProjectionController) {
+        if (selectedProjectionScreenController == null || selectedProjectionScreenController == mainProjectionController) {
             stopOtherCountDownTimer();
             for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
                 projectionScreenHolder.setCountDownTimer(finishDate, selectedAction, showFinishTime);
