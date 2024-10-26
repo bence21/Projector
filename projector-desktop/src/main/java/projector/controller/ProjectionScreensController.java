@@ -226,7 +226,7 @@ public class ProjectionScreensController {
     }
 
     private static void setLabelTextByHolder(Label label, ProjectionScreenHolder projectionScreenHolder) {
-        label.setText(projectionScreenHolder.getName());
+        label.setText(projectionScreenHolder.getProjectionScreenSettings().getName());
     }
 
     private Button getSettingsButton(ProjectionScreenHolder projectionScreenHolder, ResourceBundle resourceBundle) {
@@ -334,7 +334,7 @@ public class ProjectionScreensController {
             @Override
             public void handle(ActionEvent event) {
                 ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
-                String title = resourceBundle.getString("Settings") + " - " + projectionScreenHolder.getName();
+                String title = resourceBundle.getString("Settings") + " - " + projectionScreenHolder.getProjectionScreenSettings().getName();
                 FXMLLoader loader = new FXMLLoader();
                 loader.setLocation(getClass().getResource("/view/ProjectionScreenSettings.fxml"));
                 loader.setResources(resourceBundle);

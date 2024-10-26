@@ -109,6 +109,7 @@ public class ProjectionScreenSettingsController {
     public ResetButton marginsReset;
     public ComboBox<ProjectionScreenBunch> screenComboBox;
     public HBox swapScreenHBox;
+    public TextField nameTextField;
     public CheckBox progressBarCheckbox;
     public Slider progressBarHeightSlider;
     private Stage stage;
@@ -150,7 +151,9 @@ public class ProjectionScreenSettingsController {
         projectionScreenSettings.setAsPadding(projectionScreenSettingsModel.getAsPadding());
         projectionScreenSettings.setProgressBar(projectionScreenSettingsModel.getProgressBar());
         projectionScreenSettings.setProgressBarHeight(projectionScreenSettingsModel.getProgressBarHeight());
+        projectionScreenSettings.setName(projectionScreenSettingsModel.getName_());
         projectionScreenSettings.save();
+        projectionScreenHolder.onNameChanged();
         ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
         if (projectionScreenController != null) {
             projectionScreenController.setProjectionScreenSettings(projectionScreenSettings);
@@ -218,6 +221,8 @@ public class ProjectionScreenSettingsController {
 
     private void initializeScreenComboBox() {
         try {
+            nameTextField.setText(projectionScreenSettings.getName());
+            nameTextField.textProperty().addListener((observableValue, oldValue, newValue) -> projectionScreenSettingsModel.setName(newValue));
             handleProjectionScreensWithScreenComboBox(screenComboBox, projectionScreenHolder);
             screenComboBox.getSelectionModel().selectedItemProperty().addListener((o, old, newValue) -> swapProjectionScreen(projectionScreenHolder, newValue.getProjectionScreenHolder()));
             if (screenComboBox.getItems().size() == 0) {
@@ -234,6 +239,11 @@ public class ProjectionScreenSettingsController {
             String temporarySwappingScreen = "TemporarySwappingScreen";
             ProjectionScreenSettings projectionScreenSettings1 = projectionScreenHolder1.getProjectionScreenSettings();
             ProjectionScreenSettings projectionScreenSettings2 = projectionScreenHolder2.getProjectionScreenSettings();
+            String settings1Name_ = projectionScreenSettings1.getName_();
+            projectionScreenSettings1.setName(projectionScreenSettings2.getName_());
+            projectionScreenSettings2.setName(settings1Name_);
+            projectionScreenSettings1.save();
+            projectionScreenSettings2.save();
             projectionScreenSettings2.renameSettingsFile2(temporarySwappingScreen, true);
             projectionScreenSettings1.renameSettingsFile2(projectionScreenHolder2.getName(), true);
             projectionScreenSettings2.renameSettingsFile3(temporarySwappingScreen, temp, true);
@@ -389,6 +399,7 @@ public class ProjectionScreenSettingsController {
             // }
             // textFlow.setText2(getPreviewText(), (int) width, (int) height);
             if (liveButton.isSelected()) {
+                projectionScreenHolder.onNameChanged();
                 ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
                 if (projectionScreenController == null) {
                     return;

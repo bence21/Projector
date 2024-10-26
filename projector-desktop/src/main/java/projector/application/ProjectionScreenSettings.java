@@ -104,6 +104,8 @@ public class ProjectionScreenSettings {
     private Boolean progressBar;
     @Expose
     private Double progressBarHeight;
+    @Expose
+    private String name;
     // check for copy constructor!
     private Listener onChangedListener = null;
 
@@ -158,6 +160,7 @@ public class ProjectionScreenSettings {
         this.focusOnSongPart = projectionScreenSettings.focusOnSongPart;
         this.progressBar = projectionScreenSettings.progressBar;
         this.progressBarHeight = projectionScreenSettings.progressBarHeight;
+        this.name = projectionScreenSettings.name;
         // Also copy fromJson in load method!!!
         return settings;
     }
@@ -357,6 +360,7 @@ public class ProjectionScreenSettings {
             this.focusOnSongPart = fromJson.focusOnSongPart;
             this.progressBar = fromJson.progressBar;
             this.progressBarHeight = fromJson.progressBarHeight;
+            this.name = fromJson.name;
         } catch (FileNotFoundException ignored) {
         } catch (IOException e) {
             LOG.error(e.getMessage(), e);
@@ -651,6 +655,22 @@ public class ProjectionScreenSettings {
 
     public Boolean getProgressBar() {
         return progressBar;
+    }
+
+    public String getName_() {
+        return name;
+    }
+
+    public String getName() {
+        if (name == null && projectionScreenHolder != null) {
+            return projectionScreenHolder.getName();
+        }
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+        onChanged();
     }
 
     public interface Listener {

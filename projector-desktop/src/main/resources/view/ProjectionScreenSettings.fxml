@@ -264,6 +264,7 @@
             <center>
                 <HBox alignment="CENTER_LEFT" styleClass="h-box">
                     <HBox fx:id="swapScreenHBox" alignment="CENTER_LEFT" spacing="10.0" styleClass="h-box">
+                        <TextField fx:id="nameTextField"/>
                         <Label text="%Swap screen with:"/>
                         <ComboBox fx:id="screenComboBox"/>
                         <padding>

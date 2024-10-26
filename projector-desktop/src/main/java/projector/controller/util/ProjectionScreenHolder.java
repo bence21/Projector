@@ -48,6 +48,10 @@ public class ProjectionScreenHolder {
 
     public void setName(String name) {
         this.name = name;
+        onNameChanged();
+    }
+
+    public void onNameChanged() {
         for (OnResultListener onNameChangeListener : onNameChangeListeners) {
             onNameChangeListener.onResult();
         }
@@ -198,5 +202,16 @@ public class ProjectionScreenHolder {
 
     public void setBackGroundColor() {
         projectionScreenController.setBackGroundColor();
+    }
+
+    public String getNameWithDefault() {
+        String s = getProjectionScreenSettings().getName();
+        String s2 = getName();
+        String result = s;
+        if (!s.equals(s2)) {
+            String s1 = " (" + s2 + ")";
+            result += s1;
+        }
+        return result;
     }
 }

@@ -25,7 +25,7 @@ public class ProjectionScreenBunch {
         if (projectionScreenHolder == null) {
             return getName();
         } else {
-            return projectionScreenHolder.getName();
+            return projectionScreenHolder.getNameWithDefault();
         }
     }
 }

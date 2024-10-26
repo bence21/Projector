@@ -325,6 +325,7 @@ public class ProjectionScreenController {
         } else {
             setBackGroundImage();
         }
+        onViewChanged();
     }
 
     private void setPanesBackground(Color backgroundColor) {
@@ -732,7 +733,7 @@ public class ProjectionScreenController {
     }
 
     private void createProgressBarTopPane(List<SongVersePartTextFlow> songVersePartTextFlows, double currentSongVerseWidth, double width, ObservableList<Node> stackPaneChildren, SongVersePartTextFlow previousLast, SongVersePartTextFlow nextFirst) {
-        double progressBarSelectionBorderWidth = 21.0 * projectionScreenSettings.getProgressBarHeightD();
+        double progressBarSelectionBorderSize = 24.0 * projectionScreenSettings.getProgressBarHeightD();
         HBox hBox = new HBox();
         setHBoxSizes(hBox, currentSongVerseWidth, progressBarHBox.getPrefHeight());
         ObservableList<Node> hBoxChildren = hBox.getChildren();
@@ -748,9 +749,9 @@ public class ProjectionScreenController {
                 pane.setEffect(glow);
                 SongVersePartTextFlow previousSongVersePartTextFlow = getFromListWithDefault(songVersePartTextFlows, i - 1, previousLast);
                 SongVersePartTextFlow nextSongVersePartTextFlow = getFromListWithDefault(songVersePartTextFlows, i + 1, nextFirst);
-                double leftBorderWidth = isSongVersePartTextFlowSelected(previousSongVersePartTextFlow) ? 0 : progressBarSelectionBorderWidth;
-                double rightBorderWidth = isSongVersePartTextFlowSelected(nextSongVersePartTextFlow) ? 0 : progressBarSelectionBorderWidth;
-                pane.setBorder(new Border(new BorderStroke(settings.getProgressLineColor(), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(progressBarSelectionBorderWidth, rightBorderWidth, progressBarSelectionBorderWidth, leftBorderWidth))));
+                double leftBorderWidth = isSongVersePartTextFlowSelected(previousSongVersePartTextFlow) ? 0 : progressBarSelectionBorderSize;
+                double rightBorderWidth = isSongVersePartTextFlowSelected(nextSongVersePartTextFlow) ? 0 : progressBarSelectionBorderSize;
+                pane.setBorder(new Border(new BorderStroke(settings.getProgressLineColor(), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(progressBarSelectionBorderSize, rightBorderWidth, progressBarSelectionBorderSize, leftBorderWidth))));
             }
         }
         stackPaneChildren.add(hBox);
@@ -908,7 +909,7 @@ public class ProjectionScreenController {
                 scene2.heightProperty().addListener((observable, oldValue, newValue) -> doubleProjectionScreenController.repaint());
                 Stage stage2 = getAStage(getClass());
                 stage2.setScene(scene2);
-                stage2.setTitle(doubleProjectionScreenController.getProjectionScreenSettings().getProjectionScreenHolder().getName());
+                stage2.setTitle(doubleProjectionScreenController.getProjectionScreenSettings().getProjectionScreenHolder().getProjectionScreenSettings().getName());
                 stage2.setX(0);
                 stage2.setY(0);
                 doubleProjectionScreenController.setStage(stage2);
