@@ -1,9 +1,15 @@
 package projector.controller.util;
 
+import javafx.application.Platform;
+import javafx.scene.image.Image;
+import projector.application.ProjectionType;
+import projector.controller.MyController;
 import projector.controller.ProjectionScreenController;
+import projector.controller.ProjectionTextChangeListener;
 import projector.controller.listener.ProjectionScreenListener;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +20,14 @@ public class ProjectionScreensUtil {
     private final Map<Integer, ProjectionScreenHolder> doubleScreenHolders;
     private final Map<Integer, ProjectionScreenHolder> automaticScreenHolders;
     private final List<ProjectionScreenListener> projectionScreenListeners;
+    private boolean lock;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private boolean blank;
+    private List<ProjectionTextChangeListener> projectionTextChangeListeners;
+    private String text = "";
+    private ProjectionType projectionType = null;
+    private ProjectionData projectionData = null;
+    private ProjectionScreenController mainProjectionScreenController = null;
 
     private ProjectionScreensUtil() {
         projectionScreenHolders = new ArrayList<>();
@@ -118,6 +132,130 @@ public class ProjectionScreensUtil {
     private void onRemoveListenersCall(ProjectionScreenHolder projectionScreenHolder) {
         for (ProjectionScreenListener projectionScreenListener : projectionScreenListeners) {
             projectionScreenListener.onRemoved(projectionScreenHolder);
+        }
+    }
+
+    public boolean isLock() {
+        return lock;
+    }
+
+    public void setLock(boolean lock) {
+        this.lock = lock;
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            if (projectionScreenHolder.isNotPreview()) {
+                projectionScreenHolder.setLock(lock);
+            }
+        }
+    }
+
+    public void setBlank(boolean blank) {
+        this.blank = blank;
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            if (projectionScreenHolder.isNotPreview()) {
+                projectionScreenHolder.setBlank(blank);
+            }
+        }
+    }
+
+    public void setText(String text, ProjectionType projectionType, ProjectionData projectionData) {
+        this.text = text;
+        this.projectionType = projectionType;
+        this.projectionData = projectionData;
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.setText(text, projectionType, projectionData);
+        }
+    }
+
+    public void drawImage(Image image) {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.drawImage(image);
+        }
+    }
+
+    public void addProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
+        List<ProjectionTextChangeListener> projectionTextChangeListeners = getProjectionTextChangeListeners();
+        projectionTextChangeListeners.add(projectionTextChangeListener);
+        projectionTextChangeListener.onSetText(text, projectionType, projectionData);
+    }
+
+    private List<ProjectionTextChangeListener> getProjectionTextChangeListeners() {
+        if (projectionTextChangeListeners == null) {
+            projectionTextChangeListeners = new ArrayList<>();
+        }
+        return projectionTextChangeListeners;
+    }
+
+    public void removeProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
+        if (projectionTextChangeListeners != null) {
+            Platform.runLater(() -> projectionTextChangeListeners.remove(projectionTextChangeListener));
+        }
+        if (mainProjectionScreenController != null) {
+            mainProjectionScreenController.removeProjectionTextChangeListener((projectionTextChangeListener));
+        }
+    }
+
+    public void addImageChangeListenerToProjectionScreenController(ProjectionTextChangeListener projectionTextChangeListener, ProjectionScreenController projectionScreenController) {
+        this.mainProjectionScreenController = projectionScreenController;
+        projectionScreenController.addProjectionImageChangeListener(projectionTextChangeListener);
+    }
+
+    public void stopOtherCountDownTimer() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.stopCountDownTimer();
+        }
+    }
+
+    public void clearAll() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.clearAll();
+        }
+    }
+
+    public void onClose() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.onClose();
+        }
+    }
+
+    public void setCountDownTimer(ProjectionScreenController selectedProjectionScreenController, Date finishDate, AutomaticAction selectedAction, boolean showFinishTime) {
+        ProjectionScreenController mainProjectionController = MyController.getInstance().getProjectionScreenController();
+        if (selectedProjectionScreenController == mainProjectionController) {
+            stopOtherCountDownTimer();
+            for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+                projectionScreenHolder.setCountDownTimer(finishDate, selectedAction, showFinishTime);
+            }
+        } else {
+            selectedProjectionScreenController.setCountDownTimer(finishDate, selectedAction, showFinishTime);
+        }
+    }
+
+    public void setImage(String fileImagePath, ProjectionType projectionType, String nextFileImagePath) {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.setImage(fileImagePath, projectionType, nextFileImagePath);
+        }
+    }
+
+    public void clearText() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.clearText();
+        }
+    }
+
+    public void setProgress(double progress) {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.setProgress(progress);
+        }
+    }
+
+    public void onSettingsChanged() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.onSettingsChanged();
+        }
+    }
+
+    public void setBackGroundColor() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.setBackGroundColor();
         }
     }
 }

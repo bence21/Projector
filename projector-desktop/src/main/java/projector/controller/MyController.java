@@ -26,6 +26,7 @@ import projector.application.ProjectorState;
 import projector.application.Settings;
 import projector.controller.song.ScheduleController;
 import projector.controller.song.SongController;
+import projector.controller.util.ProjectionScreensUtil;
 import projector.model.CustomCanvas;
 import projector.network.TCPClient;
 import projector.network.TCPServer;
@@ -48,7 +49,7 @@ public class MyController {
     private static MyController instance = null;
     @FXML
     private ToggleButton showProjectionScreenToggleButton;
-    @FXML
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private ProjectionScreenController projectionScreenController;
     @FXML
     private BibleController bibleController;
@@ -140,18 +141,17 @@ public class MyController {
         projectionScreenController.setBlank(true);
         projectionScreenController.setGalleryController(galleryController);
         if (settings.isAllowRemote()) {
-            RemoteServer.startRemoteServer(projectionScreenController, songController);
+            RemoteServer.startRemoteServer(songController);
         }
-        //initializeGlobalKeyListener(projectionScreenController);
+        //initializeGlobalKeyListener();
         automaticNetworks();
     }
 
     @SuppressWarnings("unused")
-    private void initializeGlobalKeyListener(ProjectionScreenController projectionScreenController) {
+    private void initializeGlobalKeyListener() {
         try {
             GlobalScreen.registerNativeHook();
             GlobalKeyListenerExample nativeKeyListener = new GlobalKeyListenerExample();
-            nativeKeyListener.setProjectionScreenController(projectionScreenController);
             GlobalScreen.addNativeKeyListener(nativeKeyListener);
             java.util.logging.Logger logger = java.util.logging.Logger.getLogger(GlobalScreen.class.getPackage().getName());
             logger.setLevel(Level.OFF);
@@ -225,7 +225,7 @@ public class MyController {
             TCPServer.startShareNetwork(projectionScreenController, songController);
         }
         if (settings.isConnectToSharedAutomatically()) {
-            TCPClient.connectToShared(projectionScreenController);
+            TCPClient.connectToShared();
         }
     }
 
@@ -277,7 +277,7 @@ public class MyController {
     public void setBlank(boolean selected) {
         if (blankButton.isSelected() != selected) {
             blankButton.setSelected(selected);
-            projectionScreenController.setBlank(selected);
+            projectionScreensUtil.setBlank(selected);
             songController.onBlankButtonSelected(selected);
         }
     }
@@ -287,13 +287,13 @@ public class MyController {
     }
 
     public void blankButtonOnAction() {
-        projectionScreenController.setBlank(blankButton.isSelected());
+        projectionScreensUtil.setBlank(blankButton.isSelected());
         // recentController.setBlank(blankButton.isSelected());
         songController.onBlankButtonSelected(blankButton.isSelected());
     }
 
     public void lockButtonOnAction() {
-        projectionScreenController.setLock(lockButton.isSelected());
+        projectionScreensUtil.setLock(lockButton.isSelected());
         final ResourceBundle resourceBundle = settings.getResourceBundle();
         if (lockButton.isSelected()) {
             lockButton.setText(resourceBundle.getString("Unlock"));
@@ -454,6 +454,6 @@ public class MyController {
     }
 
     public void clearButtonOnAction() {
-        projectionScreenController.clearAll();
+        projectionScreensUtil.clearAll();
     }
 }

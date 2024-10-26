@@ -352,7 +352,7 @@ public class MainDesktop extends Application {
             windowController.setStylesheet(url);
         });
         projectionScreenController.setInitialDotText();
-        projectionScreenController.setBlank(false);
+        ProjectionScreensUtil.getInstance().setBlank(false);
         Updater.getInstance().checkForUpdate();
         if (startDate != null) {
             Date date1 = new Date();
@@ -398,7 +398,7 @@ public class MainDesktop extends Application {
             tmpStage.close();
         }
         myController.close();
-        projectionScreenController.onClose();
+        ProjectionScreensUtil.getInstance().onClose();
         CustomCanvasService.getInstance().save();
     }
 

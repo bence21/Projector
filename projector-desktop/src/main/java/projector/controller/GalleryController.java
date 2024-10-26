@@ -38,6 +38,7 @@ import projector.application.Settings;
 import projector.controller.util.ImageCacheService;
 import projector.controller.util.ImageContainer;
 import projector.controller.util.ImageOrderMethod;
+import projector.controller.util.ProjectionScreensUtil;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -70,6 +71,7 @@ public class GalleryController {
     private static final String FOLDER_PATH = "gallery";
     private static final Logger LOG = LoggerFactory.getLogger(GalleryController.class);
     private static final Settings settings = Settings.getInstance();
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     public BorderPane borderPane;
     private ImageContainer selectedImageContainer; // to keep track of the selected image container
     private FlowPane flowPane = null;
@@ -638,7 +640,7 @@ public class GalleryController {
                 String nextFileImagePath = getNextFileImagePath();
                 String fileImagePath = imageContainer.getFileImagePath();
                 setLastAccessTime(Path.of(fileImagePath));
-                MyController.getInstance().getProjectionScreenController().setImage(fileImagePath, ProjectionType.IMAGE, nextFileImagePath);
+                projectionScreensUtil.setImage(fileImagePath, ProjectionType.IMAGE, nextFileImagePath);
                 loadImagePathToPreviewCanvas(fileImagePath);
                 return true;
             } else {

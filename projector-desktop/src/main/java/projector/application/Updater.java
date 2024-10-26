@@ -150,7 +150,7 @@ public class Updater {
                                     ApplicationUtil.getInstance().closeApplication();
                                     new Thread(() -> {
                                         try {
-                                            sleep(1000);
+                                            sleep(2000);
                                             String command = "cmd /c updater.exe";
                                             Runtime.getRuntime().exec(command);
                                         } catch (Exception e) {

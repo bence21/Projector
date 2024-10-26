@@ -2,7 +2,6 @@ package projector.remote;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import projector.controller.ProjectionScreenController;
 import projector.controller.song.SongController;
 
 import java.io.IOException;
@@ -18,22 +17,22 @@ public class RemoteServer {
     private static final Logger LOG = LoggerFactory.getLogger(RemoteServer.class);
     private static Thread thread;
     private static boolean closed = false;
-    private static List<Sender> senders = new ArrayList<>();
+    private static final List<Sender> senders = new ArrayList<>();
     private static ServerSocket welcomeSocket;
 
-    public synchronized static void startRemoteServer(ProjectionScreenController projectionScreenController, SongController songController) {
+    public synchronized static void startRemoteServer(SongController songController) {
         if (thread == null) {
             thread = new Thread(() -> {
                 try {
                     welcomeSocket = new ServerSocket(PORT);
                     while (!closed) {
                         Socket connectionSocket = welcomeSocket.accept();
-                        Sender sender = new Sender(connectionSocket, projectionScreenController, songController);
+                        Sender sender = new Sender(connectionSocket, songController);
                         addSocket(sender);
                     }
                 } catch (SocketException e) {
                     try {
-                        if (e.getMessage().toLowerCase().equals("socket closed")) {
+                        if (e.getMessage().equalsIgnoreCase("socket closed")) {
                             return;
                         }
                     } catch (Exception e1) {

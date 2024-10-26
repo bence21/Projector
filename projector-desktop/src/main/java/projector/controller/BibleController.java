@@ -50,6 +50,7 @@ import projector.application.Reader;
 import projector.application.Settings;
 import projector.controller.eventHandler.NextButtonEventHandler;
 import projector.controller.util.ProjectionData;
+import projector.controller.util.ProjectionScreensUtil;
 import projector.model.Bible;
 import projector.model.BibleVerse;
 import projector.model.Book;
@@ -95,7 +96,7 @@ public class BibleController {
     private final List<Bible> parallelBibles = new ArrayList<>();
     private final Settings settings = Settings.getInstance();
     private MyController mainController;
-    private ProjectionScreenController projectionScreenController;
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private BibleSearchController bibleSearchController;
     private RecentController recentController;
     private HistoryController historyController;
@@ -720,7 +721,7 @@ public class BibleController {
                     final KeyCode keyCode = event.getCode();
                     if (keyCode == KeyCode.ENTER) {
                         if (settings.isFastMode()) {
-                            projectionScreenController.setBlank(false);
+                            projectionScreensUtil.setBlank(false);
                             mainController.getBlankButton().setSelected(false);
                         }
                     } else if (keyCode == KeyCode.UP && event.isAltDown()) {
@@ -811,7 +812,7 @@ public class BibleController {
             bookTextField.requestFocus();
             sendProjectionScreenText.setOnAction(event -> {
                 try {
-                    projectionScreenController.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, null);
+                    projectionScreensUtil.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, null);
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
@@ -1478,7 +1479,6 @@ public class BibleController {
 
     void setProjectionScreenController(ProjectionScreenController projectionScreenController) {
         try {
-            this.projectionScreenController = projectionScreenController;
             projectionScreenController.setBibleController(this);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -1711,7 +1711,7 @@ public class BibleController {
             if (!string.isEmpty()) {
                 if (!settings.isShowReferenceOnly()) {
                     //noinspection ConstantConditions
-                    projectionScreenController.setText(text, ProjectionType.BIBLE, projectionData);
+                    projectionScreensUtil.setText(text, ProjectionType.BIBLE, projectionData);
                 }
                 for (int i : ob) {
                     if (i == -1) {
@@ -1722,7 +1722,7 @@ public class BibleController {
                 }
                 refreshReferenceTextArea();
                 if (settings.isShowReferenceOnly()) {
-                    projectionScreenController.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, projectionData);
+                    projectionScreensUtil.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, projectionData);
                 }
             }
         } catch (Exception e) {

@@ -81,6 +81,7 @@ import projector.controller.song.util.ScheduleSong;
 import projector.controller.song.util.SearchedSong;
 import projector.controller.song.util.SongTextFlow;
 import projector.controller.util.ProjectionData;
+import projector.controller.util.ProjectionScreensUtil;
 import projector.controller.util.UserService;
 import projector.model.FavouriteSong;
 import projector.model.Language;
@@ -226,6 +227,7 @@ public class SongController {
     private Button starButton;
     @FXML
     private TextField authorTextField;
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private ProjectionScreenController projectionScreenController;
     private ProjectionScreenController previewProjectionScreenController;
     private RecentController recentController;
@@ -835,7 +837,7 @@ public class SongController {
                     if (selectedIndex < 0) {
                         return;
                     }
-                    if ((settings.isShareOnNetwork() || settings.isAllowRemote()) && projectionTextChangeListeners != null && !projectionScreenController.isLock()) {
+                    if ((settings.isShareOnNetwork() || settings.isAllowRemote()) && projectionTextChangeListeners != null && !projectionScreensUtil.isLock()) {
                         try {
                             String secondText = getSecondText(selectedIndex - 1);
                             if (secondText != null && !secondText.isEmpty()) {
@@ -858,14 +860,14 @@ public class SongController {
                     setSongVerseProjection1(songVersePartTextFlow, text, this.selectedSong);
                     previousSelectedVerseIndex = selectedIndex;
                     if (selectedIndex + 1 == songListViewItems.size()) {
-                        projectionScreenController.clearText();
-                        projectionScreenController.setProgress(0);
+                        projectionScreensUtil.clearText();
+                        projectionScreensUtil.setProgress(0);
                     } else {
-                        projectionScreenController.setProgress((double) selectedIndex / (songListViewItems.size() - 2));
+                        projectionScreensUtil.setProgress((double) selectedIndex / (songListViewItems.size() - 2));
                     }
                 } else if (ob.size() > 1) {
                     int lastIndex = setSongVerseProjectionBySelectedParts();
-                    projectionScreenController.setProgress((double) lastIndex / (songListViewItems.size() - 2));
+                    projectionScreensUtil.setProgress((double) lastIndex / (songListViewItems.size() - 2));
                 }
                 if (recentController != null && !recentController.getLastItemText().equals(activeSongVerseTime.getSongTitle()) && !ob.isEmpty()) {
                     recentController.addRecentSong(activeSongVerseTime.getSongTitle(), ProjectionType.SONG);
@@ -929,7 +931,7 @@ public class SongController {
         projectionData.setProjectionDTO(projectionDTO);
         projectionData.setSong(song);
         projectionData.setSongVersePartTextFlows(getSongVersePartTextFlowsByOnlySongVerse());
-        projectionScreenController.setText(text, ProjectionType.SONG, projectionData);
+        projectionScreensUtil.setText(text, ProjectionType.SONG, projectionData);
     }
 
     private List<SongVersePartTextFlow> getSongVersePartTextFlowsByOnlySongVerse() {

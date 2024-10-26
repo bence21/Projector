@@ -3,7 +3,7 @@ package projector.utils;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
 import projector.application.ProjectionType;
-import projector.controller.ProjectionScreenController;
+import projector.controller.util.ProjectionScreensUtil;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -15,7 +15,7 @@ import java.util.List;
 
 public class GlobalKeyListenerExample implements NativeKeyListener {
 
-    private ProjectionScreenController projectionScreenController;
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private boolean controlPressed = false;
     private boolean metaPressed = false;
 
@@ -52,7 +52,7 @@ public class GlobalKeyListenerExample implements NativeKeyListener {
                 for (DataFlavor dataFlavor : dataFlavorList) {
                     if (systemClipboard.isDataFlavorAvailable(dataFlavor)) {
                         String clipBoardText = (String) systemClipboard.getData(dataFlavor);
-                        projectionScreenController.setText(clipBoardText, ProjectionType.CLIP_BOARD, null);
+                        projectionScreensUtil.setText(clipBoardText, ProjectionType.CLIP_BOARD, null);
                     }
                 }
             } catch (UnsupportedFlavorException | IOException ex) {
@@ -76,7 +76,4 @@ public class GlobalKeyListenerExample implements NativeKeyListener {
         System.out.println("Key Typed: " + NativeKeyEvent.getKeyText(keyCode));
     }
 
-    public void setProjectionScreenController(ProjectionScreenController projectionScreenController) {
-        this.projectionScreenController = projectionScreenController;
-    }
 }

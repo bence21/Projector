@@ -35,6 +35,7 @@ import projector.application.PTextAlignment;
 import projector.application.Settings;
 import projector.application.Updater;
 import projector.controller.song.SongController;
+import projector.controller.util.ProjectionScreensUtil;
 import projector.network.TCPClient;
 import projector.network.TCPServer;
 import projector.remote.RemoteServer;
@@ -50,6 +51,7 @@ import java.util.Objects;
 public class SettingsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(SettingsController.class);
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     public CheckBox automaticProjectionScreensCheckBox;
     public CheckBox strokeCheckbox;
     public ColorPicker strokeColorPicker;
@@ -322,7 +324,7 @@ public class SettingsController {
             TCPServer.startShareNetwork(projectionScreenController, songController);
             connectToSharedButton.setDisable(true);
         });
-        connectToSharedButton.setOnAction(event -> TCPClient.connectToShared(projectionScreenController));
+        connectToSharedButton.setOnAction(event -> TCPClient.connectToShared());
         settings.connectedToSharedProperty().addListener((observable, oldValue, newValue) -> shareOnLocalNetworkButton.setDisable(newValue));
         allowRemoteButton.setSelected(settings.isAllowRemote());
     }
@@ -348,7 +350,6 @@ public class SettingsController {
         FontWeight fontWeight1 = getFontWeightByString(newValue);
         addFonts(fontWeight1, listView);
         listView.getSelectionModel().select(0);
-        projectionScreenController.reload();
     }
 
     private void applyValues() {
@@ -482,15 +483,15 @@ public class SettingsController {
     private void onChanged() {
         if (liveButton.isSelected()) {
             applyValues();
-            projectionScreenController.onSettingsChanged();
+            projectionScreensUtil.onSettingsChanged();
         }
     }
 
     public synchronized void onSaveButtonAction() {
         applyValues();
         settings.save();
-        projectionScreenController.onSettingsChanged();
-        projectionScreenController.setBackGroundColor();
+        projectionScreensUtil.onSettingsChanged();
+        projectionScreensUtil.setBackGroundColor();
         if (listeners != null) {
             for (Listener listener : listeners) {
                 listener.onSave();
@@ -535,13 +536,12 @@ public class SettingsController {
     private synchronized void changed(ObservableValue<? extends Text> observable, Text oldValue, Text newValue) {
         if (newValue != null && !newValue.getText().isEmpty()) {
             settings.setFont(newValue.getText());
-            projectionScreenController.reload();
+            onChanged();
         }
     }
 
     private synchronized void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
         settings.setLineSpace(slider.getValue());
-        projectionScreenController.reload();
     }
 
     public synchronized void setSongController(SongController songController) {
@@ -558,7 +558,7 @@ public class SettingsController {
     public void allowRemoteButtonOnAction() {
         settings.setAllowRemote(allowRemoteButton.isSelected());
         if (settings.isAllowRemote()) {
-            RemoteServer.startRemoteServer(projectionScreenController, songController);
+            RemoteServer.startRemoteServer(songController);
         }
     }
 

@@ -7,11 +7,11 @@ import javafx.scene.image.Image;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
-import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.song.SongController;
 import projector.controller.song.util.SearchedSong;
 import projector.controller.util.ProjectionData;
+import projector.controller.util.ProjectionScreensUtil;
 import projector.model.Song;
 import projector.utils.scene.text.SongVersePartTextFlow;
 
@@ -33,8 +33,9 @@ public class Sender {
     private final Socket connectionSocket;
     private final Thread reader;
     private final BufferedReader inFromClient;
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
 
-    Sender(Socket connectionSocket, ProjectionScreenController projectionScreenController, SongController songController) throws IOException {
+    Sender(Socket connectionSocket, SongController songController) throws IOException {
         this.connectionSocket = connectionSocket;
         outToClient = new DataOutputStream(connectionSocket.getOutputStream());
         inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
@@ -53,17 +54,17 @@ public class Sender {
                     } catch (SocketException e) {
                         String message = e.getMessage();
                         if (message.equals("Socket closed")) {
-                            projectionScreenController.removeProjectionTextChangeListener(this);
+                            projectionScreensUtil.removeProjectionTextChangeListener(this);
                             close();
                             return;
                         } else if (!message.equals("Connection reset by peer: socket write error") &&
                                 !message.equals("Software caused connection abort: socket write error")) {
                             LOG.error(message, e);
                         }
-                        projectionScreenController.removeProjectionTextChangeListener(this);
+                        projectionScreensUtil.removeProjectionTextChangeListener(this);
                     } catch (Exception e) {
                         LOG.error(e.getMessage(), e);
-                        projectionScreenController.removeProjectionTextChangeListener(this);
+                        projectionScreensUtil.removeProjectionTextChangeListener(this);
                         close();
                     }
                 }
@@ -125,7 +126,7 @@ public class Sender {
                     }
                 }
             };
-            projectionScreenController.addProjectionTextChangeListener(projectionTextChangeListener);
+            projectionScreensUtil.addProjectionTextChangeListener(projectionTextChangeListener);
             songController.addProjectionTextChangeListener(projectionTextChangeListener);
             songController.setSongRemoteListener(songRemoteListener);
         });

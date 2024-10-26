@@ -51,6 +51,7 @@ public class UtilsController {
     private Label countDownLabel;
     @FXML
     private TextField timeTextField;
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private ProjectionScreenController projectionScreenController;
     private MouseButton lastMouseButton = null;
     private MouseEvent lastMouseEvent = null;
@@ -162,9 +163,9 @@ public class UtilsController {
     }
 
     public static void addProjectionScreenHolderToItems(ProjectionScreenHolder projectionScreenHolder, ObservableList<ProjectionScreenBunch> projectionScreensComboBoxItems) {
-        ProjectionScreenBunch projectionScreenBunch1 = new ProjectionScreenBunch();
-        projectionScreenBunch1.setProjectionScreenHolder(projectionScreenHolder);
-        projectionScreensComboBoxItems.add(projectionScreenBunch1);
+        ProjectionScreenBunch projectionScreenBunch = new ProjectionScreenBunch();
+        projectionScreenBunch.setProjectionScreenHolder(projectionScreenHolder);
+        projectionScreensComboBoxItems.add(projectionScreenBunch);
     }
 
     private AutomaticAction getSelectedAction() {
@@ -384,9 +385,9 @@ public class UtilsController {
         if (selectedProjectionScreenController != null) {
             ProjectionScreenController mainProjectionController = MyController.getInstance().getProjectionScreenController();
             if (selectedProjectionScreenController == mainProjectionController) {
-                mainProjectionController.stopOtherCountDownTimer();
+                projectionScreensUtil.stopOtherCountDownTimer();
             }
-            selectedProjectionScreenController.setCountDownTimer(getFinishDate(), selectedAction, showFinishTime);
+            projectionScreensUtil.setCountDownTimer(selectedProjectionScreenController, getFinishDate(), selectedAction, showFinishTime);
         } else {
             LOG.error("selectedProjectionScreenController is null");
         }

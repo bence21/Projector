@@ -4,7 +4,7 @@ import javafx.scene.image.Image;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
-import projector.controller.ProjectionScreenController;
+import projector.controller.util.ProjectionScreensUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -28,7 +28,7 @@ public class TCPImageClient {
     private static DataOutputStream outToServer;
     private static DataInputStream inFromServer;
 
-    public synchronized static void connectToShared(ProjectionScreenController projectionScreenController, String openIp) {
+    public synchronized static void connectToShared(String openIp) {
         if (thread != null) {
             closeInstance();
         }
@@ -45,7 +45,7 @@ public class TCPImageClient {
                     reader = new Thread(() -> {
                         while (settings.isConnectedToShared()) {
                             try {
-                                readImage(inFromServer, projectionScreenController);
+                                readImage(inFromServer);
                             } catch (SocketException e) {
                                 if (isUnknownException(e)) {
                                     LOG.error(e.getMessage(), e);
@@ -70,14 +70,14 @@ public class TCPImageClient {
         thread.start();
     }
 
-    private static void readImage(DataInputStream dataInputStream, ProjectionScreenController projectionScreenController) throws IOException {
+    private static void readImage(DataInputStream dataInputStream) throws IOException {
         int imageLength = dataInputStream.readInt();
         // Read the byte array itself
         byte[] imageBytes = new byte[imageLength];
         dataInputStream.readFully(imageBytes, 0, imageLength);
         ByteArrayInputStream imageStream = new ByteArrayInputStream(imageBytes);
         Image image = new Image(imageStream);
-        projectionScreenController.drawImage(image);
+        ProjectionScreensUtil.getInstance().drawImage(image);
     }
 
     static void closeInstance() {

@@ -6,8 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
 import projector.application.Settings;
-import projector.controller.ProjectionScreenController;
 import projector.controller.util.ProjectionData;
+import projector.controller.util.ProjectionScreensUtil;
 import projector.model.Bible;
 import projector.model.VerseIndex;
 import projector.service.ServiceManager;
@@ -117,7 +117,7 @@ public class TCPClient {
         }
     }
 
-    public synchronized static void connectToShared(ProjectionScreenController projectionScreenController) {
+    public synchronized static void connectToShared() {
         if (thread != null) {
             close();
         }
@@ -134,7 +134,7 @@ public class TCPClient {
                 }
                 System.out.println("openIp = " + openIp);
                 if (openIp != null) {
-                    TCPImageClient.connectToShared(projectionScreenController, openIp);
+                    TCPImageClient.connectToShared(openIp);
                     clientSocket = new Socket(openIp, PORT);
                     inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8));
                     outToServer = new DataOutputStream(clientSocket.getOutputStream());
@@ -142,6 +142,7 @@ public class TCPClient {
                     Settings settings = Settings.getInstance();
                     settings.setConnectedToShared(true);
                     reader = new Thread(() -> {
+                        ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
                         String fromServer;
                         while (settings.isConnectedToShared()) {
                             try {
@@ -169,7 +170,7 @@ public class TCPClient {
                                         String projectionTypeName = inFromServer.readLine();
                                         fromServer = inFromServer.readLine();
                                         if (fromServer.equals("end 'projectionType'")) {
-                                            projectionScreenController.setText(text, ProjectionType.valueOf(projectionTypeName), getProjectionData(projectionDTO));
+                                            projectionScreensUtil.setText(text, ProjectionType.valueOf(projectionTypeName), getProjectionData(projectionDTO));
                                         }
                                     }
                                 }

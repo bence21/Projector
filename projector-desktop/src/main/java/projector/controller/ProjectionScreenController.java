@@ -57,6 +57,7 @@ import projector.controller.listener.ViewChangedListener;
 import projector.controller.song.SongController;
 import projector.controller.util.AutomaticAction;
 import projector.controller.util.ImageCacheService;
+import projector.controller.util.OnResultListener;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
@@ -138,8 +139,7 @@ public class ProjectionScreenController {
     private double yOffset = 0;
     private boolean broughtToTheFront;
     private Scene scene;
-    private List<ProjectionTextChangeListener> projectionTextChangeListeners;
-    private ProjectionScreenController customStageController;
+    private List<ProjectionTextChangeListener> projectionImageChangeListeners;
     private boolean countDownTimerRunning = false;
     private Thread countDownTimerThread = null;
     private ProjectionScreenSettings projectionScreenSettings = new ProjectionScreenSettings();
@@ -308,22 +308,14 @@ public class ProjectionScreenController {
     }
 
     public void setBackGroundColor() {
-        setBackGroundColor2(false);
+        setBackGroundColor2();
     }
 
-    public void setBackGroundColor2(boolean onlyRepaint) {
-        if (previewProjectionScreenController != null && !onlyRepaint) {
-            previewProjectionScreenController.setBackGroundColor();
-        }
+    public void setBackGroundColor2() {
         if (isLock) {
             return;
         }
         Platform.runLater(this::setBackgroundBySettings);
-        if (!onlyRepaint) {
-            for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-                projectionScreenController.setBackGroundColor();
-            }
-        }
     }
 
     private void setBackgroundBySettings() {
@@ -365,18 +357,10 @@ public class ProjectionScreenController {
 
     public void setBlank(boolean isBlank) {
         setBlankLocally(isBlank);
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.setBlank(isBlank);
-        }
     }
 
     private void setBlankLocally(boolean isBlank) {
         this.isBlank = isBlank;
-        if (isBlank) {
-            setPanesBackground(Color.BLACK);
-        } else {
-            setBackgroundBySettings();
-        }
         pane.setVisible(!isBlank);
         pane1.setVisible(!isBlank);
         blackCoverPane.setVisible(isBlank);
@@ -388,16 +372,6 @@ public class ProjectionScreenController {
     private void onBlankChanged() {
         for (OnBlankListener onBlankListener : onBlankListeners) {
             onBlankListener.onBlankChanged(isBlank);
-        }
-    }
-
-    void reload() {
-        if (isLock) {
-            return;
-        }
-        setText(activeText, projectionType, projectionData);
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.reload();
         }
     }
 
@@ -414,13 +388,10 @@ public class ProjectionScreenController {
             }
             return;
         }
-        setText5(activeText, projectionType, projectionData, true);
-        setBackGroundColor2(true);
+        setText5(activeText, projectionType, projectionData);
+        setBackGroundColor2();
         setProgressLineProperties();
         setProgressBarHeight();
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.repaint();
-        }
     }
 
     public void setCountDownTimer(Date finishedDate, AutomaticAction automaticAction, boolean showFinishTime) {
@@ -509,18 +480,18 @@ public class ProjectionScreenController {
     }
 
     public void setText(String newText, ProjectionType projectionType, ProjectionData projectionData) {
-        setText5(newText, projectionType, projectionData, false);
+        setText5(newText, projectionType, projectionData);
     }
 
-    public void setText5(String newText, ProjectionType projectionType, ProjectionData projectionData, boolean onlyForRepaint) {
+    private void setText5(String newText, ProjectionType projectionType, ProjectionData projectionData) {
         if (projectionType == ProjectionType.SONG) {
-            setSongVerseProjection(projectionData, newText, onlyForRepaint);
+            setSongVerseProjection(projectionData, newText);
         } else {
-            setText3(newText, projectionType, projectionData, onlyForRepaint);
+            setText3(newText, projectionType, projectionData);
         }
     }
 
-    private void setSongVerseProjection(ProjectionData projectionData, String text, boolean onlyForRepaint) {
+    private void setSongVerseProjection(ProjectionData projectionData, String text) {
         if (projectionData != null) {
             List<SongVerseProjectionDTO> songVerseProjectionDTOS = null;
             ProjectionDTO projectionDTO = projectionData.getProjectionDTO();
@@ -531,7 +502,7 @@ public class ProjectionScreenController {
                 if (projectionScreenSettings.isFocusOnSongPart()) {
                     String focusedText = getFocusedText(songVerseProjectionDTOS);
                     if (!focusedText.isEmpty()) {
-                        setText3(focusedText, ProjectionType.SONG, projectionData, onlyForRepaint);
+                        setText3(focusedText, ProjectionType.SONG, projectionData);
                         return;
                     }
                 }
@@ -541,7 +512,7 @@ public class ProjectionScreenController {
                 }
             }
         }
-        setText3(text, ProjectionType.SONG, projectionData, onlyForRepaint);
+        setText3(text, ProjectionType.SONG, projectionData);
     }
 
     private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS) {
@@ -585,7 +556,7 @@ public class ProjectionScreenController {
         return focusedText.toString();
     }
 
-    private void setText3(String newText, ProjectionType projectionType, ProjectionData projectionData, boolean onlyForRepaint) {
+    private void setText3(String newText, ProjectionType projectionType, ProjectionData projectionData) {
         if (!newText.equals(INITIAL_DOT_TEXT)) {
             this.setTextCalled = true;
         }
@@ -602,23 +573,10 @@ public class ProjectionScreenController {
             this.projectionType = projectionType;
             activeText = newText;
             this.projectionData = projectionData;
-            if (previewProjectionScreenController != null && !onlyForRepaint) {
-                previewProjectionScreenController.setText(newText, projectionType, projectionData);
-            }
             if (isLock) {
                 return;
             }
             handleSongProgressBar(projectionType);
-            if (!onlyForRepaint) {
-                for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-                    projectionScreenController.setText(newText, projectionType, projectionData);
-                }
-                if (projectionTextChangeListeners != null) {
-                    for (ProjectionTextChangeListener projectionTextChangeListener : projectionTextChangeListeners) {
-                        projectionTextChangeListener.onSetText(newText, projectionType, projectionData);
-                    }
-                }
-            }
             if (handleByProjectionScreenSettingsAction()) {
                 return;
             }
@@ -887,9 +845,6 @@ public class ProjectionScreenController {
             return;
         }
         clear();
-        for (ProjectionScreenController projectionScreenController : getOtherProjectionScreenControllers()) {
-            projectionScreenController.clearAll();
-        }
     }
 
     private void hideImageIfNotImageType(ProjectionType projectionType) {
@@ -990,7 +945,7 @@ public class ProjectionScreenController {
                     }
                 });
                 duplicateCanvasClose(stage2);
-                setSomeInitializationForDoubleProjectionScreenController();
+                setSomeInitializationForDoubleProjectionScreenController(doubleProjectionScreenController);
             } catch (IOException e) {
                 LOG.error(e.getMessage(), e);
             }
@@ -1017,26 +972,29 @@ public class ProjectionScreenController {
         }
     }
 
-    public ProjectionScreenController duplicate2() {
-        if (doubleProjectionScreenController == null) {
-            FXMLLoader loader2 = new FXMLLoader();
-            loader2.setLocation(MainDesktop.class.getResource("/view/ProjectionScreen.fxml"));
-            try {
-                Pane root = loader2.load();
-                doubleProjectionScreenController = loader2.getController();
-                doubleProjectionScreenController.setRoot(root);
-                ProjectionScreensUtil.getInstance().addAutomaticDoubleProjectionScreenController(doubleProjectionScreenController);
-                setSomeInitializationForDoubleProjectionScreenController();
-            } catch (IOException e) {
-                LOG.error(e.getMessage(), e);
-            }
-            return doubleProjectionScreenController;
-        } else {
-            return doubleProjectionScreenController.duplicate2();
+    private void removeProjectionScreenController(ProjectionScreenController doubleProjectionScreenController) {
+        if (doubleProjectionScreenController != null) {
+            ProjectionScreensUtil.getInstance().removeProjectionScreenController(doubleProjectionScreenController);
         }
     }
 
-    private void setSomeInitializationForDoubleProjectionScreenController() {
+    public ProjectionScreenController duplicate2() {
+        FXMLLoader loader2 = new FXMLLoader();
+        loader2.setLocation(MainDesktop.class.getResource("/view/ProjectionScreen.fxml"));
+        try {
+            Pane root = loader2.load();
+            ProjectionScreenController doubleProjectionScreenController = loader2.getController();
+            doubleProjectionScreenController.setRoot(root);
+            ProjectionScreensUtil.getInstance().addAutomaticDoubleProjectionScreenController(doubleProjectionScreenController);
+            setSomeInitializationForDoubleProjectionScreenController(doubleProjectionScreenController);
+            return doubleProjectionScreenController;
+        } catch (IOException e) {
+            LOG.error(e.getMessage(), e);
+            return null;
+        }
+    }
+
+    private void setSomeInitializationForDoubleProjectionScreenController(ProjectionScreenController doubleProjectionScreenController) {
         doubleProjectionScreenController.setBlank(isBlank);
         doubleProjectionScreenController.setParentProjectionScreenController(doubleProjectionScreenController);
         doubleProjectionScreenController.setText(activeText, projectionType, projectionData);
@@ -1050,11 +1008,7 @@ public class ProjectionScreenController {
     }
 
     public void createNewCustomStage(CustomCanvas customCanvas) {
-        if (customStageController == null) {
-            createCustomStage2(customCanvas, null);
-        } else {
-            customStageController.createNewCustomStage(customCanvas);
-        }
+        createCustomStage2(customCanvas, null);
     }
 
     public void createCustomStage2(CustomCanvas customCanvas, Iterator<CustomCanvas> iterator) {
@@ -1063,89 +1017,82 @@ public class ProjectionScreenController {
         }
         double width = calculateSizeByScale(customCanvas.getWidth());
         double height = calculateSizeByScale(customCanvas.getHeight());
-        if (customStageController == null) {
-            FXMLLoader loader2 = new FXMLLoader();
-            loader2.setLocation(MainDesktop.class.getResource("/view/ProjectionScreen.fxml"));
-            Pane root2;
-            try {
-                root2 = loader2.load();
+        FXMLLoader loader2 = new FXMLLoader();
+        loader2.setLocation(MainDesktop.class.getResource("/view/ProjectionScreen.fxml"));
+        Pane root2;
+        try {
+            root2 = loader2.load();
 
-                customStageController = loader2.getController();
-                Scene scene2 = new Scene(root2, width, height);
-                setStyleFile(scene2);
+            ProjectionScreenController customStageController = loader2.getController();
+            Scene scene2 = new Scene(root2, width, height);
+            setStyleFile(scene2);
 
-                scene2.widthProperty().addListener((observable, oldValue, newValue) -> customStageController.repaint());
-                scene2.heightProperty().addListener((observable, oldValue, newValue) -> customStageController.repaint());
-                Stage stage2 = getTransparentStage(getClass());
-                stage2.setTitle(customCanvas.getName());
-                ProjectionScreenHolder projectionScreenHolder = ProjectionScreensUtil.getInstance().addProjectionScreenController(customStageController, stage2.getTitle());
-                customCanvas.setProjectionScreenHolder(projectionScreenHolder);
-                projectionScreenHolder.setStage(stage2);
-                projectionScreenHolder.setScreenIndex(0);
-                customStageController.setScreen(Screen.getPrimary());
-                scene2.setFill(Color.TRANSPARENT);
-                stage2.setScene(scene2);
+            scene2.widthProperty().addListener((observable, oldValue, newValue) -> customStageController.repaint());
+            scene2.heightProperty().addListener((observable, oldValue, newValue) -> customStageController.repaint());
+            Stage stage2 = getTransparentStage(getClass());
+            stage2.setTitle(customCanvas.getName());
+            ProjectionScreenHolder projectionScreenHolder = ProjectionScreensUtil.getInstance().addProjectionScreenController(customStageController, stage2.getTitle());
+            customCanvas.setProjectionScreenHolder(projectionScreenHolder);
+            projectionScreenHolder.setStage(stage2);
+            projectionScreenHolder.setScreenIndex(0);
+            customStageController.setScreen(Screen.getPrimary());
+            scene2.setFill(Color.TRANSPARENT);
+            stage2.setScene(scene2);
 
-                stage2.setX(calculateSizeByScale(customCanvas.getPositionX()));
-                stage2.setY(calculateSizeByScale(customCanvas.getPositionY()));
-                customStageController.setStage(stage2);
-                scene2.setOnKeyPressed(event -> {
-                    if (event.getCode() == KeyCode.F11) {
-                        stage2.setMaximized(!stage2.isMaximized());
-                    } else if (event.getCode().equals(KeyCode.ESCAPE)) {
-                        stage2.setMaximized(false);
-                    }
-                });
-                stage2.show();
-                stage2.maximizedProperty().addListener((observable, oldValue, newValue) -> {
-                    if (newValue) {
-                        scene2.setCursor(Cursor.NONE);
-                    } else {
-                        scene2.setCursor(Cursor.DEFAULT);
-                    }
-                });
-                scene2.setOnMousePressed(event -> {
-                    xOffset = event.getSceneX();
-                    yOffset = event.getSceneY();
-                });
-                scene2.setOnMouseDragged(event -> {
-                    if (!stage2.isMaximized()) {
-                        stage2.setX(event.getScreenX() - xOffset);
-                        stage2.setY(event.getScreenY() - yOffset);
-                    }
-                });
+            stage2.setX(calculateSizeByScale(customCanvas.getPositionX()));
+            stage2.setY(calculateSizeByScale(customCanvas.getPositionY()));
+            customStageController.setStage(stage2);
+            scene2.setOnKeyPressed(event -> {
+                if (event.getCode() == KeyCode.F11) {
+                    stage2.setMaximized(!stage2.isMaximized());
+                } else if (event.getCode().equals(KeyCode.ESCAPE)) {
+                    stage2.setMaximized(false);
+                }
+            });
+            stage2.show();
+            stage2.maximizedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    scene2.setCursor(Cursor.NONE);
+                } else {
+                    scene2.setCursor(Cursor.DEFAULT);
+                }
+            });
+            scene2.setOnMousePressed(event -> {
+                customStageController.xOffset = event.getSceneX();
+                customStageController.yOffset = event.getSceneY();
+            });
+            scene2.setOnMouseDragged(event -> {
+                if (!stage2.isMaximized()) {
+                    stage2.setX(event.getScreenX() - customStageController.xOffset);
+                    stage2.setY(event.getScreenY() - customStageController.yOffset);
+                }
+            });
 
-                stage2.fullScreenProperty().addListener((observable, oldValue, newValue) -> {
-                    if (!newValue) {
-                        stage2.setMaximized(false);
-                    }
-                });
-                customCanvasClose(stage2, customCanvas);
-                customStageController.setBlank(isBlank);
-                customStageController.setText(activeText, projectionType, projectionData);
-                customCanvas.setStage(stage2);
-                customStageController.createCustomStageWithIterator(iterator);
-            } catch (IOException e) {
-                LOG.error(e.getMessage(), e);
-            }
-        } else {
-            Stage stage = customStageController.getStage();
-            stage.setWidth(width);
-            stage.setHeight(height);
+            stage2.fullScreenProperty().addListener((observable, oldValue, newValue) -> {
+                if (!newValue) {
+                    stage2.setMaximized(false);
+                }
+            });
+            customCanvasClose(stage2, customCanvas, () -> onCloseCustomCanvasStage(customStageController));
+            customStageController.setBlank(isBlank);
+            customStageController.setText(activeText, projectionType, projectionData);
+            customCanvas.setStage(stage2);
+            customStageController.createCustomStageWithIterator(iterator);
+        } catch (IOException e) {
+            LOG.error(e.getMessage(), e);
         }
     }
 
-    private void customCanvasClose(Stage stage2, CustomCanvas customCanvas) {
-        customCanvas.setCloseListener(this::onCloseCustomCanvasStage);
-        customStageController.setParentProjectionScreenController(customStageController);
+    private static void customCanvasClose(Stage stage2, CustomCanvas customCanvas, OnResultListener onCloseCustomCanvasStage) {
+        customCanvas.setCloseListener(onCloseCustomCanvasStage);
         stage2.setOnCloseRequest(we -> {
             stage2.close();
-            onCloseCustomCanvasStage();
+            onCloseCustomCanvasStage.onResult();
         });
     }
 
-    private void onCloseCustomCanvasStage() {
-        linkedMerge(customStageController, parentProjectionScreenController);
+    private void onCloseCustomCanvasStage(ProjectionScreenController customStageController) {
+        removeProjectionScreenController(customStageController);
     }
 
     public void createPreview() {
@@ -1159,6 +1106,7 @@ public class ProjectionScreenController {
                 previewProjectionScreenController = loader2.getController();
                 String title = Settings.getInstance().getResourceBundle().getString("Preview");
                 ProjectionScreenHolder projectionScreenHolder = ProjectionScreensUtil.getInstance().addProjectionScreenController(previewProjectionScreenController, title);
+                projectionScreenHolder.setPreview(true);
                 previewProjectionScreenController.setScreen(Screen.getPrimary());
                 projectionScreenHolder.setScreenIndex(0);
                 double ratio = getSceneAspectRatio(contentPane.getScene());
@@ -1257,13 +1205,6 @@ public class ProjectionScreenController {
     }
 
     public void onClose() {
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            Stage stage = projectionScreenController.getStage();
-            if (stage != null) {
-                stage.close();
-            }
-            projectionScreenController.onClose();
-        }
         if (previewProjectionScreenController != null) {
             final Stage stage2 = previewProjectionScreenController.getStage();
             if (stage2 != null) {
@@ -1286,6 +1227,14 @@ public class ProjectionScreenController {
         }
         countDownTimerRunning = false;
         getExecutorService().shutdown();
+        closeStage();
+    }
+
+    private void closeStage() {
+        Stage stage = getStage();
+        if (stage != null) {
+            stage.close();
+        }
     }
 
     private void setParentProjectionScreenController(ProjectionScreenController parentProjectionScreenController) {
@@ -1296,7 +1245,7 @@ public class ProjectionScreenController {
         this.doubleProjectionScreenController = doubleProjectionScreenController;
     }
 
-    void setLock(boolean selected) {
+    public void setLock(boolean selected) {
         isLock = selected;
         Stage stage = null;
         if (previewProjectionScreenController != null) {
@@ -1316,21 +1265,6 @@ public class ProjectionScreenController {
 
     public boolean isLock() {
         return isLock;
-    }
-
-    public void setColor(Color value) {
-        if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.setColor(value);
-        }
-        if (isLock) {
-            return;
-        }
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.setColor(value);
-        }
-        textFlow.setColor(value);
-        textFlow1.setColor(value);
-        progressLine.setStroke(projectionScreenSettings.getProgressLineColor());
     }
 
     void setPrimaryStage(Stage primaryStage) {
@@ -1391,9 +1325,6 @@ public class ProjectionScreenController {
     }
 
     public void setProgress(double size) {
-        if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.setProgress(size);
-        }
         if (!isLock) {
             if (contentPane == null) {
                 return;
@@ -1401,7 +1332,6 @@ public class ProjectionScreenController {
             if (!handleByProjectionScreenSettingsAction()) {
                 setLineSizeMain(size);
             }
-            setLineSizeForOther(size);
         }
     }
 
@@ -1436,23 +1366,16 @@ public class ProjectionScreenController {
         progressLine.setStrokeWidth(projectionScreenSettings.getProgressLineThickness());
     }
 
-    private void setLineSizeForOther(double size) {
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.setProgress(size);
+    public synchronized void addProjectionImageChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
+        if (projectionImageChangeListeners == null) {
+            projectionImageChangeListeners = new ArrayList<>();
         }
-    }
-
-    public synchronized void addProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
-        if (projectionTextChangeListeners == null) {
-            projectionTextChangeListeners = new ArrayList<>();
-        }
-        projectionTextChangeListeners.add(projectionTextChangeListener);
-        projectionTextChangeListener.onSetText(activeText, projectionType, projectionData);
+        projectionImageChangeListeners.add(projectionTextChangeListener);
     }
 
     public void removeProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
-        if (projectionTextChangeListeners != null) {
-            Platform.runLater(() -> projectionTextChangeListeners.remove(projectionTextChangeListener));
+        if (projectionImageChangeListeners != null) {
+            Platform.runLater(() -> projectionImageChangeListeners.remove(projectionTextChangeListener));
         }
     }
 
@@ -1597,13 +1520,6 @@ public class ProjectionScreenController {
         setText(INITIAL_DOT_TEXT, ProjectionType.REFERENCE, projectionData);
     }
 
-    private List<ProjectionScreenController> getDoubleAndCanvasProjectionScreenController() {
-        List<ProjectionScreenController> projectionScreenControllers = new ArrayList<>();
-        addIfNotNull(doubleProjectionScreenController, projectionScreenControllers);
-        addIfNotNull(customStageController, projectionScreenControllers);
-        return projectionScreenControllers;
-    }
-
     public void setImage(String fileImagePath, ProjectionType projectionType, String nextFileImagePath) {
         this.projectionType = projectionType;
         this.fileImagePath = fileImagePath;
@@ -1611,7 +1527,6 @@ public class ProjectionScreenController {
         if (!handleByProjectionScreenSettingsAction()) {
             setImageMain(nextFileImagePath);
         }
-        setImageForOthers(fileImagePath, projectionType, nextFileImagePath);
     }
 
     private void setImageMain(String nextFileImagePath) {
@@ -1626,23 +1541,8 @@ public class ProjectionScreenController {
         }
     }
 
-    private void setImageForOthers(String fileImagePath, ProjectionType projectionType, String nextFileImagePath) {
-        if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.setImage(fileImagePath, projectionType, nextFileImagePath);
-        }
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.setImage(fileImagePath, projectionType, nextFileImagePath);
-        }
-    }
-
     public void setGalleryController(GalleryController galleryController) {
         this.galleryController = galleryController;
-    }
-
-    private void addIfNotNull(ProjectionScreenController customStageController, List<ProjectionScreenController> projectionScreenControllers) {
-        if (customStageController != null) {
-            projectionScreenControllers.add(customStageController);
-        }
     }
 
     public void updateProjectorState(ProjectorState projectorState) {
@@ -1671,15 +1571,7 @@ public class ProjectionScreenController {
         return new ScaledSizes(width, height);
     }
 
-    public void stopOtherCountDownTimer() {
-        stopCountDownTimer();
-        List<ProjectionScreenController> otherProjectionScreenControllers = getOtherProjectionScreenControllers();
-        for (ProjectionScreenController projectionScreenController : otherProjectionScreenControllers) {
-            projectionScreenController.stopOtherCountDownTimer();
-        }
-    }
-
-    private void stopCountDownTimer() {
+    public void stopCountDownTimer() {
         try {
             this.countDownTimerRunning = false;
             if (this.countDownTimerThread != null) {
@@ -1688,14 +1580,6 @@ public class ProjectionScreenController {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
-    }
-
-    private List<ProjectionScreenController> getOtherProjectionScreenControllers() {
-        List<ProjectionScreenController> projectionScreenControllers = getDoubleAndCanvasProjectionScreenController();
-        if (previewProjectionScreenController != null) {
-            projectionScreenControllers.add(previewProjectionScreenController);
-        }
-        return projectionScreenControllers;
     }
 
     public String getActiveText() {
@@ -1740,11 +1624,11 @@ public class ProjectionScreenController {
     }
 
     private void callOnImageListeners(Image image) {
-        if (projectionTextChangeListeners != null) {
+        if (projectionImageChangeListeners != null) {
             // because of concurrent modification exception!
             //noinspection ForLoopReplaceableByForEach
-            for (int i = 0; i < projectionTextChangeListeners.size(); ++i) {
-                ProjectionTextChangeListener projectionTextChangeListener = projectionTextChangeListeners.get(i);
+            for (int i = 0; i < projectionImageChangeListeners.size(); ++i) {
+                ProjectionTextChangeListener projectionTextChangeListener = projectionImageChangeListeners.get(i);
                 projectionTextChangeListener.onImageChanged(image, projectionType, projectionData);
             }
         }
@@ -1754,16 +1638,10 @@ public class ProjectionScreenController {
         this.projectionType = ProjectionType.IMAGE;
         this.lastImage = image;
         this.fileImagePath = null;
-        if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.drawImage(image);
-        }
         if (isLock) {
             return;
         }
         drawAnImageOnCanvas(image);
-        for (ProjectionScreenController projectionScreenController : getDoubleAndCanvasProjectionScreenController()) {
-            projectionScreenController.drawImage(image);
-        }
     }
 
     private void drawAnImageOnCanvas(Image image) {

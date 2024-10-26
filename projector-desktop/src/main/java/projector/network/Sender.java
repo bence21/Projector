@@ -11,6 +11,7 @@ import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.song.SongController;
 import projector.controller.util.ProjectionData;
+import projector.controller.util.ProjectionScreensUtil;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -47,7 +48,7 @@ public class Sender {
                     if (senderType != SenderType.TEXT) {
                         return;
                     }
-                    sendTextInThread(text, projectionType, projectionData, this, projectionScreenController);
+                    sendTextInThread(text, projectionType, projectionData, this);
                 }
 
                 @Override
@@ -55,10 +56,14 @@ public class Sender {
                     if (senderType != SenderType.IMAGE) {
                         return;
                     }
-                    sendImageInThread(image, this, projectionScreenController);
+                    sendImageInThread(image, this);
                 }
             };
-            projectionScreenController.addProjectionTextChangeListener(projectionTextChangeListener);
+            ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
+            projectionScreensUtil.addProjectionTextChangeListener(projectionTextChangeListener);
+            if (senderType == SenderType.IMAGE) {
+                projectionScreensUtil.addImageChangeListenerToProjectionScreenController(projectionTextChangeListener, projectionScreenController);
+            }
             songController.addProjectionTextChangeListener(projectionTextChangeListener);
         });
         writer.start();
@@ -83,7 +88,7 @@ public class Sender {
     }
 
     private void sendTextInThread(String text, ProjectionType projectionType, ProjectionData projectionData,
-                                  ProjectionTextChangeListener projectionTextChangeListener, ProjectionScreenController projectionScreenController) {
+                                  ProjectionTextChangeListener projectionTextChangeListener) {
         waitPreviousThread();
         thread = new Thread(() -> {
             try {
@@ -98,9 +103,9 @@ public class Sender {
                         + "end 'projectionType'\n";
                 outToClient.write(s.getBytes(StandardCharsets.UTF_8));
             } catch (SocketException e) {
-                onSocketException(e, projectionScreenController, projectionTextChangeListener);
+                onSocketException(e, projectionTextChangeListener);
             } catch (Exception e) {
-                onListenerException(e, projectionScreenController, projectionTextChangeListener);
+                onListenerException(e, projectionTextChangeListener);
             }
         });
         thread.start();
@@ -119,10 +124,11 @@ public class Sender {
         }
     }
 
-    private void onSocketException(SocketException e, ProjectionScreenController projectionScreenController, ProjectionTextChangeListener projectionTextChangeListener) {
+    private void onSocketException(SocketException e, ProjectionTextChangeListener projectionTextChangeListener) {
+        ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
         String message = e.getMessage();
         if (message.equals("Socket closed")) {
-            projectionScreenController.removeProjectionTextChangeListener(projectionTextChangeListener);
+            projectionScreensUtil.removeProjectionTextChangeListener(projectionTextChangeListener);
             close();
             return;
         } else if (!message.equals("Connection reset by peer: socket write error") &&
@@ -131,16 +137,17 @@ public class Sender {
         ) {
             LOG.error(message, e);
         }
-        projectionScreenController.removeProjectionTextChangeListener(projectionTextChangeListener);
+        projectionScreensUtil.removeProjectionTextChangeListener(projectionTextChangeListener);
     }
 
-    private void onListenerException(Exception e, ProjectionScreenController projectionScreenController, ProjectionTextChangeListener projectionTextChangeListener) {
+    private void onListenerException(Exception e, ProjectionTextChangeListener projectionTextChangeListener) {
         LOG.error(e.getMessage(), e);
-        projectionScreenController.removeProjectionTextChangeListener(projectionTextChangeListener);
+        ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
+        projectionScreensUtil.removeProjectionTextChangeListener(projectionTextChangeListener);
         close();
     }
 
-    private void sendImageInThread(Image image, ProjectionTextChangeListener projectionTextChangeListener, ProjectionScreenController projectionScreenController) {
+    private void sendImageInThread(Image image, ProjectionTextChangeListener projectionTextChangeListener) {
         waitPreviousThread();
         thread = new Thread(() -> {
             try {
@@ -152,9 +159,9 @@ public class Sender {
                 // Send the image byte array
                 outToClient.write(imageBytes, 0, imageBytes.length);
             } catch (SocketException e) {
-                onSocketException(e, projectionScreenController, projectionTextChangeListener);
+                onSocketException(e, projectionTextChangeListener);
             } catch (Exception e) {
-                onListenerException(e, projectionScreenController, projectionTextChangeListener);
+                onListenerException(e, projectionTextChangeListener);
             }
         });
         thread.start();

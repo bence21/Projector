@@ -1,13 +1,16 @@
 package projector.controller.util;
 
+import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import projector.application.ProjectionScreenSettings;
+import projector.application.ProjectionType;
 import projector.controller.ProjectionScreenController;
 import projector.controller.listener.OnMainPaneSizeChangeListener;
 import projector.controller.listener.PopupCreatedListener;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class ProjectionScreenHolder {
@@ -23,6 +26,7 @@ public class ProjectionScreenHolder {
     private javafx.scene.layout.HBox HBox;
     private int doubleIndex;
     private final List<OnResultListener> onNameChangeListeners = new ArrayList<>();
+    private boolean preview;
 
     public ProjectionScreenHolder(ProjectionScreenController projectionScreenController, String name) {
         this.projectionScreenController = projectionScreenController;
@@ -134,5 +138,65 @@ public class ProjectionScreenHolder {
     public void reload() {
         projectionScreenSettings.reload();
         projectionScreenController.repaint();
+    }
+
+    public void setLock(boolean lock) {
+        projectionScreenController.setLock(lock);
+    }
+
+    public void setBlank(boolean blank) {
+        projectionScreenController.setBlank(blank);
+    }
+
+    public void setText(String text, ProjectionType projectionType, ProjectionData projectionData) {
+        projectionScreenController.setText(text, projectionType, projectionData);
+    }
+
+    public void drawImage(Image image) {
+        projectionScreenController.drawImage(image);
+    }
+
+    public void stopCountDownTimer() {
+        projectionScreenController.stopCountDownTimer();
+    }
+
+    public void clearAll() {
+        projectionScreenController.clearAll();
+    }
+
+    public void onClose() {
+        projectionScreenController.onClose();
+    }
+
+    public void setCountDownTimer(Date finishDate, AutomaticAction selectedAction, boolean showFinishTime) {
+        projectionScreenController.setCountDownTimer(finishDate, selectedAction, showFinishTime);
+    }
+
+    public void setImage(String fileImagePath, ProjectionType projectionType, String nextFileImagePath) {
+        projectionScreenController.setImage(fileImagePath, projectionType, nextFileImagePath);
+    }
+
+    public void clearText() {
+        projectionScreenController.clearText();
+    }
+
+    public void setProgress(double progress) {
+        projectionScreenController.setProgress(progress);
+    }
+
+    public void setPreview(boolean preview) {
+        this.preview = preview;
+    }
+
+    public boolean isNotPreview() {
+        return !preview;
+    }
+
+    public void onSettingsChanged() {
+        projectionScreenController.onSettingsChanged();
+    }
+
+    public void setBackGroundColor() {
+        projectionScreenController.setBackGroundColor();
     }
 }
