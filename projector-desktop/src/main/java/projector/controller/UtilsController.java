@@ -40,7 +40,6 @@ import static projector.utils.CountDownTimerUtil.getRemainedTime;
 import static projector.utils.CountDownTimerUtil.getTimeTextFromDate;
 import static projector.utils.KeyEventUtil.getTextFromEvent;
 
-
 public class UtilsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(UtilsController.class);
@@ -52,7 +51,6 @@ public class UtilsController {
     @FXML
     private TextField timeTextField;
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
-    private ProjectionScreenController projectionScreenController;
     private MouseButton lastMouseButton = null;
     private MouseEvent lastMouseEvent = null;
     private ContextMenu deleteContextMenu = null;
@@ -89,13 +87,14 @@ public class UtilsController {
             actionComboBox.getItems().addAll(
                     "-",
                     resourceBundle.getString("Empty"),
-                    resourceBundle.getString("Song title"));
+                    resourceBundle.getString("Song title"),
+                    resourceBundle.getString("Endless timer")
+            );
             actionComboBox.getSelectionModel().select(0);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
     }
-
 
     private void initializeProjectionScreensComboBox() {
         try {
@@ -173,6 +172,7 @@ public class UtilsController {
             case 0 -> AutomaticAction.NOTHING;
             case 1 -> AutomaticAction.EMPTY;
             case 2 -> AutomaticAction.SONG_TITLE;
+            case 3 -> AutomaticAction.COUNTDOWN_TIMER_ENDLESS;
             default -> null;
         };
     }
@@ -329,7 +329,7 @@ public class UtilsController {
 
     private void setCountDownValue() {
         Long remainedTime = getRemainedTime(getFinishDate());
-        String timeTextFromDate = getTimeTextFromDate(remainedTime);
+        String timeTextFromDate = getTimeTextFromDate(remainedTime, getSelectedAction());
         if (!timeTextFromDate.isEmpty() && !countDownLabel.getText().equals(timeTextFromDate)) {
             Platform.runLater(() -> countDownLabel.setText(timeTextFromDate));
         }
@@ -372,7 +372,7 @@ public class UtilsController {
     private ProjectionScreenController getSelectedProjectionScreenController() {
         ProjectionScreenHolder selectedProjectionScreenHolder = getSelectedProjectionScreenHolder();
         if (selectedProjectionScreenHolder == null) {
-            return projectionScreenController;
+            return null;
         } else {
             return selectedProjectionScreenHolder.getProjectionScreenController();
         }
@@ -382,15 +382,7 @@ public class UtilsController {
         AutomaticAction selectedAction = getSelectedAction();
         ProjectionScreenController selectedProjectionScreenController = getSelectedProjectionScreenController();
         boolean showFinishTime = showFinishTimeCheckBox.isSelected();
-        if (selectedProjectionScreenController != null) {
-            ProjectionScreenController mainProjectionController = MyController.getInstance().getProjectionScreenController();
-            if (selectedProjectionScreenController == mainProjectionController) {
-                projectionScreensUtil.stopOtherCountDownTimer();
-            }
-            projectionScreensUtil.setCountDownTimer(selectedProjectionScreenController, getFinishDate(), selectedAction, showFinishTime);
-        } else {
-            LOG.error("selectedProjectionScreenController is null");
-        }
+        projectionScreensUtil.setCountDownTimer(selectedProjectionScreenController, getFinishDate(), selectedAction, showFinishTime);
         String timeText = getTimeTextFieldText();
         CountdownTimeService countdownTimeService = ServiceManager.getCountdownTimeService();
         List<CountdownTime> countdownTimes = countdownTimeService.findAll();
@@ -439,9 +431,5 @@ public class UtilsController {
         CountdownTime countdownTime = new CountdownTime();
         countdownTime.setTimeText(timeText);
         return countdownTime;
-    }
-
-    public void setProjectionScreenController(ProjectionScreenController projectionScreenController) {
-        this.projectionScreenController = projectionScreenController;
     }
 }

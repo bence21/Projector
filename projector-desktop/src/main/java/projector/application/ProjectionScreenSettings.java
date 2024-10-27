@@ -599,7 +599,7 @@ public class ProjectionScreenSettings {
 
     public ScreenProjectionAction getScreenProjectionAction(ProjectionType projectionType) {
         for (ScreenProjectionType screenProjectionType : getScreenProjectionTypes()) {
-            if (screenProjectionType.getProjectionType().equals(projectionType)) {
+            if (screenProjectionType.getProjectionType().sameCategory(projectionType)) {
                 return screenProjectionType.getScreenProjectionAction();
             }
         }

@@ -100,6 +100,7 @@ public class ProjectionScreenController {
     private static final Logger LOG = LoggerFactory.getLogger(ProjectionScreenController.class);
     private final List<ViewChangedListener> viewChangedListeners = new ArrayList<>();
     private final List<OnBlankListener> onBlankListeners = new ArrayList<>();
+    private final List<OnBlankListener> onLockListeners = new ArrayList<>();
     private final String INITIAL_DOT_TEXT = "<color=\"0xffffff0c\">.</color>";
     public BorderPane paneForMargins;
     public BorderPane contentPane;
@@ -409,12 +410,12 @@ public class ProjectionScreenController {
             while (countDownTimerRunning && settings.isApplicationRunning()) {
                 try {
                     Long remainedTime = getRemainedTime(finishedDate);
-                    if (remainedTime != null && remainedTime <= 0) {
+                    if (remainedTime != null && remainedTime <= 0 && automaticAction != AutomaticAction.COUNTDOWN_TIMER_ENDLESS) {
                         countDownTimerRunning = false;
                         doTheAutomaticAction(automaticAction);
                         break;
                     }
-                    String timeTextFromDate = getTimeTextFromDate(remainedTime);
+                    String timeTextFromDate = getTimeTextFromDate(remainedTime, automaticAction);
                     int millis = 100;
                     if (timeTextFromDate.equals(previousTimeText)) {
                         //noinspection BusyWait
@@ -426,7 +427,7 @@ public class ProjectionScreenController {
                         Platform.runLater(() -> {
                             String s = timeTextFromDate;
                             s = addFinishTime(finishedDate, showFinishTime, s);
-                            setText(s, ProjectionType.COUNTDOWN_TIMER, projectionData);
+                            setText(s, ProjectionType.COUNTDOWN_TIMER_PROCESS, projectionData);
                         });
                     }
                     //noinspection BusyWait
@@ -561,7 +562,7 @@ public class ProjectionScreenController {
         if (!newText.equals(INITIAL_DOT_TEXT)) {
             this.setTextCalled = true;
         }
-        if (projectionType != ProjectionType.COUNTDOWN_TIMER) {
+        if (!projectionType.isCountdownTimer() && !isLock) {
             countDownTimerRunning = false;
         }
         this.setTextCounter++;
@@ -574,7 +575,7 @@ public class ProjectionScreenController {
             this.projectionType = projectionType;
             activeText = newText;
             this.projectionData = projectionData;
-            if (isLock) {
+            if (isLock && projectionType != ProjectionType.COUNTDOWN_TIMER_PROCESS) {
                 return;
             }
             handleSongProgressBar(projectionType);
@@ -839,6 +840,7 @@ public class ProjectionScreenController {
         progressBarHBox.setVisible(false);
         hideCanvas();
         onViewChanged();
+        stopCountDownTimer();
     }
 
     public void clearAll() {
@@ -1262,6 +1264,9 @@ public class ProjectionScreenController {
                 setOpacityAndTitle(stage, 0.77, "Preview (MAIN LOCKED)");
             }
         }
+        for (OnBlankListener onLockListener : onLockListeners) {
+            onLockListener.onBlankChanged(isLock);
+        }
     }
 
     public boolean isLock() {
@@ -1456,6 +1461,10 @@ public class ProjectionScreenController {
         setBlankLocally(!isBlank);
     }
 
+    public void toggleLock() {
+        setLock(!isLock);
+    }
+
     public void toggleShowHidePopup() {
         Popup popup = getPopup();
         if (popup == null) {
@@ -1504,6 +1513,10 @@ public class ProjectionScreenController {
 
     public void addOnBlankListener(OnBlankListener onBlankListener) {
         onBlankListeners.add(onBlankListener);
+    }
+
+    public void addOnLockListener(OnBlankListener onLockListener) {
+        onLockListeners.add(onLockListener);
     }
 
     public boolean isSetTextCalled() {

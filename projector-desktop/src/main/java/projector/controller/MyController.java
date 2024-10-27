@@ -137,7 +137,6 @@ public class MyController {
         songController.setProjectionScreenController(projectionScreenController);
         settingsController.setProjectionScreenController(projectionScreenController);
         settingsController.setSongController(songController);
-        utilsController.setProjectionScreenController(projectionScreenController);
         projectionScreenController.setBlank(true);
         projectionScreenController.setGalleryController(galleryController);
         if (settings.isAllowRemote()) {

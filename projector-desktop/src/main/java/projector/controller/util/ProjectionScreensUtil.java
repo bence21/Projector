@@ -3,7 +3,6 @@ package projector.controller.util;
 import javafx.application.Platform;
 import javafx.scene.image.Image;
 import projector.application.ProjectionType;
-import projector.controller.MyController;
 import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.listener.ProjectionScreenListener;
@@ -224,8 +223,7 @@ public class ProjectionScreensUtil {
     }
 
     public void setCountDownTimer(ProjectionScreenController selectedProjectionScreenController, Date finishDate, AutomaticAction selectedAction, boolean showFinishTime) {
-        ProjectionScreenController mainProjectionController = MyController.getInstance().getProjectionScreenController();
-        if (selectedProjectionScreenController == null || selectedProjectionScreenController == mainProjectionController) {
+        if (selectedProjectionScreenController == null) {
             stopOtherCountDownTimer();
             for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
                 projectionScreenHolder.setCountDownTimer(finishDate, selectedAction, showFinishTime);

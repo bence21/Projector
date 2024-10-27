@@ -208,6 +208,8 @@ public class ProjectionScreensController {
         hBoxLeftChildren.add(getProjectionTypeButton(projectionScreenHolder, resourceBundle));
         ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
         hBoxLeftChildren.add(getBlankButton(resourceBundle, projectionScreenController));
+        hBoxLeftChildren.add(getClearButton(resourceBundle, projectionScreenController));
+        hBoxLeftChildren.add(getLockButton(resourceBundle, projectionScreenController));
         addShowProjectionScreenButton(projectionScreenHolder, hBoxLeftChildren, projectionScreenController);
         ObservableList<Node> hBoxChildren = hBox.getChildren();
         hBoxChildren.add(vBoxLeft);
@@ -255,7 +257,7 @@ public class ProjectionScreensController {
     private ToggleButton getBlankButton(ResourceBundle resourceBundle, ProjectionScreenController projectionScreenController) {
         ToggleButton blankButton = new ToggleButton();
         blankButton.setMnemonicParsing(false);
-        blankButton.setText(resourceBundle.getString("Blank"));
+        blankButton.setText(resourceBundle.getString("Black"));
         HBox.setMargin(blankButton, new Insets(2, 4, 0, 0));
         blankButton.setContentDisplay(ContentDisplay.CENTER);
         blankButton.setGraphicTextGap(0.0);
@@ -266,6 +268,36 @@ public class ProjectionScreensController {
         projectionScreenController.addOnBlankListener(blankButton::setSelected);
         blankButton.setOnAction(event -> projectionScreenController.toggleBlank());
         return blankButton;
+    }
+
+    private Button getClearButton(ResourceBundle resourceBundle, ProjectionScreenController projectionScreenController) {
+        Button clearButton = new Button();
+        clearButton.setText(resourceBundle.getString("Clear"));
+        HBox.setMargin(clearButton, new Insets(2, 4, 0, 0));
+        clearButton.setContentDisplay(ContentDisplay.CENTER);
+        clearButton.setGraphicTextGap(0.0);
+        double size = 20.0;
+        clearButton.setPrefHeight(size);
+        clearButton.setTextAlignment(TextAlignment.CENTER);
+        clearButton.setPadding(new Insets(4.0));
+        clearButton.setOnAction(event -> projectionScreenController.clearAll());
+        return clearButton;
+    }
+
+    private ToggleButton getLockButton(ResourceBundle resourceBundle, ProjectionScreenController projectionScreenController) {
+        ToggleButton lockButton = new ToggleButton();
+        lockButton.setMnemonicParsing(false);
+        lockButton.setText(resourceBundle.getString("Lock"));
+        HBox.setMargin(lockButton, new Insets(2, 4, 0, 0));
+        lockButton.setContentDisplay(ContentDisplay.CENTER);
+        lockButton.setGraphicTextGap(0.0);
+        double size = 20.0;
+        lockButton.setPrefHeight(size);
+        lockButton.setTextAlignment(TextAlignment.CENTER);
+        lockButton.setPadding(new Insets(4.0));
+        projectionScreenController.addOnLockListener(lockButton::setSelected);
+        lockButton.setOnAction(event -> projectionScreenController.toggleLock());
+        return lockButton;
     }
 
     private void addShowProjectionScreenButton(ProjectionScreenHolder projectionScreenHolder, ObservableList<Node> hBoxChildren, ProjectionScreenController projectionScreenController) {
