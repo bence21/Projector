@@ -1,7 +1,7 @@
 [Setup]
 AppName=Projector
 AppId=Projector_3
-AppVersion=3.5.11
+AppVersion=3.5.12
 AppVerName=Projector
 AppPublisher=SongPraise.com
 AppPublisherURL=https://www.songpraise.com/#/desktop-app
