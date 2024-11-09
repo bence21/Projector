@@ -17,6 +17,7 @@ import com.bence.projector.server.backend.model.Suggestion;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.StatisticsService;
@@ -414,7 +415,12 @@ public class SongResource {
         song.setOriginalId(songDTO.getUuid());
         song.setDeleted(true);
         song.setUploaded(true);
-        final Song savedSong = songService.save(song);
+        Song savedSong;
+        try {
+            savedSong = songService.save(song);
+        } catch (ServiceException e) {
+            return new ResponseEntity<>(e.getResponseMessage(), e.getHttpStatus());
+        }
         if (savedSong != null) {
             Thread thread = new Thread(() -> {
                 List<Song> songs = songService.findAllSongsLazy();
@@ -764,17 +770,21 @@ public class SongResource {
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "admin/api/songVersionGroup/{songId1}/{songId2}")
-    public ResponseEntity<Object> mergeSongVersionGroup(@PathVariable("songId1") String songId1, @PathVariable("songId2") String songId2, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<Object> mergeSongVersionGroupCall(@PathVariable("songId1") String songId1, @PathVariable("songId2") String songId2, HttpServletRequest httpServletRequest) {
         if (songId1.equals(songId2)) {
             return new ResponseEntity<>("Same song", HttpStatus.CONFLICT);
         }
-        Date date = new Date();
         Song song1 = songRepository.findOneByUuid(songId1);
         Song song2 = songRepository.findOneByUuid(songId2);
         if (song1 == null || song2 == null) {
             return new ResponseEntity<>("Null", HttpStatus.NO_CONTENT);
         }
         saveStatistics(httpServletRequest, statisticsService);
+        mergeSongVersionGroup(song1, song2, songService);
+        return new ResponseEntity<>("Merged", HttpStatus.ACCEPTED);
+    }
+
+    public static void mergeSongVersionGroup(Song song1, Song song2, SongService songService) {
         String song1VersionGroup = getUuidFromVersionGroupSong(song1);
         String song2VersionGroup = getUuidFromVersionGroupSong(song2);
         if (song1VersionGroup == null) {
@@ -804,18 +814,20 @@ public class SongResource {
                 }
             }
             if (size1 < size2) {
-                for (Song song : allByVersionGroup1) {
-                    setVersionGroupAndDate(song, date, songService.findOneByUuid(song2VersionGroup));
-                }
-                songService.saveAllByRepository(allByVersionGroup1);
+                setVersionGroupToOther(song2VersionGroup, allByVersionGroup1, songService);
             } else {
-                for (Song song : allByVersionGroup2) {
-                    setVersionGroupAndDate(song, date, songService.findOneByUuid(song1VersionGroup));
-                }
-                songService.saveAllByRepository(allByVersionGroup2);
+                setVersionGroupToOther(song1VersionGroup, allByVersionGroup2, songService);
             }
         }
-        return new ResponseEntity<>("Merged", HttpStatus.ACCEPTED);
+    }
+
+    private static void setVersionGroupToOther(String song2VersionGroup, List<Song> allByVersionGroup1, SongService songService) {
+        Date date = new Date();
+        Song oneByUuid = songService.findOneByUuid(song2VersionGroup);
+        for (Song song : allByVersionGroup1) {
+            setVersionGroupAndDate(song, date, oneByUuid);
+        }
+        songService.saveAllByRepository(allByVersionGroup1);
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "admin/api/songVersionGroup/remove/{songId}")
@@ -847,15 +859,11 @@ public class SongResource {
         return new ResponseEntity<>("Removed", HttpStatus.ACCEPTED);
     }
 
-    private String getUuidFromVersionGroupSong(Song song) {
+    private static String getUuidFromVersionGroupSong(Song song) {
         if (song == null) {
             return null;
         }
-        Song versionGroup = song.getVersionGroup();
-        if (versionGroup == null) {
-            return null;
-        }
-        return versionGroup.getUuid();
+        return song.getVersionGroupUuid();
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/api/songs/versionGroup/{id}")

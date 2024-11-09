@@ -128,4 +128,21 @@ public class SongLink extends AbstractModel {
         Song song2 = getSong2(songRepository);
         return song1.isSameVersionGroup(song2);
     }
+
+    public boolean isSameSongs(Song songA, Song songB) {
+        if (song1 == null || song2 == null) {
+            return false;
+        }
+        if (isSongPairMatch(song1, song2, songA, songB) ) {
+            return true;
+        }
+        return isSongPairMatch(song2, song1, songB, songA);
+    }
+
+    private boolean isSongPairMatch(Song song1, Song song2, Song songA, Song songB) {
+        if (song1.equals(songA)) {
+            return song2.equals(songB);
+        }
+        return false;
+    }
 }

@@ -23,6 +23,8 @@ public interface SongService extends BaseService<Song> {
 
     Collection<Song> getSongsByLanguageForSimilar(Language language);
 
+    Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language);
+
     boolean matches(Song song, Song song2);
 
     List<Song> findAllByVersionGroup(String versionGroup);
@@ -48,6 +50,8 @@ public interface SongService extends BaseService<Song> {
     List<Song> findAllSimilar(Song song, boolean checkDeleted);
 
     List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs);
+
+    List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs);
 
     @SuppressWarnings("unused")
     void enrollSongInMap(Song song);

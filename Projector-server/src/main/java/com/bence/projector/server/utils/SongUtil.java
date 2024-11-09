@@ -3,9 +3,12 @@ package com.bence.projector.server.utils;
 import com.bence.projector.common.model.SectionType;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Song;
+import com.bence.projector.server.backend.model.SongLink;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.model.User;
+import com.bence.projector.server.backend.repository.SongLinkRepository;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.backend.service.SongLinkService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.UserService;
 
@@ -15,11 +18,13 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
 import static com.bence.projector.server.api.resources.SongResource.createBackUpSongWithoutSave;
+import static com.bence.projector.server.api.resources.SongResource.mergeSongVersionGroup;
 import static com.bence.projector.server.utils.StringUtils.formatSongAndCheckChange;
 import static com.bence.projector.server.utils.StringUtils.isSongVerseChanged;
 import static com.bence.projector.server.utils.StringUtils.replaceAllOtherThenLetterAndNumber2;
@@ -57,16 +62,87 @@ public class SongUtil {
         return new Result(admin, songs);
     }
 
+    @SuppressWarnings("unused")
     public static void checkSongTexts(LanguageService languageService, UserService userService, SongService songService) {
         Result result = getHungarianSongsResult(languageService, userService);
         List<Song> modifiedSongs = checkSongTextsForSongs(result.songs());
         saveModifiedSongsWithBackups(modifiedSongs, result.admin(), songService);
     }
 
+    @SuppressWarnings("unused")
     public static void deleteSectionTextsFromHungarianSongTexts(LanguageService languageService, UserService userService, SongService songService) {
         Result result = getHungarianSongsResult(languageService, userService);
         List<Song> modifiedSongs = deleteSectionTextsFromHungarianSongs(result.songs());
         saveModifiedSongsWithBackups(modifiedSongs, result.admin(), songService);
+    }
+
+    @SuppressWarnings("unused")
+    public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService) {
+        List<Language> languages = languageService.findAll();
+        for (Language language : languages) {
+            // if (language.getEnglishName().equals("Hungarian")) {
+            markSimilarSongsAndSetForLanguage(songService, language, songLinkRepository, songLinkService);
+            // }
+        }
+    }
+
+    private static void markSimilarSongsAndSetForLanguage(SongService songService, Language language, SongLinkRepository songLinkRepository, SongLinkService songLinkService) {
+        Collection<Song> songs = songService.getSongsByLanguageForSimilarWithVersionGroup(language);
+        for (Song songForSimilar : songs) {
+            if (!songForSimilar.isPublic()) {
+                continue;
+            }
+            List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, songs);
+            markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService);
+        }
+    }
+
+    private static void markSimilarSongsAndSetForSong(Song songForSimilar, List<Song> similarSongs, SongLinkRepository songLinkRepository, SongService songService, SongLinkService songLinkService) {
+        if (similarSongs == null || similarSongs.isEmpty()) {
+            return;
+        }
+        List<SongLink> songLinks = songLinkRepository.findAllBySong1OrSong2(songForSimilar, songForSimilar);
+        for (Song similarSong : similarSongs) {
+            handleSimilarSong(songForSimilar, similarSong, songLinks, songService, songLinkService);
+        }
+    }
+
+    private static void handleSimilarSong(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService) {
+        Song loadedSongForSimilar = songService.findOneByUuid(songForSimilar.getUuid());
+        Song loadedSimilarSong = songService.findOneByUuid(similarSong.getUuid());
+        handleSimilarLoadedSong(loadedSongForSimilar, loadedSimilarSong, songLinks, songService, songLinkService, similarSong.getSimilarRatio());
+    }
+
+    private static void handleSimilarLoadedSong(Song loadedSongForSimilar, Song loadedSimilarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, double percentage) {
+        if (loadedSongForSimilar.isSameVersionGroup(loadedSimilarSong)) {
+            return;
+        }
+        if (percentage > 0.9 && percentage < 0.99) {
+            mergeSongVersionGroup(loadedSongForSimilar, loadedSimilarSong, songService);
+        } else {
+            songLinkForSimilar(loadedSongForSimilar, loadedSimilarSong, songLinks, songLinkService);
+        }
+    }
+
+    private static void songLinkForSimilar(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongLinkService songLinkService) {
+        if (containsSongLink(songForSimilar, similarSong, songLinks)) {
+            return;
+        }
+        SongLink songLink = new SongLink();
+        songLink.setApplied(false);
+        songLink.setCreatedDate(new Date());
+        songLink.setSong1(songForSimilar);
+        songLink.setSong2(similarSong);
+        songLinkService.save(songLink);
+    }
+
+    private static boolean containsSongLink(Song songForSimilar, Song similarSong, List<SongLink> songLinks) {
+        for (SongLink songLink : songLinks) {
+            if (songLink.isSameSongs(songForSimilar, similarSong)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void saveModifiedSongsWithBackups(List<Song> modifiedSongs, User result, SongService songService) {

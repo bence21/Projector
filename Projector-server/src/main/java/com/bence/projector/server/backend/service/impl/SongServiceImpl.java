@@ -30,7 +30,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -277,19 +276,27 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     @Override
-    public List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs) {
+    public List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs) {
+        // returns custom queried Song models
         String text = getText(song).toLowerCase();
         String songId = song.getUuid();
         HashMap<String, Boolean> wordHashMap = getWordHashMap(text);
-        List<Song> similarSongsForSong = getSimilarSongsForSong(checkDeleted, songs, text, songId, wordHashMap);
+        return getSimilarSongsForSong(checkDeleted, songs, text, songId, wordHashMap);
+    }
+
+    @Override
+    public List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs) {
+        List<Song> similarSongsForSong = findAllSimilarSongsForSong(song, checkDeleted, songs);
         return getSongsFromRepository(similarSongsForSong);
     }
 
     private List<Song> getSongsFromRepository(List<Song> similarSongsForSong) {
         ArrayList<Song> songs = new ArrayList<>();
         for (Song song : similarSongsForSong) {
-            Optional<Song> songOptional = songRepository.findById(song.getId());
-            songOptional.ifPresent(songs::add);
+            Song songOptional = findOneByUuid(song.getUuid());
+            if (songOptional != null) {
+                songs.add(songOptional);
+            }
         }
         return songs;
     }
@@ -328,7 +335,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     private void sortSimilar(List<Song> similar) {
-        similar.sort((o1, o2) -> Double.compare(o2.getPercentage(), o1.getPercentage()));
+        similar.sort((o1, o2) -> Double.compare(o2.getSimilarRatio(), o1.getSimilarRatio()));
     }
 
     private boolean songsIsSimilar(String text, HashMap<String, Boolean> wordHashMap, int wordCount, HashMap<String, Boolean> hashMap, Song databaseSong) {
@@ -360,24 +367,22 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 y = y / secondText.length();
                 if (y > 0.55) {
                     x = (x + y) / 2;
-                    databaseSong.setPercentage(x);
+                    databaseSong.setSimilarRatio(x);
                     return true;
                 }
             }
             int longestCommonSubStringLength = longestCommonSubString(text, secondText);
             if (longestCommonSubStringLength > 50) {
-                setPercentage(text, databaseSong, secondText, longestCommonSubStringLength);
+                setRatio(text, databaseSong, secondText, longestCommonSubStringLength);
                 return true;
             }
         }
         return false;
     }
 
-    private void setPercentage(String text, Song databaseSong, String secondText, int longestCommonSubStringLength) {
-        double percentage = text.length() + secondText.length();
-        percentage /= 2;
-        percentage /= longestCommonSubStringLength;
-        databaseSong.setPercentage(percentage);
+    private void setRatio(String text, Song databaseSong, String secondText, int longestCommonSubStringLength) {
+        double ratio = (double) longestCommonSubStringLength / Math.min(text.length(), secondText.length());
+        databaseSong.setSimilarRatio(ratio);
     }
 
     @Override
@@ -459,9 +464,25 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNull(language);
     }
 
+    @Override
+    public Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language) {
+        return getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNullWithVersionGroup(language);
+    }
+
     private List<Song> getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNull(Language language) {
         try {
             List<Song> songsFromResultSet = getSongsByLanguageFromResultSet(language);
+            setVerseOrderListForSongsFromResultSet(songsFromResultSet, language);
+            return songsFromResultSet;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private List<Song> getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNullWithVersionGroup(Language language) {
+        try {
+            List<Song> songsFromResultSet = getSongsByLanguageFromResultSetWithVersionGroup(language);
             setVerseOrderListForSongsFromResultSet(songsFromResultSet, language);
             return songsFromResultSet;
         } catch (SQLException e) {
@@ -504,15 +525,38 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
 
     private List<Song> getSongsByLanguageFromResultSet(Language language) throws SQLException {
         ResultSet resultSet = getResultSet(language);
-        return getSongsFromResultSet(resultSet);
+        return getSongsFromResultSet(resultSet, false);
+    }
+
+    private List<Song> getSongsByLanguageFromResultSetWithVersionGroup(Language language) throws SQLException {
+        ResultSet resultSet = getResultSetWithVersionGroup(language);
+        return getSongsFromResultSet(resultSet, true);
     }
 
     private ResultSet getResultSet(Language language) throws SQLException {
         Statement statement = getStatement();
-        String sql = "select uuid, title, deleted, is_back_up, reviewer_erased, text, section_type, song_id from song";
+        String sql = getSelectSongFields() + getFromSong();
+        return getSongJoinSongVersesResultSet(language, sql, statement);
+    }
+
+    private ResultSet getSongJoinSongVersesResultSet(Language language, String sql, Statement statement) throws SQLException {
         sql += " join song_verse on (song.id = song_verse.song_id)";
         sql = getConditionSqlByLanguage(language, sql);
         return statement.executeQuery(sql);
+    }
+
+    private ResultSet getResultSetWithVersionGroup(Language language) throws SQLException {
+        Statement statement = getStatement();
+        String sql = getSelectSongFields() + ", version_group_id" + getFromSong();
+        return getSongJoinSongVersesResultSet(language, sql, statement);
+    }
+
+    private static String getFromSong() {
+        return " from song";
+    }
+
+    private static String getSelectSongFields() {
+        return "select uuid, title, deleted, is_back_up, reviewer_erased, text, section_type, song_id";
     }
 
     private String getConditionSqlByLanguage(Language language, String sql) {
@@ -533,7 +577,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return statement.executeQuery(sql);
     }
 
-    private List<Song> getSongsFromResultSet(ResultSet resultSet) throws SQLException {
+    private List<Song> getSongsFromResultSet(ResultSet resultSet, boolean withVersionGroup) throws SQLException {
         List<Song> songs = new ArrayList<>();
         Long lastSongId = null;
         Song lastSong;
@@ -550,6 +594,9 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 song.setDeleted(resultSet.getBoolean("deleted"));
                 song.setIsBackUp(getBooleanFromResultSet(resultSet, "is_back_up"));
                 song.setReviewerErased(getBooleanFromResultSet(resultSet, "reviewer_erased"));
+                if (withVersionGroup) {
+                    song.setVersionGroupUuid(resultSet.getString("version_group_id"));
+                }
                 lastSong = song;
                 songVerses = new ArrayList<>();
                 lastSong.setVerses(songVerses);
@@ -611,8 +658,8 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             }
         }
         if (!versionGroupSong.isDeleted()) {
-            Song group = versionGroupSong.getVersionGroup();
-            if (group == null || !group.getUuid().equals(versionGroupUuid)) {
+            String groupUuid = versionGroupSong.getVersionGroupUuid();
+            if (groupUuid == null || !groupUuid.equals(versionGroupUuid)) {
                 songs.add(versionGroupSong);
             }
         }
@@ -760,6 +807,10 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (song.getTitle() == null || song.getTitle().trim().isEmpty()) {
             throw new ServiceException("No title", HttpStatus.PRECONDITION_FAILED);
         }
+        List<SongVerse> songVerses = song.getVerses();
+        if (songVerses == null || songVerses.isEmpty()) {
+            throw new ServiceException("songVerses isEmpty!", HttpStatus.PRECONDITION_FAILED);
+        }
         if (song.isDeleted() && song.getLanguage() == null) {
             return songRepository.save(song);
         }
@@ -767,7 +818,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             throw new ServiceException("No language", HttpStatus.PRECONDITION_FAILED);
         }
         try {
-            List<SongVerse> verses = new ArrayList<>(song.getVerses());
+            List<SongVerse> verses = new ArrayList<>(songVerses);
             List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
             songRepository.save(song);
             songVerseService.deleteBySong(song);

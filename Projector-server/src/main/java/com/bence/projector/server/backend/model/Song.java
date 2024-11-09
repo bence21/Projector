@@ -39,9 +39,11 @@ public class Song extends AbstractModel {
     private Date lastIncrementFavouritesDate;
     private String createdByEmail;
     @Transient
-    transient private double percentage;
+    transient private double similarRatio;
     @ManyToOne(fetch = FetchType.LAZY)
     private Song versionGroup;
+    @Transient
+    private String versionGroupUuid;
     private String youtubeUrl;
     private String verseOrder;
     private String author;
@@ -81,7 +83,7 @@ public class Song extends AbstractModel {
         favourites = song.favourites;
         lastIncrementFavouritesDate = song.lastIncrementFavouritesDate;
         createdByEmail = song.createdByEmail;
-        percentage = song.percentage;
+        similarRatio = song.similarRatio;
         versionGroup = song.versionGroup;
         youtubeUrl = song.youtubeUrl;
         verseOrder = song.verseOrder;
@@ -196,20 +198,34 @@ public class Song extends AbstractModel {
         this.originalId = originalId;
     }
 
-    public double getPercentage() {
-        return percentage;
+    public double getSimilarRatio() {
+        return similarRatio;
     }
 
-    public void setPercentage(double percentage) {
-        this.percentage = percentage;
+    public void setSimilarRatio(double similarRatio) {
+        this.similarRatio = similarRatio;
     }
 
-    public Song getVersionGroup() {
+    private Song getVersionGroup() {
         return versionGroup;
     }
 
     public void setVersionGroup(Song versionGroup) {
         this.versionGroup = versionGroup;
+        this.versionGroupUuid = getVersionGroupUuidByGroupSong(versionGroup);
+    }
+
+    public void setVersionGroupUuid(String versionGroupUuid) {
+        this.versionGroupUuid = versionGroupUuid;
+        this.versionGroup = null;
+    }
+
+    private String getVersionGroupUuidByGroupSong(Song versionGroup) {
+        if (versionGroup != null) {
+            return versionGroup.getUuid();
+        } else {
+            return null;
+        }
     }
 
     public boolean isUploaded() {
@@ -403,9 +419,9 @@ public class Song extends AbstractModel {
     }
 
     private String idOrVersionGroup() {
-        Song versionGroup = getVersionGroup();
-        if (versionGroup != null) {
-            return versionGroup.getUuid();
+        String versionGroupUuid = getVersionGroupUuid();
+        if (versionGroupUuid != null) {
+            return versionGroupUuid;
         }
         return getUuid();
     }
@@ -418,6 +434,9 @@ public class Song extends AbstractModel {
     }
 
     public String getVersionGroupUuid() {
+        if (versionGroupUuid != null) {
+            return versionGroupUuid;
+        }
         Song versionGroup = getVersionGroup();
         if (versionGroup == null) {
             return null;
