@@ -22,24 +22,11 @@ public class SongLinkServiceImpl extends BaseServiceImpl<SongLink> implements So
 
     @Override
     public List<SongLink> findAllByLanguage(Language language) {
-        List<SongLink> songLinks = getUnAppliedSongLinks();
-        songLinks = getFilteredSongLinks(songLinks, language);
-        return songLinks;
-    }
-
-    private List<SongLink> getFilteredSongLinks(List<SongLink> songLinks, Language language) {
-        List<SongLink> filteredSongLinks = new ArrayList<>();
-        for (SongLink songLink : songLinks) {
-            if (songLink.hasLanguage(language, songRepository)) {
-                filteredSongLinks.add(songLink);
-            }
-        }
-        return filteredSongLinks;
+        return songLinkRepository.findAllUnAppliedByLanguage(language);
     }
 
     private List<SongLink> getUnAppliedSongLinks() {
-        Iterable<SongLink> songLinks = songLinkRepository.findAll();
-        return getFilteredSongLinks(songLinks);
+        return songLinkRepository.findAllUnApplied();
     }
 
     @Override
@@ -60,16 +47,6 @@ public class SongLinkServiceImpl extends BaseServiceImpl<SongLink> implements So
     @Override
     public List<SongLink> findAllUnApplied() {
         return getUnAppliedSongLinks();
-    }
-
-    private List<SongLink> getFilteredSongLinks(Iterable<SongLink> songLinks) {
-        List<SongLink> filteredSongLinks = new ArrayList<>();
-        for (SongLink songLink : songLinks) {
-            if (songLink.isUnApplied()) {
-                filteredSongLinks.add(songLink);
-            }
-        }
-        return filteredSongLinks;
     }
 
     @Override

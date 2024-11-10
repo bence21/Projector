@@ -47,6 +47,7 @@ export class SongComponent implements OnInit, OnDestroy {
   @ViewChild("versions", { static: false }) versionsElement: ElementRef;
   hasReviewerRoleForSong: boolean;
   routerSubscription: Subscription;
+  songsByVersionGroupSet: Set<""> = null;
 
   constructor(private activatedRoute: ActivatedRoute,
     private songService: SongService,
@@ -207,13 +208,32 @@ export class SongComponent implements OnInit, OnDestroy {
       id = this.song.uuid;
     }
     this.songService.getSongsByVersionGroup(id).subscribe((songs) => {
+      const filteredSongs: Song[] = [];
+
       for (const song of songs) {
-        if (song.uuid != this.song.uuid) {
-          this.songsByVersionGroup.push(song);
+        if (song.uuid !== this.song.uuid) {
+          filteredSongs.push(song);
         }
       }
-    });
 
+      filteredSongs.sort((a, b) => {
+        // Songs with the same language as `this.song.languageDTO` should come first
+        if (a.languageDTO.uuid === this.song.languageDTO.uuid && b.languageDTO.uuid !== this.song.languageDTO.uuid) {
+          return -1;
+        }
+        if (b.languageDTO.uuid === this.song.languageDTO.uuid && a.languageDTO.uuid !== this.song.languageDTO.uuid) {
+          return 1;
+        }
+        return b.views - a.views;
+      });
+
+      this.songsByVersionGroup = filteredSongs;
+      this.songsByVersionGroupSet = new Set(this.songsByVersionGroup.map(song => song.uuid));
+    });
+  }
+  
+  isInSongsByVersionGroup(song: Song): boolean {
+    return this.songsByVersionGroupSet.has(song.uuid);
   }
 
   ngOnDestroy(): void {

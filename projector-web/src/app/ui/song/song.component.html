@@ -187,7 +187,9 @@
                 </mat-panel-title>
               </mat-expansion-panel-header>
               <mat-nav-list>
-                <mat-list-item *ngFor="let song of similar" (click)="selectSecondSong(song)">
+                <mat-list-item *ngFor="let song of similar" (click)="selectSecondSong(song)"
+                  [class.marked]="isInSongsByVersionGroup(song)">
+                  <mat-icon *ngIf="!isInSongsByVersionGroup(song)">layers_clear</mat-icon>
                   <a>{{ song.title + " "}}</a>
                   <a href="/#/song/{{song.uuid}}" target="_blank">{{'. Open'}}</a>
                 </mat-list-item>
