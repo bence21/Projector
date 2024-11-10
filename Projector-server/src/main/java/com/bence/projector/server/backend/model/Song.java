@@ -11,11 +11,14 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import static com.bence.projector.server.utils.MemoryUtil.getEmptyList;
+import static com.bence.projector.server.utils.SetLanguages.addWordsInCollection;
 
 @Entity
 @Table(
@@ -66,6 +69,14 @@ public class Song extends AbstractModel {
     private List<SongListElement> songListElements;
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "song")
     private List<FavouriteSong> favouriteSongs;
+    @Transient
+    private Collection<String> wordsCollection;
+    @Transient
+    private HashMap<String, Boolean> wordHashMap;
+    @Transient
+    private String textLazy;
+    @Transient
+    private Set<String> wordHashMapKeySet;
 
     public Song() {
     }
@@ -504,6 +515,17 @@ public class Song extends AbstractModel {
         return s.toString();
     }
 
+    public String getTextLazyLowerCase() {
+        if (textLazy == null) {
+            StringBuilder s = new StringBuilder(getTitle() + "\n\n");
+            for (SongVerse verse : getVerses()) {
+                s.append(verse.getText()).append("\n\n");
+            }
+            textLazy = s.toString().toLowerCase();
+        }
+        return textLazy;
+    }
+
     public List<FavouriteSong> getFavouriteSongs() {
         if (favouriteSongs == null) {
             return favouriteSongs = getEmptyList();
@@ -553,5 +575,32 @@ public class Song extends AbstractModel {
         }
         setVerses(uniqueSongVerses);
         setSongVerseOrderListItems(songVerseOrderListItems);
+    }
+
+    public Collection<String> getWords() {
+        if (this.wordsCollection == null) {
+            this.wordsCollection = new ArrayList<>();
+            addWordsInCollection(this, wordsCollection);
+        }
+        return wordsCollection;
+    }
+
+    public HashMap<String, Boolean> getWordHashMap() {
+        if (this.wordHashMap == null) {
+            Collection<String> words = getWords();
+            int wordsLength = words.size();
+            wordHashMap = new HashMap<>(wordsLength);
+            for (String word : words) {
+                wordHashMap.put(word.toLowerCase(), true);
+            }
+        }getText();
+        return wordHashMap;
+    }
+
+    public Set<String> getWordHashMapKeySet() {
+        if (wordHashMapKeySet == null) {
+            wordHashMapKeySet = getWordHashMap().keySet();
+        }
+        return wordHashMapKeySet;
     }
 }

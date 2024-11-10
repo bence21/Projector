@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.bence.projector.server.backend.service.util.QueryUtil.getStatement;
@@ -278,9 +279,9 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     @Override
     public List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs) {
         // returns custom queried Song models
-        String text = getText(song).toLowerCase();
+        String text = song.getTextLazyLowerCase();
         String songId = song.getUuid();
-        HashMap<String, Boolean> wordHashMap = getWordHashMap(text);
+        HashMap<String, Boolean> wordHashMap = song.getWordHashMap();
         return getSimilarSongsForSong(checkDeleted, songs, text, songId, wordHashMap);
     }
 
@@ -301,20 +302,9 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return songs;
     }
 
-    private HashMap<String, Boolean> getWordHashMap(String text) {
-        String[] split = text.split(wordsSplit);
-        int wordsLength = split.length;
-        HashMap<String, Boolean> wordHashMap = new HashMap<>(wordsLength);
-        for (String word : split) {
-            wordHashMap.put(word.toLowerCase(), true);
-        }
-        return wordHashMap;
-    }
-
     private List<Song> getSimilarSongsForSong(boolean checkDeleted, Collection<Song> songs, String text, String songUuid, HashMap<String, Boolean> wordHashMap) {
         List<Song> similar = new ArrayList<>();
         int wordCount = wordHashMap.keySet().size();
-        HashMap<String, Boolean> hashMap = new HashMap<>(wordCount);
         for (Song databaseSong : songs) {
             try {
                 if ((songUuid != null && databaseSong.getUuid().equals(songUuid)) || (databaseSong.isDeleted() && !checkDeleted)) {
@@ -326,7 +316,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 }
                 continue;
             }
-            if (songsIsSimilar(text, wordHashMap, wordCount, hashMap, databaseSong)) {
+            if (songsIsSimilar(text, wordHashMap, wordCount, databaseSong)) {
                 similar.add(databaseSong);
             }
         }
@@ -338,15 +328,11 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         similar.sort((o1, o2) -> Double.compare(o2.getSimilarRatio(), o1.getSimilarRatio()));
     }
 
-    private boolean songsIsSimilar(String text, HashMap<String, Boolean> wordHashMap, int wordCount, HashMap<String, Boolean> hashMap, Song databaseSong) {
-        String secondText = getText(databaseSong).toLowerCase();
-        String[] words = secondText.split(wordsSplit);
-        hashMap.clear();
+    private boolean songsIsSimilar(String text, HashMap<String, Boolean> wordHashMap, int wordCount, Song databaseSong) {
+        String secondText = databaseSong.getTextLazyLowerCase();
         int count = 0;
-        for (String word : words) {
-            hashMap.put(word.toLowerCase(), true);
-        }
-        for (String word : hashMap.keySet()) {
+        Set<String> wordsSet = databaseSong.getWordHashMapKeySet();
+        for (String word : wordsSet) {
             if (wordHashMap.containsKey(word)) {
                 ++count;
             }

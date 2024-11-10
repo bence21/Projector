@@ -87,45 +87,70 @@ public class SongUtil {
     }
 
     private static void markSimilarSongsAndSetForLanguage(SongService songService, Language language, SongLinkRepository songLinkRepository, SongLinkService songLinkService) {
+        Date startDate = new Date();
+        long startDateTime = startDate.getTime();
         Collection<Song> songs = songService.getSongsByLanguageForSimilarWithVersionGroup(language);
+        // songs = new ArrayList<>(songs).subList(0, 4000);
+        int n = songs.size();
+        int i = 0;
+        int p = 0;
         for (Song songForSimilar : songs) {
+            ++i;
             if (!songForSimilar.isPublic()) {
                 continue;
             }
             List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, songs);
             markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService);
+            p = logProgress(i, n, p, startDateTime);
         }
+        System.out.println("Elapsed seconds: " + (new Date().getTime() - startDateTime) / 1000);
+    }
+
+    private static int logProgress(int i, int n, int p, long startDateTime) {
+        double progress = (double) (i * 100) / n;
+        if ((int) progress != p) {
+            p = (int) progress;
+            Date date = new Date();
+            long dateTime = date.getTime();
+            double remainingMs = (n - i);
+            remainingMs = remainingMs / i * (dateTime - startDateTime);
+            double remainingSeconds = (long) (remainingMs / 100);
+            remainingSeconds /= 10;
+            System.out.println(p + "%\tRemaining seconds: " + remainingSeconds + "\t Estimated finish: " + new Date((long) (dateTime + remainingMs)) + "\t" + date);
+        }
+        return p;
     }
 
     private static void markSimilarSongsAndSetForSong(Song songForSimilar, List<Song> similarSongs, SongLinkRepository songLinkRepository, SongService songService, SongLinkService songLinkService) {
         if (similarSongs == null || similarSongs.isEmpty()) {
             return;
         }
-        List<SongLink> songLinks = songLinkRepository.findAllBySong1OrSong2(songForSimilar, songForSimilar);
+        List<SongLink> songLinks = null;
         for (Song similarSong : similarSongs) {
-            handleSimilarSong(songForSimilar, similarSong, songLinks, songService, songLinkService);
+            //noinspection ConstantValue
+            handleSimilarSong(songForSimilar, similarSong, songLinks, songService, songLinkService, songLinkRepository);
         }
     }
 
-    private static void handleSimilarSong(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService) {
+    private static void handleSimilarSong(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, SongLinkRepository songLinkRepository) {
         Song loadedSongForSimilar = songService.findOneByUuid(songForSimilar.getUuid());
         Song loadedSimilarSong = songService.findOneByUuid(similarSong.getUuid());
-        handleSimilarLoadedSong(loadedSongForSimilar, loadedSimilarSong, songLinks, songService, songLinkService, similarSong.getSimilarRatio());
+        handleSimilarLoadedSong(loadedSongForSimilar, loadedSimilarSong, songLinks, songService, songLinkService, similarSong.getSimilarRatio(), songLinkRepository);
     }
 
-    private static void handleSimilarLoadedSong(Song loadedSongForSimilar, Song loadedSimilarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, double percentage) {
+    private static void handleSimilarLoadedSong(Song loadedSongForSimilar, Song loadedSimilarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, double percentage, SongLinkRepository songLinkRepository) {
         if (loadedSongForSimilar.isSameVersionGroup(loadedSimilarSong)) {
             return;
         }
         if (percentage > 0.9 && percentage < 0.99) {
             mergeSongVersionGroup(loadedSongForSimilar, loadedSimilarSong, songService);
         } else {
-            songLinkForSimilar(loadedSongForSimilar, loadedSimilarSong, songLinks, songLinkService);
+            songLinkForSimilar(loadedSongForSimilar, loadedSimilarSong, songLinks, songLinkService, songLinkRepository);
         }
     }
 
-    private static void songLinkForSimilar(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongLinkService songLinkService) {
-        if (containsSongLink(songForSimilar, similarSong, songLinks)) {
+    private static void songLinkForSimilar(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongLinkService songLinkService, SongLinkRepository songLinkRepository) {
+        if (containsSongLink(songForSimilar, similarSong, songLinks, songLinkRepository)) {
             return;
         }
         SongLink songLink = new SongLink();
@@ -136,13 +161,21 @@ public class SongUtil {
         songLinkService.save(songLink);
     }
 
-    private static boolean containsSongLink(Song songForSimilar, Song similarSong, List<SongLink> songLinks) {
+    private static boolean containsSongLink(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongLinkRepository songLinkRepository) {
+        songLinks = ensureSongLinks(songLinks, songForSimilar, songLinkRepository);
         for (SongLink songLink : songLinks) {
             if (songLink.isSameSongs(songForSimilar, similarSong)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static List<SongLink> ensureSongLinks(List<SongLink> songLinks, Song songForSimilar, SongLinkRepository songLinkRepository) {
+        if (songLinks == null) {
+            songLinks = songLinkRepository.findAllBySong1OrSong2(songForSimilar, songForSimilar);
+        }
+        return songLinks;
     }
 
     private static void saveModifiedSongsWithBackups(List<Song> modifiedSongs, User result, SongService songService) {

@@ -537,8 +537,7 @@ public class SetLanguages {
         List<String> result = new ArrayList<>();
         StringBuilder currentPart = new StringBuilder();
         boolean inWhitespace = false;
-        for (int i = 0; i < text.length(); ++i) {
-            char currentChar = text.charAt(i);
+        for (char currentChar : text.toCharArray()) {
             if (isWhitespace(currentChar)) {
                 if (!inWhitespace) {
                     addResultAndClearTheBuffer(result, currentPart);
@@ -573,8 +572,9 @@ public class SetLanguages {
         return Character.isWhitespace(currentChar) || currentChar == NON_BREAKING_SPACE;
     }
 
-    private static void addWordsInCollection(Song song, Collection<String> words) {
-        for (SongVerse songVerse : song.getVerses()) {
+    public static void addWordsInCollection(Song song, Collection<String> words) {
+        List<SongVerse> songVerses = song.getVerses();
+        for (SongVerse songVerse : songVerses) {
             addWordsFromSongVerse(words, songVerse);
         }
     }
@@ -582,19 +582,20 @@ public class SetLanguages {
     private static void addWordsFromSongVerse(Collection<String> words, SongVerse songVerse) {
         List<String> split = splitOnWhitespace(songVerse.getText());
         for (String word : split) {
+            char[] wordCharArray = word.toCharArray();
             int start = 0;
-            int end = word.length() - 1;
+            int end = wordCharArray.length - 1;
             // Find the first letter (skip leading non-letter characters)
-            while (start <= end && !Character.isLetter(word.charAt(start))) {
+            while (start <= end && !Character.isLetter(wordCharArray[start])) {
                 start++;
             }
             // Find the last letter (skip trailing non-letter characters)
-            while (end >= start && !Character.isLetter(word.charAt(end))) {
+            while (end >= start && !Character.isLetter(wordCharArray[end])) {
                 end--;
             }
             // If we found a valid range with at least one letter
             if (start <= end) {
-                String wordWithoutNonLetters = getWordWithoutNonLetters(word, start, end);
+                String wordWithoutNonLetters = getWordWithoutNonLetters(wordCharArray, start, end);
                 words.add(wordWithoutNonLetters);
             }
         }
@@ -619,7 +620,7 @@ public class SetLanguages {
             }
             // If we found a valid range with at least one letter
             if (start <= end) {
-                String wordWithoutNonLetters = getWordWithoutNonLetters(word, start, end);
+                String wordWithoutNonLetters = getWordWithoutNonLetters(word.toCharArray(), start, end);
                 if (wordWithoutNonLetters.equals(from)) {
                     text.append(to);
                 } else {
@@ -633,11 +634,11 @@ public class SetLanguages {
         songVerse.setText(text.toString());
     }
 
-    private static String getWordWithoutNonLetters(String word, int start, int end) {
+    private static String getWordWithoutNonLetters(char[] wordCharArray, int start, int end) {
         StringBuilder wordWithoutNonLetters = new StringBuilder();
         // Traverse through the word from 'start' to 'end'
         for (int i = start; i <= end; i++) {
-            char currentChar = word.charAt(i);
+            char currentChar = wordCharArray[i];
             wordWithoutNonLetters.append(currentChar);
         }
         // Add the result to the list
