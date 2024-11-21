@@ -834,6 +834,8 @@ public class ProjectionScreenController {
     }
 
     private void clear() {
+        activeText = "";
+        projectionType = ProjectionType.CLEAR;
         textFlow.setText2("", 0, 10);
         textFlow1.setText2("", 0, 10);
         progressLine.setVisible(false);

@@ -265,4 +265,10 @@ public class ProjectionScreensUtil {
             projectionScreenHolder.setBackGroundColor();
         }
     }
+
+    public void hidePopups() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.hidePopups();
+        }
+    }
 }

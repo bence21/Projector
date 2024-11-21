@@ -52,6 +52,7 @@ public class ProjectionScreensController {
     private VBox vBox;
     private boolean initialized = false;
     private Tab projectionScreensTab;
+    private final double BUTTON_SIZE = 20.0;
 
     private static int minimumSize(int size) {
         if (size > 0) {
@@ -232,14 +233,21 @@ public class ProjectionScreensController {
     }
 
     private Button getSettingsButton(ProjectionScreenHolder projectionScreenHolder, ResourceBundle resourceBundle) {
-        Button settingsButton = new Button();
+        Button settingsButton = getButton();
         settingsButton.setText(resourceBundle.getString("Settings"));
         settingsButton.setOnAction(onSettingsAction(projectionScreenHolder));
         return settingsButton;
     }
 
+    private Button getButton() {
+        Button button = new Button();
+        button.setPrefHeight(BUTTON_SIZE);
+        button.setPadding(new Insets(4.0));
+        return button;
+    }
+
     private Button getProjectionTypeButton(ProjectionScreenHolder projectionScreenHolder, ResourceBundle resourceBundle) {
-        Button projectionTypeButton = new Button();
+        Button projectionTypeButton = getButton();
         projectionTypeButton.setText(resourceBundle.getString("Projection type"));
         projectionTypeButton.setOnAction(onProjectionTypeAction(projectionScreenHolder));
         return projectionTypeButton;
@@ -261,8 +269,7 @@ public class ProjectionScreensController {
         HBox.setMargin(blankButton, new Insets(2, 4, 0, 0));
         blankButton.setContentDisplay(ContentDisplay.CENTER);
         blankButton.setGraphicTextGap(0.0);
-        double size = 20.0;
-        blankButton.setPrefHeight(size);
+        blankButton.setPrefHeight(BUTTON_SIZE);
         blankButton.setTextAlignment(TextAlignment.CENTER);
         blankButton.setPadding(new Insets(4.0));
         projectionScreenController.addOnBlankListener(blankButton::setSelected);
@@ -276,8 +283,7 @@ public class ProjectionScreensController {
         HBox.setMargin(clearButton, new Insets(2, 4, 0, 0));
         clearButton.setContentDisplay(ContentDisplay.CENTER);
         clearButton.setGraphicTextGap(0.0);
-        double size = 20.0;
-        clearButton.setPrefHeight(size);
+        clearButton.setPrefHeight(BUTTON_SIZE);
         clearButton.setTextAlignment(TextAlignment.CENTER);
         clearButton.setPadding(new Insets(4.0));
         clearButton.setOnAction(event -> projectionScreenController.clearAll());
@@ -291,8 +297,7 @@ public class ProjectionScreensController {
         HBox.setMargin(lockButton, new Insets(2, 4, 0, 0));
         lockButton.setContentDisplay(ContentDisplay.CENTER);
         lockButton.setGraphicTextGap(0.0);
-        double size = 20.0;
-        lockButton.setPrefHeight(size);
+        lockButton.setPrefHeight(BUTTON_SIZE);
         lockButton.setTextAlignment(TextAlignment.CENTER);
         lockButton.setPadding(new Insets(4.0));
         projectionScreenController.addOnLockListener(lockButton::setSelected);

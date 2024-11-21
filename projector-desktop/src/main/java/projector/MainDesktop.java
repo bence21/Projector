@@ -65,6 +65,7 @@ public class MainDesktop extends Application {
     private static Pane globalRoot;
     private MyController myController;
     private ProjectionScreenController projectionScreenController;
+    private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private Stage tmpStage;
     private Stage primaryStage;
     private Scene primaryScene;
@@ -617,7 +618,7 @@ public class MainDesktop extends Application {
     }
 
     public void hideProjectionScreen() {
-        projectionScreenController.hidePopups();
+        projectionScreensUtil.hidePopups();
         if (canvasStage != null) {
             canvasStage.hide();
         }

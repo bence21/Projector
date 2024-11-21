@@ -214,4 +214,8 @@ public class ProjectionScreenHolder {
         }
         return result;
     }
+
+    public void hidePopups() {
+        projectionScreenController.hidePopups();
+    }
 }
