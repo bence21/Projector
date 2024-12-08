@@ -64,6 +64,7 @@ import projector.controller.util.ProjectionScreensUtil;
 import projector.model.CustomCanvas;
 import projector.model.Song;
 import projector.model.SongVerse;
+import projector.utils.Monitor;
 import projector.utils.SongVerseHolder;
 import projector.utils.scene.text.MyTextFlow;
 import projector.utils.scene.text.SongVersePartTextFlow;
@@ -158,6 +159,7 @@ public class ProjectionScreenController {
     private double saturation = 0.0;
     private Image lastImage = null;
     private int setTextCounter = 0;
+    private Monitor monitor;
 
     public static BackgroundImage getBackgroundImageByPath(String backgroundImagePath, int width, int height) {
         try {
@@ -1457,6 +1459,7 @@ public class ProjectionScreenController {
         if (popup != null) {
             popup.hide();
         }
+        projectionScreenSettings.getProjectionScreenHolder().onProjectionToggle();
     }
 
     public void toggleBlank() {
@@ -1477,6 +1480,7 @@ public class ProjectionScreenController {
         } else {
             mainDesktop.createPopupForNextScreen(screen, this);
         }
+        projectionScreenSettings.getProjectionScreenHolder().onProjectionToggle();
     }
 
     public Screen getScreen() {
@@ -1603,6 +1607,14 @@ public class ProjectionScreenController {
 
     public String getActiveText() {
         return activeText;
+    }
+
+    public void setMonitor(Monitor monitor) {
+        this.monitor = monitor;
+    }
+
+    public Monitor getMonitor() {
+        return monitor;
     }
 
     private record ScaledSizes(double width, double height) {

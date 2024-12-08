@@ -52,4 +52,12 @@ public class Monitor {
     public double getDpiScale() {
         return dpiScale;
     }
+
+    public double getWidth() {
+        return monitorArea.getWidth();
+    }
+
+    public double getHeight() {
+        return monitorArea.getHeight();
+    }
 }

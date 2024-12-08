@@ -32,6 +32,7 @@ import projector.controller.listener.ProjectionScreenListener;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.utils.ImageUtil;
+import projector.utils.Monitor;
 
 import java.awt.*;
 import java.io.IOException;
@@ -88,6 +89,7 @@ public class ProjectionScreensController {
         bunch.mainPane = mainPane;
         bunch.imageView = imageView;
         bunch.projectionScreenHolder = projectionScreenHolder;
+        projectionScreenHolder.setBunch(bunch);
         snapshot(bunch);
         bunches.add(bunch);
         imageView.setOnMouseClicked(event -> snapshot(bunch));
@@ -324,8 +326,23 @@ public class ProjectionScreensController {
         Label sizeLabel = new Label();
         setLabelTextByHolder(sizeLabel, projectionScreenHolder);
         projectionScreenHolder.setOnMainPaneSizeChangeListener((width, height) -> {
-            ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
-            if (projectionScreenController != null) {
+            MonitorSizes monitorSizes = getMonitorSizes(projectionScreenHolder, width, height);
+            sizeLabel.setText("(" + (int) (Math.round(monitorSizes.width())) + " x " + (int) (Math.round(monitorSizes.height())) + ")");
+        });
+        HBox.setMargin(sizeLabel, new Insets(0, 0, 0, 12));
+        ObservableList<Node> hBoxChildren = hBox.getChildren();
+        hBoxChildren.add(sizeLabel);
+        return hBox;
+    }
+
+    private static MonitorSizes getMonitorSizes(ProjectionScreenHolder projectionScreenHolder, double width, double height) {
+        ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
+        if (projectionScreenController != null) {
+            Monitor monitor = projectionScreenController.getMonitor();
+            if (monitor != null) {
+                width = monitor.getWidth();
+                height = monitor.getHeight();
+            } else {
                 Screen screen = projectionScreenController.getScreen();
                 if (screen != null) {
                     double scale = getScreenScale(projectionScreenHolder, screen);
@@ -333,12 +350,11 @@ public class ProjectionScreensController {
                     height = height * scale;
                 }
             }
-            sizeLabel.setText("(" + (int) (Math.round(width)) + " x " + (int) (Math.round(height)) + ")");
-        });
-        HBox.setMargin(sizeLabel, new Insets(0, 0, 0, 12));
-        ObservableList<Node> hBoxChildren = hBox.getChildren();
-        hBoxChildren.add(sizeLabel);
-        return hBox;
+        }
+        return new MonitorSizes(width, height);
+    }
+
+    private record MonitorSizes(double width, double height) {
     }
 
     private ToggleButton getShowProjectionScreenToggleButton(ProjectionScreenHolder projectionScreenHolder) {
@@ -352,7 +368,11 @@ public class ProjectionScreensController {
         toggleButton.setSelected(true);
         toggleButton.setTextAlignment(TextAlignment.CENTER);
         toggleButton.setPadding(new Insets(4.0));
-        toggleButton.setOnAction(event -> projectionScreenHolder.getProjectionScreenController().toggleShowHidePopup());
+        projectionScreenHolder.setOnProjectionToggle(() -> onProjectionToggle(projectionScreenHolder));
+        toggleButton.setOnAction(event -> {
+            projectionScreenHolder.getProjectionScreenController().toggleShowHidePopup();
+            onProjectionToggle(projectionScreenHolder);
+        });
         ImageView imageView = new ImageView();
         imageView.setFitHeight(size);
         imageView.setFitWidth(size);
@@ -364,6 +384,23 @@ public class ProjectionScreensController {
             toggleButton.setGraphic(imageView);
         }
         return toggleButton;
+    }
+
+    private void onProjectionToggle(ProjectionScreenHolder projectionScreenHolder) {
+        Monitor monitor = projectionScreenHolder.getProjectionScreenController().getMonitor();
+        ImageView imageView = projectionScreenHolder.getBunch().imageView;
+        if (monitor == null && imageView.getOpacity() >= 1.0) {
+            return;
+        }
+        imageView.setOpacity(getOpacityByMonitorProjection(projectionScreenHolder, monitor));
+    }
+
+    private double getOpacityByMonitorProjection(ProjectionScreenHolder projectionScreenHolder, Monitor monitor) {
+        if (projectionScreenHolder.isPopupShowing() || monitor == null) {
+            return 1.0;
+        } else {
+            return 0.5;
+        }
     }
 
     private EventHandler<ActionEvent> onSettingsAction(ProjectionScreenHolder projectionScreenHolder) {
@@ -394,7 +431,7 @@ public class ProjectionScreensController {
         };
     }
 
-    private static class Bunch {
+    public static class Bunch {
         BorderPane mainPane;
         ImageView imageView;
         ProjectionScreenHolder projectionScreenHolder;

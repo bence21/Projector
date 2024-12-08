@@ -382,6 +382,7 @@ public class MyController {
     public void showHideProjectionScreen() {
         if (showProjectionScreenToggleButton.isSelected()) {
             mainDesktop.setProjectionScreenStage(true);
+            projectionScreensUtil.onProjectionToggle();
         } else {
             mainDesktop.hideProjectionScreen();
         }

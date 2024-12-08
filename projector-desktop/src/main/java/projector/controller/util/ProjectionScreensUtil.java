@@ -271,4 +271,10 @@ public class ProjectionScreensUtil {
             projectionScreenHolder.hidePopups();
         }
     }
+
+    public void onProjectionToggle() {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.onProjectionToggle();
+        }
+    }
 }

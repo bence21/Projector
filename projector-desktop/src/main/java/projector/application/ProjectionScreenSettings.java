@@ -394,7 +394,7 @@ public class ProjectionScreenSettings {
             if (projectionScreenController == null) {
                 return null;
             }
-            return getNameForMonitorByScreen(projectionScreenController.getScreen());
+            return getNameForMonitorByScreen(projectionScreenController);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             return null;
@@ -440,13 +440,15 @@ public class ProjectionScreenSettings {
         return extendedMonitors;
     }
 
-    private String getNameForMonitorByScreen(Screen screen) {
+    private String getNameForMonitorByScreen(ProjectionScreenController projectionScreenController) {
+        Screen screen = projectionScreenController.getScreen();
         if (screen == null || screen.equals(Screen.getPrimary())) {
             return null;
         }
         Rectangle2D bounds = screen.getBounds();
         List<Monitor> extendedMonitors = sortMonitorsBySimilarity(MonitorUtil.getInstance().getExtendedMonitors(), bounds);
         for (Monitor monitor : extendedMonitors) {
+            projectionScreenController.setMonitor(monitor);
             return monitor.getMonitorDeviceId();
         }
         return null;

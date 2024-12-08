@@ -2,10 +2,12 @@ package projector.controller.util;
 
 import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 import projector.application.ProjectionScreenSettings;
 import projector.application.ProjectionType;
 import projector.controller.ProjectionScreenController;
+import projector.controller.ProjectionScreensController;
 import projector.controller.listener.OnMainPaneSizeChangeListener;
 import projector.controller.listener.PopupCreatedListener;
 
@@ -27,6 +29,8 @@ public class ProjectionScreenHolder {
     private int doubleIndex;
     private final List<OnResultListener> onNameChangeListeners = new ArrayList<>();
     private boolean preview;
+    private ProjectionScreensController.Bunch bunch;
+    private ProjectionScreenSettings.Listener onProjectionToggleListener;
 
     public ProjectionScreenHolder(ProjectionScreenController projectionScreenController, String name) {
         this.projectionScreenController = projectionScreenController;
@@ -217,5 +221,35 @@ public class ProjectionScreenHolder {
 
     public void hidePopups() {
         projectionScreenController.hidePopups();
+    }
+
+    public void setBunch(ProjectionScreensController.Bunch bunch) {
+        this.bunch = bunch;
+    }
+
+    public ProjectionScreensController.Bunch getBunch() {
+        return bunch;
+    }
+
+    public boolean isPopupShowing() {
+        ProjectionScreenController projectionScreenController = getProjectionScreenController();
+        if (projectionScreenController == null) {
+            return false;
+        }
+        Popup popup = projectionScreenController.getPopup();
+        if (popup == null) {
+            return false;
+        }
+        return popup.isShowing();
+    }
+
+    public void setOnProjectionToggle(ProjectionScreenSettings.Listener onProjectionToggle) {
+        this.onProjectionToggleListener = onProjectionToggle;
+    }
+
+    public void onProjectionToggle() {
+        if (onProjectionToggleListener != null) {
+            onProjectionToggleListener.onChanged();
+        }
     }
 }
