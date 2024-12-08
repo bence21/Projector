@@ -20,6 +20,8 @@ public class Language extends BaseEntity {
     private boolean selected;
     @DatabaseField
     private Date favouriteSongDate;
+    @DatabaseField
+    private Boolean sectionTypeDownloadedCorrectly;
     @ForeignCollectionField
     private ForeignCollection<Song> songForeignCollection;
     private List<Song> songs;
@@ -128,4 +130,11 @@ public class Language extends BaseEntity {
         this.songsCount = songsCount;
     }
 
+    public boolean isSectionTypeDownloadedCorrectly() {
+        return sectionTypeDownloadedCorrectly != null && sectionTypeDownloadedCorrectly;
+    }
+
+    public void setSectionTypeDownloadedCorrectly(Boolean sectionTypeDownloadedCorrectly) {
+        this.sectionTypeDownloadedCorrectly = sectionTypeDownloadedCorrectly;
+    }
 }

@@ -193,6 +193,7 @@ public class DownloadSongsController {
                         LOG.error(e.getMessage(), e);
                     }
                     Platform.runLater(() -> {
+                        setLanguageSectionTypeDownloadedCorrectly(language, languageService);
                         for (Song song : newSongList) {
                             newSongListView.getItems().add(song);
                         }
@@ -204,6 +205,15 @@ public class DownloadSongsController {
         });
         thread.start();
         initializeButtons();
+    }
+
+    private static void setLanguageSectionTypeDownloadedCorrectly(Language language, LanguageService languageService) {
+        try {
+            language.setSectionTypeDownloadedCorrectly(true);
+            languageService.update(language);
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
     }
 
     private void saveSong(Song song) {
@@ -257,6 +267,9 @@ public class DownloadSongsController {
     private Long getLastModifiedSongDate(Language language) {
         final List<Song> all = language.getSongs();
         Date lastModified = new Date(0);
+        if (!language.isSectionTypeDownloadedCorrectly()) {
+            return 0L;
+        }
         for (Song song : all) {
             Date serverModifiedDate = song.getServerModifiedDate();
             if (serverModifiedDate != null && lastModified.compareTo(serverModifiedDate) < 0 && !song.isDownloadedSeparately()) {

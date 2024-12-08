@@ -43,7 +43,7 @@ public class DatabaseHelper {
 
     private static DatabaseHelper instance;
     private static boolean frozen = false;
-    private final int DATABASE_VERSION = 19;
+    private final int DATABASE_VERSION = 20;
     private final ConnectionSource connectionSource;
     private final String dataBaseVersionPath = getDataBaseVersionPath();
     private Dao<Song, Long> songDao;
@@ -181,10 +181,13 @@ public class DatabaseHelper {
                     if (oldVersion <= 17) {
                         executeSafe(getLanguageDao(), "ALTER TABLE `language` ADD COLUMN favouriteSongDate DATETIME");
                     }
-                    //noinspection ConstantValue
                     if (oldVersion <= 18) {
                         executeSafe(getCountdownTimeDao(), "ALTER TABLE `CountdownTime` ADD COLUMN showFinishTime BOOLEAN");
                         executeSafe(getCountdownTimeDao(), "ALTER TABLE `CountdownTime` ADD COLUMN selectedProjectionScreenName VARCHAR(255)");
+                    }
+                    //noinspection ConstantValue
+                    if (oldVersion <= 19) {
+                        executeSafe(getLanguageDao(), "ALTER TABLE `language` ADD COLUMN sectionTypeDownloadedCorrectly BOOLEAN");
                     }
                 }
                 if (!frozen) {
