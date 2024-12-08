@@ -5,16 +5,21 @@ import com.bence.projector.common.serializer.ColorSerializer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.layout.BackgroundImage;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeType;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.Screen;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import projector.controller.ProjectionScreenController;
 import projector.controller.SettingsController;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.utils.AppProperties;
+import projector.utils.Monitor;
+import projector.utils.MonitorUtil;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -298,7 +303,7 @@ public class ProjectionScreenSettings {
         try {
             File file = new File(getFileName());
             if (!file.exists()) {
-                copyFromOther(new ProjectionScreenSettings());
+                copyFromOther(this);
             } else {
                 load();
             }
@@ -368,7 +373,83 @@ public class ProjectionScreenSettings {
     }
 
     private String getFileName() {
-        return getFileName(projectionScreenHolder.getName());
+        return getFileName(getNameForMonitor());
+    }
+
+    private String getNameForMonitor() {
+        String nameForMonitor = getNameForMonitorForScreen();
+        if (nameForMonitor != null) {
+            return nameForMonitor;
+        } else {
+            return projectionScreenHolder.getName();
+        }
+    }
+
+    private String getNameForMonitorForScreen() {
+        try {
+            if (projectionScreenHolder == null) {
+                return null;
+            }
+            ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
+            if (projectionScreenController == null) {
+                return null;
+            }
+            return getNameForMonitorByScreen(projectionScreenController.getScreen());
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+            return null;
+        }
+    }
+
+    // Function to calculate the overlap area between two rectangles
+    public static double calculateOverlap(Rectangle2D rect1, Rectangle2D rect2) {
+        double overlapWidth = Math.max(0, Math.min(rect1.getMaxX(), rect2.getMaxX()) - Math.max(rect1.getMinX(), rect2.getMinX()));
+        double overlapHeight = Math.max(0, Math.min(rect1.getMaxY(), rect2.getMaxY()) - Math.max(rect1.getMinY(), rect2.getMinY()));
+        return overlapWidth * overlapHeight;
+    }
+
+    // Function to calculate the distance between the centers of two rectangles
+    public static double calculateDistance(Rectangle2D rect1, Rectangle2D rect2) {
+        double centerX1 = rect1.getMinX() + rect1.getWidth() / 2;
+        double centerY1 = rect1.getMinY() + rect1.getHeight() / 2;
+        double centerX2 = rect2.getMinX() + rect2.getWidth() / 2;
+        double centerY2 = rect2.getMinY() + rect2.getHeight() / 2;
+        return Math.sqrt(Math.pow(centerX1 - centerX2, 2) + Math.pow(centerY1 - centerY2, 2));
+    }
+
+    // Function to sort the extended monitors by overlap or distance from bounds
+    public static List<Monitor> sortMonitorsBySimilarity(List<Monitor> extendedMonitors, Rectangle2D bounds) {
+        // Sort by overlap, or by distance if overlap is small
+        extendedMonitors.sort((monitor1, monitor2) -> {
+            Rectangle2D rDpiMonitorArea1 = monitor1.getRDpiMonitorArea();
+            Rectangle2D rDpiMonitorArea2 = monitor2.getRDpiMonitorArea();
+
+            double overlap1 = calculateOverlap(bounds, rDpiMonitorArea1);
+            double overlap2 = calculateOverlap(bounds, rDpiMonitorArea2);
+
+            if (overlap1 != overlap2) {
+                return Double.compare(overlap2, overlap1); // Sort by descending overlap
+            } else {
+                // If overlaps are the same, sort by distance to center
+                double distance1 = calculateDistance(bounds, rDpiMonitorArea1);
+                double distance2 = calculateDistance(bounds, rDpiMonitorArea2);
+                return Double.compare(distance1, distance2); // Sort by ascending distance
+            }
+        });
+
+        return extendedMonitors;
+    }
+
+    private String getNameForMonitorByScreen(Screen screen) {
+        if (screen == null || screen.equals(Screen.getPrimary())) {
+            return null;
+        }
+        Rectangle2D bounds = screen.getBounds();
+        List<Monitor> extendedMonitors = sortMonitorsBySimilarity(MonitorUtil.getInstance().getExtendedMonitors(), bounds);
+        for (Monitor monitor : extendedMonitors) {
+            return monitor.getMonitorDeviceId();
+        }
+        return null;
     }
 
     private String getFileName(String name) {

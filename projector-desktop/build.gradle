@@ -55,6 +55,8 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
     implementation 'com.1stleg:jnativehook:2.1.0'
 
+    implementation 'com.github.oshi:oshi-core:6.6.5'
+
     testImplementation 'junit:junit:4.12'
     testImplementation "org.testfx:testfx-core:4.0.+"
     testImplementation "org.testfx:testfx-junit:4.0.+"

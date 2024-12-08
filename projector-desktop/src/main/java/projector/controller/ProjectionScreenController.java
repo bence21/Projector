@@ -1485,6 +1485,9 @@ public class ProjectionScreenController {
 
     public void setScreen(Screen screen) {
         this.screen = screen;
+        if (projectionScreenSettings != null) {
+            projectionScreenSettings.reload();
+        }
     }
 
     public Stage getPrimaryStageVariable() {
