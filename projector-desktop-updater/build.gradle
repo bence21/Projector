@@ -72,7 +72,7 @@ runtime {
         installerOptions += ['--resource-dir', "src/main/resources"]
         installerOptions += ['--vendor', 'Bence']
         imageName = "updater"
-        appVersion = "1.1.0"
+        appVersion = "1.1.2"
 
         if (currentOs.windows) {
             installerOptions += ['--win-per-user-install', '--win-dir-chooser', '--win-menu', '--win-shortcut']
