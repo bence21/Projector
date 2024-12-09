@@ -32,7 +32,7 @@ def read_and_modify_setup_iss(input_file_path, output_file_path, generated_lines
     for i, line in enumerate(lines):
         if line.strip() == '[Files]':
             start_index = i
-        elif line.strip() == '; Source: "..\\Projector-server\\src\\main\\resources\\static\\projector.exe"; DestDir: "{app}"':
+        elif line.strip() == '[Icons]':  # Adjusted to a standard section indicator
             end_index = i
             break
 
@@ -40,21 +40,31 @@ def read_and_modify_setup_iss(input_file_path, output_file_path, generated_lines
     if start_index is not None and end_index is not None:
         # Insert the generated lines after the [Files] section
         modified_lines = lines[:start_index + 1] + generated_lines + lines[end_index:]
-        
+
         # Write the modified content to the output file
         with open(output_file_path, 'w') as f:
             f.writelines(modified_lines)
-        
+
         print(f"Modified content has been written to {output_file_path}")
     else:
         print("Unable to find the [Files] and/or [Icons] sections in the input file.")
 
+
 if __name__ == "__main__":
     input_file_path = 'setup.iss'  # Replace with the actual path to your setup.iss file
     output_file_path = 'modified_setup.iss'  # Path to save the modified setup.iss file
-    output_file_path = input_file_path
-    
-    folder_path = ".\\build\\jpackage\\Projector\\"
-    generated_lines = generate_lines(folder_path)  # Assuming generate_lines function from previous example
-    
+    output_file_path = input_file_path  # Overwriting input file for simplicity
+
+    # Generate lines for build\jpackage\Projector
+    projector_folder_path = ".\\build\\jpackage\\Projector\\"
+    projector_lines = generate_lines(projector_folder_path)
+
+    # Generate lines for forSetup folder
+    for_setup_folder_path = ".\\forSetup\\"
+    for_setup_lines = generate_lines(for_setup_folder_path)
+
+    # Combine all generated lines
+    generated_lines = projector_lines + for_setup_lines
+
+    # Read and modify setup.iss file
     read_and_modify_setup_iss(input_file_path, output_file_path, generated_lines)
