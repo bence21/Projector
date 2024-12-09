@@ -8,3 +8,7 @@ data/
 /.cache/
 /copyCredentials.bat
 /copyCredentialsRevert.bat
+/app
+/dataE
+/runtime
+*.log

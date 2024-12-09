@@ -313,24 +313,29 @@ public class ProjectionScreenSettings {
         }
     }
 
-    private void load() {
+    public static String getLinesFromFile(String fileName) throws IOException {
         FileInputStream inputStream;
+        inputStream = new FileInputStream(fileName);
+        BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+        StringBuilder s = new StringBuilder();
+        String readLine = br.readLine();
+        while (readLine != null) {
+            s.append(readLine);
+            readLine = br.readLine();
+        }
+        br.close();
+        return s.toString();
+    }
+
+    private void load() {
         try {
-            inputStream = new FileInputStream(getFileName());
-            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            StringBuilder s = new StringBuilder();
-            String readLine = br.readLine();
-            while (readLine != null) {
-                s.append(readLine);
-                readLine = br.readLine();
-            }
-            br.close();
+            String s = getLinesFromFile(getFileName());
             Gson gson = new GsonBuilder()
                     .serializeNulls()
                     .excludeFieldsWithoutExposeAnnotation()
                     .registerTypeAdapter(Color.class, new ColorDeserializer())
                     .create();
-            ProjectionScreenSettings fromJson = gson.fromJson(s.toString(), ProjectionScreenSettings.class);
+            ProjectionScreenSettings fromJson = gson.fromJson(s, ProjectionScreenSettings.class);
             if (fromJson == null) {
                 return;
             }

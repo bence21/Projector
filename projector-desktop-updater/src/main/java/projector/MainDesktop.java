@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static projector.utils.ProcessUtil.killOtherProcesses;
+
 public class MainDesktop extends Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(MainDesktop.class);
@@ -41,6 +43,7 @@ public class MainDesktop extends Application {
     public void start(Stage primaryStage) {
         try {
             LOG.info("Starting");
+            killOtherProcesses();
             Stage stage = new Stage();
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/view/MainView.fxml"));

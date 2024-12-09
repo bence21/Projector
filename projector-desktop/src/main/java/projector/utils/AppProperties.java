@@ -51,4 +51,7 @@ public class AppProperties {
         return "./";
     }
 
+    public String getAppStatePath() {
+        return getWorkDirectory() + "appState.json";
+    }
 }

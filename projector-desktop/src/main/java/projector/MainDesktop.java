@@ -43,6 +43,7 @@ import projector.controller.util.WindowController;
 import projector.repository.ormLite.DatabaseHelper;
 import projector.service.CustomCanvasService;
 import projector.utils.AppProperties;
+import projector.utils.AppState;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -53,6 +54,7 @@ import java.util.Properties;
 
 import static java.lang.Thread.sleep;
 import static projector.utils.HandleUnexpectedError.setDefaultUncaughtExceptionHandler;
+import static projector.utils.ProcessUtil.killOtherProcesses;
 import static projector.utils.SceneUtils.addIconToStage;
 import static projector.utils.SceneUtils.addStylesheetToSceneBySettings;
 import static projector.utils.SceneUtils.createWindowController;
@@ -79,7 +81,17 @@ public class MainDesktop extends Application {
     public static void main(String[] args) {
         Log4j2Config.getInstance().initializeLog4j2OnMac();
         accessibilityAssistiveTechnologiesProblem();
+        if (!killOtherProcesses(!AppState.getInstance().isClosed())) {
+            return;
+        }
+        openState();
         launch(args);
+    }
+
+    private static void openState() {
+        AppState appState = AppState.getInstance();
+        appState.setClosed(false);
+        appState.save();
     }
 
     private static void accessibilityAssistiveTechnologiesProblem() {
@@ -387,7 +399,14 @@ public class MainDesktop extends Application {
         myController.createCustomCanvas();
     }
 
+    public void saveStateOnClose() {
+        AppState appState = AppState.getInstance();
+        appState.setClosed(true);
+        appState.save();
+    }
+
     private void closeApplication() {
+        saveStateOnClose();
         System.out.println("Stage is closing");
         Settings settings = Settings.getInstance();
         settings.setApplicationRunning(false);
