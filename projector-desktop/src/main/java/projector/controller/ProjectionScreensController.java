@@ -32,7 +32,7 @@ import projector.controller.listener.ProjectionScreenListener;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.utils.ImageUtil;
-import projector.utils.Monitor;
+import projector.utils.monitors.Monitor;
 
 import java.awt.*;
 import java.io.IOException;

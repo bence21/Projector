@@ -64,7 +64,7 @@ import projector.controller.util.ProjectionScreensUtil;
 import projector.model.CustomCanvas;
 import projector.model.Song;
 import projector.model.SongVerse;
-import projector.utils.Monitor;
+import projector.utils.monitors.Monitor;
 import projector.utils.SongVerseHolder;
 import projector.utils.scene.text.MyTextFlow;
 import projector.utils.scene.text.SongVersePartTextFlow;

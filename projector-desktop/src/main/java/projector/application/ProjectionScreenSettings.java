@@ -18,8 +18,8 @@ import projector.controller.ProjectionScreenController;
 import projector.controller.SettingsController;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.utils.AppProperties;
-import projector.utils.Monitor;
-import projector.utils.MonitorUtil;
+import projector.utils.monitors.Monitor;
+import projector.utils.monitors.MonitorUtil;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -113,6 +113,7 @@ public class ProjectionScreenSettings {
     private String name;
     // check for copy constructor!
     private Listener onChangedListener = null;
+    private transient String nameForMonitorForScreen;
 
     public ProjectionScreenSettings() {
         settings = Settings.getInstance();
@@ -301,6 +302,7 @@ public class ProjectionScreenSettings {
 
     public void reload() {
         try {
+            nameForMonitorForScreen = null;
             File file = new File(getFileName());
             if (!file.exists()) {
                 copyFromOther(this);
@@ -392,14 +394,17 @@ public class ProjectionScreenSettings {
 
     private String getNameForMonitorForScreen() {
         try {
-            if (projectionScreenHolder == null) {
-                return null;
+            if (nameForMonitorForScreen == null) {
+                if (projectionScreenHolder == null) {
+                    return null;
+                }
+                ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
+                if (projectionScreenController == null) {
+                    return null;
+                }
+                nameForMonitorForScreen = getNameForMonitorByScreen(projectionScreenController);
             }
-            ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
-            if (projectionScreenController == null) {
-                return null;
-            }
-            return getNameForMonitorByScreen(projectionScreenController);
+            return nameForMonitorForScreen;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             return null;
@@ -453,10 +458,26 @@ public class ProjectionScreenSettings {
         Rectangle2D bounds = screen.getBounds();
         List<Monitor> extendedMonitors = sortMonitorsBySimilarity(MonitorUtil.getInstance().getExtendedMonitors(), bounds);
         for (Monitor monitor : extendedMonitors) {
-            projectionScreenController.setMonitor(monitor);
-            return monitor.getMonitorDeviceId();
+            Screen monitorScreen = monitor.getScreen();
+            if (monitorScreen != null) {
+                logMonitorAndScreen(monitor, screen);
+                if (!screen.equals(monitorScreen)) {
+                    continue;
+                }
+            } else {
+                monitor.setScreen(screen);
+                projectionScreenController.setMonitor(monitor);
+            }
+            return monitor.getMonitorIdentifier();
         }
         return null;
+    }
+
+    private static void logMonitorAndScreen(Monitor monitor, Screen screen) {
+        LOG.info("Monitor was tried to reassign by position: {}", monitor.getMonitorIdentifier());
+        LOG.info("Monitor area: {}", monitor.getMonitorArea());
+        LOG.info("Monitor calculated dpi bounds: {}", monitor.getRDpiMonitorArea());
+        LOG.info("Screen bounds:                 {}\n", screen.getBounds());
     }
 
     private String getFileName(String name) {

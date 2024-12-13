@@ -44,6 +44,7 @@ import projector.repository.ormLite.DatabaseHelper;
 import projector.service.CustomCanvasService;
 import projector.utils.AppProperties;
 import projector.utils.AppState;
+import projector.utils.monitors.MonitorUtil;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -469,6 +470,7 @@ public class MainDesktop extends Application {
         if (it == null) {
             return;
         }
+        MonitorUtil.getInstance().clearMonitorInfos();
         showProjectionScreenOnNextScreen(it, fromToggleButton);
         int index = 0;
         while (it.hasNext()) {
