@@ -27,6 +27,7 @@ copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projecto
 copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\jna-5.15.0.jar" "%mainDirectory%\%subDirectory%"
 copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\jna-platform-5.15.0.jar" "%mainDirectory%\%subDirectory%"
 copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\oshi-core-6.6.5.jar" "%mainDirectory%\%subDirectory%"
+copy "C:\workspace\Projector\Projector\projector-desktop\forSetup\app\get_monitors.exe" "%mainDirectory%\%subDirectory%"
 
 echo "Directory and subdirectory created, file copied successfully."
 
