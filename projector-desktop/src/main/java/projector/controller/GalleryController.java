@@ -268,6 +268,9 @@ public class GalleryController {
     }
 
     private Image loadImagePathToCanvasWithColorAdjustments(String imagePath, Canvas canvas) {
+        if (isMediaFile(imagePath)) {
+            return null;
+        }
         Image image = getImageForCanvas(imagePath, canvas);
         getProjectionScreenController().drawImageOnCanvasColorAdjustments(image, canvas);
         return image;
@@ -715,13 +718,20 @@ public class GalleryController {
     }
 
     private boolean isImageFile(String fileName) {
-        String[] imageExtensions = {".jpg", ".jpeg", ".png", ".gif"};
+        String[] imageExtensions = {".jpg", ".jpeg", ".png", ".gif", ".mp4"};
         for (String extension : imageExtensions) {
             if (fileName.toLowerCase().endsWith(extension)) {
                 return true;
             }
         }
         return false;
+    }
+
+    public static boolean isMediaFile(String path) {
+        if (path == null) {
+            return false;
+        }
+        return path.toLowerCase().endsWith(".mp4");
     }
 
     private String getFileNameFromPath(String path) {

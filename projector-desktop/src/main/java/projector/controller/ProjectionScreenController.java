@@ -33,6 +33,9 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
@@ -64,11 +67,12 @@ import projector.controller.util.ProjectionScreensUtil;
 import projector.model.CustomCanvas;
 import projector.model.Song;
 import projector.model.SongVerse;
-import projector.utils.monitors.Monitor;
 import projector.utils.SongVerseHolder;
+import projector.utils.monitors.Monitor;
 import projector.utils.scene.text.MyTextFlow;
 import projector.utils.scene.text.SongVersePartTextFlow;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -82,6 +86,7 @@ import java.util.concurrent.Executors;
 import static java.lang.Math.max;
 import static java.lang.Thread.sleep;
 import static projector.controller.GalleryController.clearCanvas;
+import static projector.controller.GalleryController.isMediaFile;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
 import static projector.utils.ColorUtil.getColorWithOpacity;
@@ -110,6 +115,7 @@ public class ProjectionScreenController {
     public HBox progressBarHBox;
     public BorderPane blackCoverPane;
     public BorderPane progressBarBackgroundBlack;
+    public MediaView mediaView;
     private ExecutorService executorService = null;
     @FXML
     private Canvas canvas;
@@ -160,6 +166,7 @@ public class ProjectionScreenController {
     private Image lastImage = null;
     private int setTextCounter = 0;
     private Monitor monitor;
+    private MediaPlayer mediaPlayer;
 
     public static BackgroundImage getBackgroundImageByPath(String backgroundImagePath, int width, int height) {
         try {
@@ -862,6 +869,8 @@ public class ProjectionScreenController {
 
     private void hideCanvas() {
         canvas.setVisible(false);
+        mediaView.setVisible(false);
+        stopMediaPlayer();
     }
 
     private String[] splitHalfByNewLine(String newText) {
@@ -1553,14 +1562,18 @@ public class ProjectionScreenController {
     }
 
     private void setImageMain(String nextFileImagePath) {
-        ExecutorService executorService = getExecutorService();
-        BackgroundTask backgroundTask = new BackgroundTask();
-        executorService.submit(backgroundTask);
-        if (nextFileImagePath != null) {
-            executorService.submit(() -> {
-                ScaledSizes scaledSizes = getGetScaledSizes();
-                ImageCacheService.getInstance().checkForImage(nextFileImagePath, (int) scaledSizes.width(), (int) scaledSizes.height());
-            });
+        try {
+            ExecutorService executorService = getExecutorService();
+            BackgroundTask backgroundTask = new BackgroundTask();
+            executorService.submit(backgroundTask);
+            if (nextFileImagePath != null) {
+                executorService.submit(() -> {
+                    ScaledSizes scaledSizes = getGetScaledSizes();
+                    ImageCacheService.getInstance().checkForImage(nextFileImagePath, (int) scaledSizes.width(), (int) scaledSizes.height());
+                });
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
         }
     }
 
@@ -1642,16 +1655,29 @@ public class ProjectionScreenController {
         @Override
         public void run() {
             try {
-                Image image = getImageForProjectorScreenController(ProjectionScreenController.this.fileImagePath);
-                if (isLock) {
-                    return; // load remains before this, to be eager
+                String path = ProjectionScreenController.this.fileImagePath;
+                if (isMediaFile(path)) {
+                    handleMediaFile(path);
+                } else {
+                    handleImage(path);
                 }
-                drawAnImageOnCanvas(image);
-                callOnImageListeners(image);
             } catch (Exception e) {
                 LOG.error(e.getMessage(), e);
             }
         }
+    }
+
+    private void handleMediaFile(String path) {
+        playVideo(path);
+    }
+
+    private void handleImage(String fileImagePath) {
+        Image image = getImageForProjectorScreenController(fileImagePath);
+        if (isLock) {
+            return; // load remains before this, to be eager
+        }
+        drawAnImageOnCanvas(image);
+        callOnImageListeners(image);
     }
 
     private void callOnImageListeners(Image image) {
@@ -1687,7 +1713,56 @@ public class ProjectionScreenController {
         clearCanvas(canvas);
         this.image = image; // if we need to make adjustments later
         drawImageOnCanvasColorAdjustments(image, canvas);
-        canvas.setVisible(true);
+        setImageComponentVisibility(true);
+    }
+
+    private void setImageComponentVisibility(boolean isCanvas) {
+        canvas.setVisible(isCanvas);
+        mediaView.setVisible(!isCanvas);
+        if (!mediaView.isVisible()) {
+            stopMediaPlayer();
+        }
+    }
+
+    private void playVideo(String path) {
+        File videoFile = new File(path);
+        if (!videoFile.exists()) {
+            return;
+        }
+        loadEmpty();
+        double width = contentPane.getWidth();
+        double height = contentPane.getHeight();
+        mediaView.setFitWidth(width);
+        mediaView.setFitHeight(height);
+        String videoURI = videoFile.toURI().toString();
+
+        Media media = new Media(videoURI);
+
+        MediaPlayer mediaPlayer = getMediaPlayer(media);
+        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+        mediaView.setMediaPlayer(mediaPlayer);
+
+        // Auto-play the video
+        mediaPlayer.play();
+        setImageComponentVisibility(false);
+    }
+
+    private MediaPlayer getMediaPlayer(Media media) {
+        stopMediaPlayer();
+        mediaPlayer = new MediaPlayer(media);
+        return mediaPlayer;
+    }
+
+    private void stopMediaPlayer() {
+        if (mediaPlayer != null) {
+            try {
+                mediaPlayer.stop();
+                mediaPlayer.dispose();
+                mediaPlayer = null;
+            } catch (Exception e) {
+                LOG.error("Failed to stop", e);
+            }
+        }
     }
 
     public static double getCircleYInterpretation(double x) {

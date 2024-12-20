@@ -1,7 +1,13 @@
 package projector.controller.util;
 
+import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +21,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static projector.controller.GalleryController.isMediaFile;
 
 public class ImageCacheService {
 
@@ -74,12 +85,109 @@ public class ImageCacheService {
         Image image = getImageFromFile(cacheImagePath);
         if (image == null) {
             hashMap.remove(cacheImagePath);
-            image = getImageFromFile(filePath);
+            if (isMediaFile(filePath)) {
+                image = getVideoThumbnail(filePath, width, height);
+            } else {
+                image = getImageFromFile(filePath);
+            }
             if (image != null) {
                 createCache(image, width, height, cacheImagePath);
             }
         }
         return image;
+    }
+
+    private Image getVideoThumbnail(String filePath, int width, int height) {
+        if (!isMediaFile(filePath)) {
+            return null;
+        }
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return null;
+        }
+
+        try {
+            // Create Media and MediaPlayer
+            Media media = new Media(file.toURI().toString());
+            MediaPlayer mediaPlayer = new MediaPlayer(media);
+            MediaView mediaView = new MediaView(mediaPlayer);
+
+            CountDownLatch latch = new CountDownLatch(1);
+            AtomicReference<WritableImage> snapshotImage = new AtomicReference<>(new WritableImage(width, height)); // Placeholder for initialization
+            AtomicReference<Double> seekTime = new AtomicReference<>((double) 1000);
+            mediaPlayer.setOnReady(() -> {
+                try {
+                    // Get the dimensions from the media metadata
+                    int videoWidth = media.getWidth();
+                    int videoHeight = media.getHeight();
+
+                    // Adjust the MediaView size
+                    mediaView.setFitWidth(videoWidth);
+                    mediaView.setFitHeight(videoHeight);
+
+                    // Prepare the snapshot image with the correct size
+                    if (videoWidth < 1 || videoHeight < 1) {
+                        snapshotImage.set(null);
+                        beforeVideoThumbnailResult(latch, mediaPlayer);
+                        return;
+                    }
+                    snapshotImage.set(new WritableImage(videoWidth, videoHeight));
+
+                    double millis = mediaPlayer.getTotalDuration().toMillis();
+                    double calculatedSeekTime = Math.min(seekTime.get(), Math.max(millis - 100, 0));
+                    seekTime.set(calculatedSeekTime);
+                    // Seek to 1 second in the video
+                    mediaPlayer.seek(javafx.util.Duration.seconds(calculatedSeekTime));
+
+                    Platform.runLater(() -> {
+                        try {
+                            mediaPlayer.pause();
+                            mediaView.snapshot(new SnapshotParameters(), snapshotImage.get());
+                            beforeVideoThumbnailResult(latch, mediaPlayer);
+                        } catch (Exception e) {
+                            LOG.error("Error creating video thumbnail", e);
+                            beforeVideoThumbnailResult(latch, mediaPlayer);
+                        }
+                    });
+                } catch (Exception e) {
+                    LOG.error("Error creating video thumbnail", e);
+                    beforeVideoThumbnailResult(latch, mediaPlayer);
+                }
+            });
+            mediaPlayer.setMute(true);
+
+            // Start playback to trigger loading of the frame
+            mediaPlayer.play();
+
+            // Wait for the snapshot to be ready
+            try {
+                if (!latch.await(1000L, TimeUnit.MILLISECONDS)) {
+                    stopMediaPlayer(mediaPlayer);
+                    return null;
+                }
+            } catch (InterruptedException e) {
+                return null;
+            }
+
+            return snapshotImage.get();
+
+        } catch (Exception e) {
+            LOG.error("Error creating video thumbnail", e);
+            return null;
+        }
+    }
+
+    private static void beforeVideoThumbnailResult(CountDownLatch latch, MediaPlayer mediaPlayer) {
+        latch.countDown();
+        stopMediaPlayer(mediaPlayer);
+    }
+
+    private static void stopMediaPlayer(MediaPlayer mediaPlayer) {
+        if (mediaPlayer == null) {
+            return;
+        }
+        mediaPlayer.stop();
+        mediaPlayer.dispose();
     }
 
     public void checkForImage(String filePath, int width, int height) {
@@ -123,7 +231,6 @@ public class ImageCacheService {
             }
         }
     }
-
 
     public static BufferedImage resizeImage(Image originalImage, int newWidth, int newHeight) {
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(originalImage, null);

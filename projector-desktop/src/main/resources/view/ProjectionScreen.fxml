@@ -5,6 +5,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.media.MediaView?>
 <?import javafx.scene.shape.Line?>
 <?import projector.utils.scene.text.MyTextFlow?>
 <BorderPane styleClass="background" stylesheets="@ProjectionScreen.css"
@@ -21,6 +22,7 @@
                                     <BorderPane fx:id="contentPane">
                                         <center>
                                             <Pane fx:id="pane" BorderPane.alignment="CENTER">
+                                                <MediaView fx:id="mediaView" fitWidth="800" fitHeight="600"/>
                                                 <Line fx:id="progressLine" layoutY="1.0" stroke="#ffffffd0"/>
                                                 <MyTextFlow fx:id="textFlow" textAlignment="CENTER">
                                                 </MyTextFlow>
