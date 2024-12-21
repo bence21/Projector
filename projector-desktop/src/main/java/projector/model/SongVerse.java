@@ -48,7 +48,14 @@ public class SongVerse extends BaseEntity {
         this.mainSong = songVerse.mainSong;
         this.sectionTypeData = songVerse.sectionTypeData;
         this.sectionType = songVerse.sectionType;
-        this.splitTexts = new ArrayList<>(songVerse.splitTexts);
+        this.splitTexts = createNewCopyForStrings(songVerse.splitTexts);
+    }
+
+    private static ArrayList<String> createNewCopyForStrings(List<String> strings) {
+        if (strings == null) {
+            return null;
+        }
+        return new ArrayList<>(strings);
     }
 
     static List<SongVerse> cloneList(List<SongVerse> songVerses) {
@@ -238,6 +245,14 @@ public class SongVerse extends BaseEntity {
 
     public void setSplitTexts(List<String> splitTexts) {
         this.splitTexts = splitTexts;
+    }
+
+    public double getSplitTextsSize() {
+        List<String> splitTexts = getSplitTexts();
+        if (splitTexts == null) {
+            return 0;
+        }
+        return splitTexts.size();
     }
 }
 

@@ -662,7 +662,7 @@ public class ProjectionScreenController {
         List<SongVerseHolder> songVerseHolders = song.getSongVerseHolders();
         for (SongVerseHolder songVerseHolder : songVerseHolders) {
             SongVerse songVerse = songVerseHolder.getSongVerse();
-            double currentSongVerseWidth = width * songVerse.getSplitTexts().size();
+            double currentSongVerseWidth = width * songVerse.getSplitTextsSize();
             StackPane stackPane = new StackPane();
             stackPane.setPrefWidth(currentSongVerseWidth);
             stackPane.setPrefHeight(height);
