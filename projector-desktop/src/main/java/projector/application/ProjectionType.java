@@ -8,6 +8,7 @@ public enum ProjectionType {
     COUNTDOWN_TIMER("Countdown timer"),
     IMAGE("Image"),
     CLEAR("Clear"),
+    SONG_ENDING("Song ending"),
     COUNTDOWN_TIMER_PROCESS("Countdown timer process"),
     ;
 

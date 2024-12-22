@@ -5,6 +5,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.media.MediaView?>
 <?import javafx.scene.shape.Line?>
 <?import projector.utils.scene.text.MyTextFlow?>
@@ -41,8 +42,12 @@
                                 <bottom>
                                     <StackPane fx:id="progressBarStackPane">
                                         <BorderPane fx:id="progressBarBackgroundBlack"/>
-                                        <HBox fx:id="progressBarHBox">
-                                        </HBox>
+                                        <VBox>
+                                            <HBox fx:id="nextSectionHBox">
+                                            </HBox>
+                                            <HBox fx:id="progressBarHBox">
+                                            </HBox>
+                                        </VBox>
                                     </StackPane>
                                 </bottom>
                             </BorderPane>

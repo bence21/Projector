@@ -112,6 +112,8 @@ public class ProjectionScreenSettingsController {
     public TextField nameTextField;
     public CheckBox progressBarCheckbox;
     public Slider progressBarHeightSlider;
+    public CheckBox nextSectionCheckbox;
+    public Slider nextSectionHeightSlider;
     private Stage stage;
     private ProjectionScreenSettings projectionScreenSettings;
     private ProjectionScreenSettings projectionScreenSettingsModel;
@@ -151,6 +153,8 @@ public class ProjectionScreenSettingsController {
         projectionScreenSettings.setAsPadding(projectionScreenSettingsModel.getAsPadding());
         projectionScreenSettings.setProgressBar(projectionScreenSettingsModel.getProgressBar());
         projectionScreenSettings.setProgressBarHeight(projectionScreenSettingsModel.getProgressBarHeight());
+        projectionScreenSettings.setNextSection(projectionScreenSettingsModel.getNextSection());
+        projectionScreenSettings.setNextSectionHeight(projectionScreenSettingsModel.getNextSectionHeight());
         projectionScreenSettings.setName(projectionScreenSettingsModel.getName_());
         projectionScreenSettings.save();
         projectionScreenHolder.onNameChanged();
@@ -209,6 +213,7 @@ public class ProjectionScreenSettingsController {
         initializeSongSecondTextColorPicker(settings);
         initializeFontListView(settings);
         initializeProgressBar();
+        initializeNextSection();
         showSongSecondTextCheckBox.setSelected(projectionScreenSettings.isShowSongSecondText());
         songSecondTextColorPicker.setValue(projectionScreenSettings.getSongSecondTextColor());
         projectionScreenSettingsModel.setOnChangedListener(this::updatePreview);
@@ -293,25 +298,39 @@ public class ProjectionScreenSettingsController {
         progressBarCheckbox.setSelected(projectionScreenSettings.isProgressBar());
         progressBarCheckbox.selectedProperty().addListener((observableValue, oldValue, newValue) ->
                 projectionScreenSettingsModel.setProgressBar(newValue));
-        progressBarHeightSlider.setOnKeyPressed(event -> {
-            switch (event.getCode()) {
-                case UP:
-                case RIGHT:
-                    changeSliderValue(0.1);
-                    break;
-                case DOWN:
-                case LEFT:
-                    changeSliderValue(-0.1);
-                    break;
-            }
-        });
+        initializeHeightSliderOnKeyPressed(progressBarHeightSlider);
         progressBarHeightSlider.setValue(projectionScreenSettings.getProgressBarHeightD() * 100);
         progressBarHeightSlider.valueProperty().addListener((observable, oldValue, newValue) ->
                 projectionScreenSettingsModel.setProgressBarHeight(newValue.doubleValue() / 100));
     }
 
-    private void changeSliderValue(double v) {
-        progressBarHeightSlider.setValue(progressBarHeightSlider.getValue() + v);
+    private void initializeHeightSliderOnKeyPressed(Slider heightSlider) {
+        heightSlider.setOnKeyPressed(event -> {
+            switch (event.getCode()) {
+                case UP:
+                case RIGHT:
+                    changeSliderValue(0.1, heightSlider);
+                    break;
+                case DOWN:
+                case LEFT:
+                    changeSliderValue(-0.1, heightSlider);
+                    break;
+            }
+        });
+    }
+
+    private void changeSliderValue(double v, Slider heightSlider) {
+        heightSlider.setValue(heightSlider.getValue() + v);
+    }
+
+    private void initializeNextSection() {
+        nextSectionCheckbox.setSelected(projectionScreenSettings.isNextSection());
+        nextSectionCheckbox.selectedProperty().addListener((observableValue, oldValue, newValue) ->
+                projectionScreenSettingsModel.setNextSection(newValue));
+        initializeHeightSliderOnKeyPressed(nextSectionHeightSlider);
+        nextSectionHeightSlider.setValue(projectionScreenSettings.getNextSectionHeightD() * 100);
+        nextSectionHeightSlider.valueProperty().addListener((observable, oldValue, newValue) ->
+                projectionScreenSettingsModel.setNextSectionHeight(newValue.doubleValue() / 100));
     }
 
     private void initializeTextAlignment(Settings settings) {

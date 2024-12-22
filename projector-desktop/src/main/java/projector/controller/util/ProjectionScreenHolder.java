@@ -10,6 +10,7 @@ import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionScreensController;
 import projector.controller.listener.OnMainPaneSizeChangeListener;
 import projector.controller.listener.PopupCreatedListener;
+import projector.model.Song;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -184,8 +185,12 @@ public class ProjectionScreenHolder {
         projectionScreenController.setImage(fileImagePath, projectionType, nextFileImagePath);
     }
 
-    public void clearText() {
-        projectionScreenController.clearText();
+    public void setNextScheduledSong(Song nextScheduledSong) {
+        projectionScreenController.setNextScheduledSong(nextScheduledSong);
+    }
+
+    public void songEnding() {
+        projectionScreenController.songEnding();
     }
 
     public void setProgress(double progress) {

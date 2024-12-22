@@ -110,6 +110,10 @@ public class ProjectionScreenSettings {
     @Expose
     private Double progressBarHeight;
     @Expose
+    private Boolean nextSection;
+    @Expose
+    private Double nextSectionHeight;
+    @Expose
     private String name;
     @Expose
     private Boolean guideView;
@@ -168,6 +172,8 @@ public class ProjectionScreenSettings {
         this.focusOnSongPart = projectionScreenSettings.focusOnSongPart;
         this.progressBar = projectionScreenSettings.progressBar;
         this.progressBarHeight = projectionScreenSettings.progressBarHeight;
+        this.nextSection = projectionScreenSettings.nextSection;
+        this.nextSectionHeight = projectionScreenSettings.nextSectionHeight;
         this.name = projectionScreenSettings.name;
         this.guideView = projectionScreenSettings.guideView;
         // Also copy fromJson in load method!!!
@@ -375,6 +381,8 @@ public class ProjectionScreenSettings {
             this.focusOnSongPart = fromJson.focusOnSongPart;
             this.progressBar = fromJson.progressBar;
             this.progressBarHeight = fromJson.progressBarHeight;
+            this.nextSection = fromJson.nextSection;
+            this.nextSectionHeight = fromJson.nextSectionHeight;
             this.name = fromJson.name;
             this.guideView = fromJson.guideView;
         } catch (FileNotFoundException ignored) {
@@ -757,6 +765,23 @@ public class ProjectionScreenSettings {
         return get_double(progressBarHeight);
     }
 
+    public void setNextSectionHeight(Double nextSectionHeight) {
+        this.nextSectionHeight = nextSectionHeight;
+        onChanged();
+    }
+
+    public Double getNextSectionHeight() {
+        return nextSectionHeight;
+    }
+
+    public double getNextSectionHeightD() {
+        Double nextSectionHeight = getNextSectionHeight();
+        if (nextSectionHeight == null) {
+            return 0.08; // default value
+        }
+        return get_double(nextSectionHeight);
+    }
+
     public boolean isProgressBar() {
         return get_boolean(progressBar);
     }
@@ -768,6 +793,19 @@ public class ProjectionScreenSettings {
 
     public Boolean getProgressBar() {
         return progressBar;
+    }
+
+    public boolean isNextSection() {
+        return get_boolean(nextSection);
+    }
+
+    public void setNextSection(Boolean nextSection) {
+        this.nextSection = nextSection;
+        onChanged();
+    }
+
+    public Boolean getNextSection() {
+        return nextSection;
     }
 
     public String getName_() {

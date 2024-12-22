@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
 import projector.controller.song.util.ScheduleSong;
+import projector.controller.util.ProjectionScreensUtil;
 import projector.model.Song;
 import projector.service.ServiceManager;
 import projector.service.SongService;
@@ -188,6 +189,7 @@ public class ScheduleController {
                 if (!text.isEmpty()) {
                     setTextColor(selectedItem, getVisitedTextColor());
                     songController.selectSong(newValue.getSong());
+                    handleNextScheduled();
                 }
             }
         });
@@ -301,6 +303,29 @@ public class ScheduleController {
             }
         });
 
+    }
+
+    private void handleNextScheduled() {
+        Song nextScheduledSong = getNextScheduledSong();
+        ProjectionScreensUtil.getInstance().setNextScheduledSong(nextScheduledSong);
+    }
+
+    private Song getNextScheduledSong() {
+        ScheduleSong nextScheduled = getNextScheduled();
+        if (nextScheduled != null) {
+            return nextScheduled.getSong();
+        }
+        return null;
+    }
+
+    private ScheduleSong getNextScheduled() {
+        int selectedIndex = listView.getSelectionModel().getSelectedIndex();
+        ObservableList<ScheduleSong> items = listView.getItems();
+        int nextIndex = selectedIndex + 1;
+        if (nextIndex >= 0 && nextIndex < items.size()) {
+            return items.get(nextIndex);
+        }
+        return null;
     }
 
     private void resetHighlights() {

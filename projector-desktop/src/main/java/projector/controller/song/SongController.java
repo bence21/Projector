@@ -922,7 +922,7 @@ public class SongController {
                     setSongVerseProjection1(songVersePartTextFlow, text, this.selectedSong);
                     previousSelectedVerseIndex = selectedIndex;
                     if (selectedIndex + 1 == songListViewItems.size()) {
-                        projectionScreensUtil.clearText();
+                        projectionScreensUtil.songEnding();
                         projectionScreensUtil.setProgress(0);
                     } else {
                         projectionScreensUtil.setProgress((double) selectedIndex / (songListViewItems.size() - 2));

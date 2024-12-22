@@ -112,6 +112,7 @@ public class ProjectionScreenController {
     public BorderPane contentPane;
     public StackPane paneForPadding;
     public StackPane progressBarStackPane;
+    public HBox nextSectionHBox;
     public HBox progressBarHBox;
     public BorderPane blackCoverPane;
     public BorderPane progressBarBackgroundBlack;
@@ -167,6 +168,7 @@ public class ProjectionScreenController {
     private int setTextCounter = 0;
     private Monitor monitor;
     private MediaPlayer mediaPlayer;
+    private Song nextScheduledSong;
 
     public static BackgroundImage getBackgroundImageByPath(String backgroundImagePath, int width, int height) {
         try {
@@ -246,6 +248,7 @@ public class ProjectionScreenController {
         for (HBox hBox : hBoxes) {
             setHBoxSizes(hBox, paneForPadding.getWidth(), height);
         }
+        setHBoxSizes(nextSectionHBox, paneForPadding.getWidth(), paneForPadding.getHeight() * projectionScreenSettings.getNextSectionHeightD());
     }
 
     private void setHBoxSizes(HBox hBox, double width, double height) {
@@ -486,8 +489,8 @@ public class ProjectionScreenController {
         setText(newText, projectionType, null);
     }
 
-    public void clearText() {
-        setText2("", ProjectionType.CLEAR); // this should send also over network. The simple clear button not
+    public void songEnding() {
+        setText2("", ProjectionType.SONG_ENDING); // this should send also over network. The simple clear button not
     }
 
     public void setText(String newText, ProjectionType projectionType, ProjectionData projectionData) {
@@ -592,6 +595,7 @@ public class ProjectionScreenController {
             if (isLock && projectionType != ProjectionType.COUNTDOWN_TIMER_PROCESS) {
                 return;
             }
+            handleSongNextSection(projectionType);
             handleSongProgressBar(projectionType);
             if (handleByProjectionScreenSettingsAction()) {
                 return;
@@ -635,6 +639,98 @@ public class ProjectionScreenController {
         return projectionData.getSong();
     }
 
+    private void handleSongNextSection(ProjectionType projectionType) {
+        nextSectionHBox.getChildren().clear();
+        boolean visible = (projectionType == ProjectionType.SONG || projectionType == ProjectionType.SONG_ENDING) && projectionScreenSettings.isNextSection();
+        if (visible) {
+            nextSectionHBox.setPrefWidth(paneForPadding.getWidth());
+            double width = paneForPadding.getWidth();
+            double height = nextSectionHBox.getPrefHeight();
+            Song song = getSong();
+            String nextSectionText = getNextSectionText(song);
+            if (nextSectionText == null || nextSectionText.trim().isEmpty()) {
+                setVisibility(nextSectionHBox, false);
+                return;
+            }
+            fillNextSectionData(width, height, nextSectionText);
+        }
+        if (projectionType == ProjectionType.CLEAR) {
+            nextSectionHBox.setVisible(false);
+        } else {
+            setVisibility(nextSectionHBox, visible);
+        }
+    }
+
+    public String getPreviewText(String fullText, int maxLength) {
+        if (fullText.length() > maxLength) {
+            return fullText.substring(0, maxLength) + "...";  // Add ellipsis if text exceeds the limit
+        }
+        return fullText;
+    }
+
+    private void fillNextSectionData(double width, double height, String nextSectionText) {
+        nextSectionText = getPreviewText(nextSectionText, 40);
+        String s = nextSectionText.replaceAll("\n", "  ").trim();
+        s = getColoredText(s, getColorForFinishedText());
+        s = getItalicText((s));
+        String nextSection = s;
+        MyTextFlow myTextFlow = new MyTextFlow();
+        myTextFlow.setTextAlignment(TextAlignment.RIGHT);
+        myTextFlow.setText2(nextSection, (int) width, (int) height);
+        nextSectionHBox.getChildren().add(myTextFlow);
+    }
+
+    private String getNextSectionText(Song song) {
+        SongVersePartTextFlow nextSongVersePartTextFlow = getNextSongVersePartTextFlow(song);
+        if (nextSongVersePartTextFlow == null) { // must be nextScheduledSong
+            if (nextScheduledSong == null) {
+                return "";
+            }
+            return nextScheduledSong.getTitle();
+        }
+        return nextSongVersePartTextFlow.getSongVerseProjectionDTO().getFocusedOrGuideText();
+    }
+
+    private SongVersePartTextFlow getNextSongVersePartTextFlow(Song song) {
+        if (song == null) {
+            return null;
+        }
+        SongVersePartTextFlow lastSelectedSongVersePartTextFlow = null;
+        List<SongVerseHolder> songVerseHolders = song.getSongVerseHolders();
+        for (SongVerseHolder songVerseHolder : songVerseHolders) {
+            List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+            for (SongVersePartTextFlow songVersePartTextFlow : songVersePartTextFlows) {
+                if (songVersePartTextFlow.isSelected()) {
+                    lastSelectedSongVersePartTextFlow = songVersePartTextFlow;
+                }
+            }
+        }
+        if (lastSelectedSongVersePartTextFlow == null) { // then it's the title
+            if (songVerseHolders.size() == 0) {
+                return null; // just range check
+            }
+            List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolders.get(0).getSongVersePartTextFlows();
+            if (songVersePartTextFlows.size() == 0) {
+                return null; // just range check
+            }
+            return songVersePartTextFlows.get(0);
+        }
+        boolean lastSelectedFound = false;
+        for (SongVerseHolder songVerseHolder : songVerseHolders) {
+            List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+            for (SongVersePartTextFlow songVersePartTextFlow : songVersePartTextFlows) {
+                if (lastSelectedFound) {
+                    return songVersePartTextFlow;
+                }
+                if (songVersePartTextFlow == lastSelectedSongVersePartTextFlow) {
+                    lastSelectedFound = true;
+                    break;
+                }
+            }
+        }
+        return null;
+    }
+
     private void handleSongProgressBar(ProjectionType projectionType) {
         List<HBox> hBoxes = getProgressBarHBoxes();
         for (HBox hBox : hBoxes) {
@@ -654,7 +750,7 @@ public class ProjectionScreenController {
             }
             createProgressBarPanes(song, width, height);
         }
-        if (projectionType == ProjectionType.CLEAR) {
+        if (projectionType == ProjectionType.CLEAR || projectionType == ProjectionType.SONG_ENDING) {
             progressBarHBox.setVisible(false);
         } else {
             setVisibility(progressBarHBox, visible);
@@ -1633,6 +1729,10 @@ public class ProjectionScreenController {
 
     public Monitor getMonitor() {
         return monitor;
+    }
+
+    public void setNextScheduledSong(Song nextScheduledSong) {
+        this.nextScheduledSong = nextScheduledSong;
     }
 
     private record ScaledSizes(double width, double height) {

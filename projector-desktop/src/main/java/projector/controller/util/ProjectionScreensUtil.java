@@ -6,6 +6,7 @@ import projector.application.ProjectionType;
 import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.listener.ProjectionScreenListener;
+import projector.model.Song;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -242,9 +243,9 @@ public class ProjectionScreensUtil {
         }
     }
 
-    public void clearText() {
+    public void songEnding() {
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
-            projectionScreenHolder.clearText();
+            projectionScreenHolder.songEnding();
         }
     }
 
@@ -275,6 +276,12 @@ public class ProjectionScreensUtil {
     public void onProjectionToggle() {
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
             projectionScreenHolder.onProjectionToggle();
+        }
+    }
+
+    public void setNextScheduledSong(Song nextScheduledSong) {
+        for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
+            projectionScreenHolder.setNextScheduledSong(nextScheduledSong);
         }
     }
 }
