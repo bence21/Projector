@@ -10,7 +10,8 @@ public enum SectionType {
     PRE_CHORUS(2),
     CHORUS(3),
     BRIDGE(4),
-    CODA(5);
+    CODA(5),
+    NOTE(6);
     private static Map<Integer, SectionType> sectionTypeMap;
     private final int value;
 
@@ -47,6 +48,8 @@ public enum SectionType {
                 return BRIDGE;
             case "[coda]":
                 return CODA;
+            case "[note]":
+                return NOTE;
         }
         return VERSE;
     }
@@ -67,6 +70,8 @@ public enum SectionType {
                 return "[BRIDGE]";
             case CODA:
                 return "[CODA]";
+            case NOTE:
+                return "[NOTE]";
         }
         return "";
     }
@@ -104,6 +109,8 @@ public enum SectionType {
                 return new Color(211, 84, 0);
             case CODA:
                 return new Color(96, 0, 0);
+            case NOTE:
+                return new Color(76, 76, 76);
             default:
                 return VERSE.getBackgroundColorDark();
         }
@@ -123,6 +130,8 @@ public enum SectionType {
                 return new Color(255, 136, 98); // Light orange
             case CODA:
                 return new Color(255, 113, 113); // Light red
+            case NOTE:
+                return new Color(122, 122, 122);
             default:
                 return VERSE.getBackgroundColorLight();
         }

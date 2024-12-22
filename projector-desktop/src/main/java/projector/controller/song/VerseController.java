@@ -62,10 +62,10 @@ public class VerseController {
     public void initialize() {
         showSecondText(false);
         fillSectionTypeComboBox();
-        Callback<ListView<SectionType>, ListCell<SectionType>> cellFactory = new Callback<ListView<SectionType>, ListCell<SectionType>>() {
+        Callback<ListView<SectionType>, ListCell<SectionType>> cellFactory = new Callback<>() {
             @Override
             public ListCell<SectionType> call(ListView<SectionType> param) {
-                return new ListCell<SectionType>() {
+                return new ListCell<>() {
                     @Override
                     protected void updateItem(SectionType sectionType, boolean empty) {
                         try {
@@ -119,6 +119,7 @@ public class VerseController {
         sectionTypeComboBoxItems.add(SectionType.CHORUS);
         sectionTypeComboBoxItems.add(SectionType.BRIDGE);
         sectionTypeComboBoxItems.add(SectionType.CODA);
+        sectionTypeComboBoxItems.add(SectionType.NOTE);
     }
 
     String getRawText() {

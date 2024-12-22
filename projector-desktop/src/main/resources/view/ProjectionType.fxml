@@ -4,6 +4,7 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.VBox?>
 <BorderPane prefHeight="300.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
@@ -12,6 +13,11 @@
     <top>
         <VBox spacing="4">
             <CheckBox fx:id="focusOnSongPartCheckBox" text="Focus on Song Part"/>
+            <CheckBox fx:id="guideViewCheckBox" text="Guide View">
+                <tooltip>
+                    <Tooltip text="Displays the guide note verse only if it is not empty."/>
+                </tooltip>
+            </CheckBox>
             <Label text="%Select projection types:"/>
         </VBox>
     </top>

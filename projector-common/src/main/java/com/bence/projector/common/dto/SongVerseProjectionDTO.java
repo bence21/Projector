@@ -18,7 +18,8 @@ public class SongVerseProjectionDTO {
     private boolean lastOne;
     @Expose
     private List<String> texts;
-
+    @Expose
+    private List<String> guideTexts;
 
     public String getFocusedText() {
         return focusedText;
@@ -66,5 +67,20 @@ public class SongVerseProjectionDTO {
 
     public List<String> getTexts() {
         return texts;
+    }
+
+    public List<String> getGuideTexts() {
+        return guideTexts;
+    }
+
+    public void setGuideTexts(List<String> guideTexts) {
+        this.guideTexts = guideTexts;
+    }
+
+    public String getFocusedOrGuideText() {
+        if (guideTexts == null || focusedTextIndex == null || guideTexts.size() < focusedTextIndex) {
+            return focusedText;
+        }
+        return guideTexts.get(focusedTextIndex);
     }
 }

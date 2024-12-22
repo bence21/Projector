@@ -111,6 +111,8 @@ public class ProjectionScreenSettings {
     private Double progressBarHeight;
     @Expose
     private String name;
+    @Expose
+    private Boolean guideView;
     // check for copy constructor!
     private Listener onChangedListener = null;
     private transient String nameForMonitorForScreen;
@@ -167,6 +169,7 @@ public class ProjectionScreenSettings {
         this.progressBar = projectionScreenSettings.progressBar;
         this.progressBarHeight = projectionScreenSettings.progressBarHeight;
         this.name = projectionScreenSettings.name;
+        this.guideView = projectionScreenSettings.guideView;
         // Also copy fromJson in load method!!!
         return settings;
     }
@@ -373,6 +376,7 @@ public class ProjectionScreenSettings {
             this.progressBar = fromJson.progressBar;
             this.progressBarHeight = fromJson.progressBarHeight;
             this.name = fromJson.name;
+            this.guideView = fromJson.guideView;
         } catch (FileNotFoundException ignored) {
         } catch (IOException e) {
             LOG.error(e.getMessage(), e);
@@ -780,6 +784,14 @@ public class ProjectionScreenSettings {
     public void setName(String name) {
         this.name = name;
         onChanged();
+    }
+
+    public boolean isGuideView() {
+        return guideView != null && guideView;
+    }
+
+    public void setGuideView(boolean guideView) {
+        this.guideView = guideView;
     }
 
     public interface Listener {

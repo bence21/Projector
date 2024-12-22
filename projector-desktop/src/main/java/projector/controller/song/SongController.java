@@ -579,6 +579,7 @@ public class SongController {
 
     private void addSongVerseParts(SongVerse songVerse, int size, int width, int height, ObservableList<SongVersePartTextFlow> songListViewItems, List<SongVerseHolder> songVerseHolders, int songVerseIndex) {
         List<String> texts = getTextByMaxLine(songVerse);
+        List<String> guideTexts = getGuideTextsByTexts(texts, songVerse.getSecondText());
         songVerse.setSplitTexts(texts);
         List<SongVersePartTextFlow> songVersePartTextFlows = new ArrayList<>();
         SongVerseHolder songVerseHolder = new SongVerseHolder();
@@ -595,10 +596,54 @@ public class SongController {
             songVerseProjectionDTO.setLastOne(texts.size() == k + 1);
             songVerseProjectionDTO.setFocusedText(text);
             songVerseProjectionDTO.setSongVerseIndex(songVerseIndex);
+            songVerseProjectionDTO.setGuideTexts(guideTexts);
             addSongVersePart(songVerse, size, width, height, songVersePartTextFlows, songVerseProjectionDTO);
             ++k;
         }
         songListViewItems.addAll(songVersePartTextFlows);
+    }
+
+    private List<String> getGuideTextsByTexts(List<String> texts, String guideText) {
+        if (guideText == null || guideText.trim().isEmpty()) {
+            return null;
+        }
+        int size = texts.size();
+        if (size == 0) {
+            return null;
+        }
+        List<String> guideTexts = new ArrayList<>(size);
+        String[] guideLines = guideText.split("\n");
+
+        int textIndex = 0;
+        String[] textLines = texts.get(textIndex).split("\n");
+        int textLineIndex = 0;
+        StringBuilder s = new StringBuilder();
+        for (String guideLine : guideLines) {
+            if (s.length() > 0) {
+                s.append("\n");
+            }
+            s.append(guideLine);
+            if (textIndex < size && guideLine.equals(textLines[textLineIndex])) {
+                ++textLineIndex;
+                if (textLineIndex >= textLines.length) {
+                    guideTexts.add(s.toString());
+                    s = new StringBuilder();
+                    ++textIndex;
+                    if (textIndex < size) {
+                        textLines = texts.get(textIndex).split("\n");
+                        textLineIndex = 0;
+                    }
+                }
+            }
+        }
+        if (textIndex < size) {
+            guideTexts.add(s.toString());
+        } else {
+            if (!s.isEmpty()) {
+                guideTexts.set(size - 1, guideTexts.get(size - 1) + "\n" + s);
+            }
+        }
+        return guideTexts;
     }
 
     private List<String> getTextByMaxLine(SongVerse songVerse) {
@@ -677,7 +722,7 @@ public class SongController {
         myTextFlow.setTextAlignment(TextAlignment.CENTER);
         myTextFlow.setBackGroundColor();
         songVersePartTextFlow.setOpacity(minOpacity);
-        String text = songVerseProjectionDTO.getFocusedText();
+        String text = songVerseProjectionDTO.getFocusedOrGuideText();
         songVersePartTextFlow.setText2(getColorizedStringByLastSearchedText(text), width1, size);
         myTextFlow.setSecondText(songVerse.getSecondText());
         myTextFlow.setRawText(text);
@@ -688,20 +733,37 @@ public class SongController {
         return 32 + SongVersePartTextFlow.DESCRIPTION_BORDER_PANE_WIDTH + SongVersePartTextFlow.SPACING;
     }
 
-    public static String getWholeWithFocusedText(List<String> texts, HashMap<Integer, Boolean> focusedIndices) {
+    public static String getWholeWithFocusedText(SongVerseProjectionDTO songVerseProjectionDTO, HashMap<Integer, Boolean> focusedIndices, boolean guideView, boolean focusOnSongPart) {
+        List<String> texts;
+        if (!guideView) {
+            texts = songVerseProjectionDTO.getTexts();
+        } else {
+            texts = songVerseProjectionDTO.getGuideTexts();
+            if (texts == null) {
+                texts = songVerseProjectionDTO.getTexts();
+            }
+        }
         StringBuilder s = new StringBuilder();
+        boolean was = false;
         for (int i = 0; i < texts.size(); ++i) {
-            appendColor(texts, i, s, focusedIndices.containsKey(i));
+            was = appendColor(texts, i, s, focusedIndices.containsKey(i), focusOnSongPart) || was;
+        }
+        if (!was) {
+            return null;
         }
         return s.toString();
     }
 
-    private static void appendColor(List<String> texts, int i, StringBuilder s, boolean isFocused) {
+    private static boolean appendColor(List<String> texts, int i, StringBuilder s, boolean isFocused, boolean focusOnSongPart) {
+        if (isFocused != focusOnSongPart && focusOnSongPart) {
+            return false;
+        }
         Color color = getFocusedColorBy(isFocused);
         if (!s.isEmpty()) {
             s.append("\n");
         }
         s.append(getColoredText(texts.get(i), color));
+        return true;
     }
 
     public static Color getFocusedColorBy(boolean isFocused) {
@@ -2606,8 +2668,9 @@ public class SongController {
     //                    // + " " + songs.get(j).getTitle());
     //                    // s2.length() + " " + songs.get(i).getTitle()
     //                    // System.out.println(s.length() + " " + x + " " +
-    ////                    if (((double) x) / (double) s.length() > 0.9 || ((double) x) / (double) s2.length() > 0.9) {
-    ////                    int x = StringUtils.highestCommonSubStringInt(s.toString(), s2.toString());
+
+    /// /                    if (((double) x) / (double) s.length() > 0.9 || ((double) x) / (double) s2.length() > 0.9) {
+    /// /                    int x = StringUtils.highestCommonSubStringInt(s.toString(), s2.toString());
     //                    }
     //                        s2.append(k);
     //                    for (String k : songs.get(j).getVerses()) {
@@ -2623,7 +2686,6 @@ public class SongController {
 //    public void similars() {
 
 //    }
-
     private void initListViewMenuItem() {
         try {
             final ContextMenu cm = new ContextMenu();

@@ -140,6 +140,7 @@ public class SongVerse extends BaseEntity {
             case CHORUS -> bundle.getString("letter_chorus");
             case BRIDGE -> bundle.getString("letter_bridge");
             case CODA -> bundle.getString("letter_coda");
+            case NOTE -> bundle.getString("letter_note");
         };
     }
 
@@ -201,6 +202,7 @@ public class SongVerse extends BaseEntity {
             case CHORUS -> bundle.getString("chorus");
             case BRIDGE -> bundle.getString("bridge");
             case CODA -> bundle.getString("coda");
+            case NOTE -> bundle.getString("note");
         };
     }
 

@@ -30,12 +30,15 @@ public class ProjectionTypeController {
     private static final Logger LOG = LoggerFactory.getLogger(ProjectionTypeController.class);
     public VBox vBox;
     public CheckBox focusOnSongPartCheckBox;
+    public CheckBox guideViewCheckBox;
 
     public void setProjectionScreenHolder(ProjectionScreenHolder projectionScreenHolder) {
         ProjectionScreenSettings projectionScreenSettings = projectionScreenHolder.getProjectionScreenSettings();
         focusOnSongPartCheckBox.setSelected(projectionScreenSettings.isFocusOnSongPart());
         addProjectionTypesToVBox(projectionScreenSettings);
         focusOnSongPartCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> projectionScreenSettings.setFocusOnSongPart(newValue));
+        guideViewCheckBox.setSelected(projectionScreenSettings.isGuideView());
+        guideViewCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> projectionScreenSettings.setGuideView(newValue));
     }
 
     private void addProjectionTypesToVBox(ProjectionScreenSettings projectionScreenSettings) {

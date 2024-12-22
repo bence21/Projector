@@ -510,14 +510,16 @@ public class ProjectionScreenController {
                 songVerseProjectionDTOS = projectionDTO.getSongVerseProjectionDTOS();
             }
             if (songVerseProjectionDTOS != null) {
-                if (projectionScreenSettings.isFocusOnSongPart()) {
+                boolean guideView = projectionScreenSettings.isGuideView();
+                boolean focusOnSongPart = projectionScreenSettings.isFocusOnSongPart();
+                if (focusOnSongPart && !guideView) {
                     String focusedText = getFocusedText(songVerseProjectionDTOS);
                     if (!focusedText.isEmpty()) {
                         setText3(focusedText, ProjectionType.SONG, projectionData);
                         return;
                     }
                 }
-                String wholeWithFocusedText = getWholeWithFocusedText(songVerseProjectionDTOS);
+                String wholeWithFocusedText = getWholeWithFocusedText(songVerseProjectionDTOS, guideView, focusOnSongPart);
                 if (!wholeWithFocusedText.trim().isEmpty()) {
                     text = wholeWithFocusedText;
                 }
@@ -526,7 +528,7 @@ public class ProjectionScreenController {
         setText3(text, ProjectionType.SONG, projectionData);
     }
 
-    private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS) {
+    private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS, boolean guideView, boolean focusOnSongPart) {
         HashMap<Integer, Boolean> songVerseIndexMap = new HashMap<>();
         StringBuilder wholeWithFocusedText = new StringBuilder();
         boolean first = true;
@@ -548,7 +550,10 @@ public class ProjectionScreenController {
                 first = false;
             }
             HashMap<Integer, Boolean> focusedIndices = focusedIndicesMap.get(songVerseIndex);
-            wholeWithFocusedText.append(SongController.getWholeWithFocusedText(songVerseProjectionDTO.getTexts(), focusedIndices));
+            String text = SongController.getWholeWithFocusedText(songVerseProjectionDTO, focusedIndices, guideView, focusOnSongPart);
+            if (text != null) {
+                wholeWithFocusedText.append(text);
+            }
         }
         return wholeWithFocusedText.toString();
     }
