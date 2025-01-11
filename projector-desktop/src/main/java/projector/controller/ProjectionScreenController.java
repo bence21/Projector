@@ -64,9 +64,12 @@ import projector.controller.util.OnResultListener;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
+import projector.model.Bible;
 import projector.model.CustomCanvas;
 import projector.model.Song;
 import projector.model.SongVerse;
+import projector.model.VerseIndex;
+import projector.service.ServiceManager;
 import projector.utils.SongVerseHolder;
 import projector.utils.monitors.Monitor;
 import projector.utils.scene.text.MyTextFlow;
@@ -85,10 +88,12 @@ import java.util.concurrent.Executors;
 
 import static java.lang.Math.max;
 import static java.lang.Thread.sleep;
+import static projector.controller.BibleController.getBibleVerseWithReferenceText;
 import static projector.controller.GalleryController.clearCanvas;
 import static projector.controller.GalleryController.isMediaFile;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
+import static projector.network.TCPClient.getFromIntegers;
 import static projector.utils.ColorUtil.getColorWithOpacity;
 import static projector.utils.ColorUtil.getGeneralTextColorByTheme;
 import static projector.utils.CountDownTimerUtil.getDisplayTextFromDateTime;
@@ -500,6 +505,8 @@ public class ProjectionScreenController {
     private void setText5(String newText, ProjectionType projectionType, ProjectionData projectionData) {
         if (projectionType == ProjectionType.SONG) {
             setSongVerseProjection(projectionData, newText);
+        } else if (projectionType == ProjectionType.BIBLE) {
+            setBibleVerseProjection(projectionData, newText);
         } else {
             setText3(newText, projectionType, projectionData);
         }
@@ -529,6 +536,83 @@ public class ProjectionScreenController {
             }
         }
         setText3(text, ProjectionType.SONG, projectionData);
+    }
+
+    private static Bible getSelectedBible(ProjectionDTO projectionDTO, List<Bible> bibles) {
+        String selectedBibleUuid = projectionDTO.getSelectedBibleUuid();
+        if (selectedBibleUuid != null) {
+            for (Bible bible : bibles) {
+                if (selectedBibleUuid.equals(bible.getUuid())) {
+                    return bible;
+                }
+            }
+        }
+        String selectedBibleName = projectionDTO.getSelectedBibleName();
+        if (selectedBibleName != null) {
+            for (Bible bible : bibles) {
+                if (selectedBibleName.equals(bible.getName())) {
+                    return bible;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String getTextFromProjectionDTO(ProjectionDTO projectionDTO, String originalText) {
+        try {
+            if (projectionDTO == null) {
+                return originalText;
+            }
+            if (!projectionScreenSettings.hasSkippedBible()) {
+                return originalText;
+            }
+            List<Bible> allBibles = ServiceManager.getBibleService().findAll();
+            List<Bible> preferredBibles = projectionScreenSettings.getPreferredBibles(allBibles);
+            if (preferredBibles == null) {
+                return originalText;
+            }
+            StringBuilder text = new StringBuilder();
+            List<Long> verseIndexIntegers = projectionDTO.getVerseIndices();
+            List<VerseIndex> verseIndices = getFromIntegers(verseIndexIntegers);
+            Bible selectedBible = getSelectedBible(projectionDTO, allBibles);
+            for (Bible preferred : preferredBibles) {
+                if (shouldShowBible(preferred, selectedBible)) {
+                    if (!text.isEmpty()) {
+                        text.append("\n");
+                    }
+                    text.append(getBibleVerseWithReferenceText(verseIndices, preferred, projectionDTO.getSelectedBook(), projectionDTO.getSelectedPart(), projectionDTO.getVerseIndicesByPart()));
+                }
+            }
+            String s = text.toString().trim();
+            if (s.isEmpty()) {
+                return originalText;
+            }
+            return s;
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+            return originalText;
+        }
+    }
+
+    private boolean shouldShowBible(Bible preferred, Bible selectedBible) {
+        if (preferred == null) {
+            return false;
+        }
+        if (preferred.equivalent(selectedBible)) {
+            return true;
+        }
+        return preferred.isParallelSelected();
+    }
+
+    private void setBibleVerseProjection(ProjectionData projectionData, String text) {
+        if (projectionData != null) {
+            ProjectionDTO projectionDTO = projectionData.getProjectionDTO();
+            if (projectionDTO != null) {
+                setText3(getTextFromProjectionDTO(projectionDTO, text), ProjectionType.BIBLE, projectionData);
+                return;
+            }
+        }
+        setText3(text, ProjectionType.BIBLE, projectionData);
     }
 
     private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS, boolean guideView, boolean focusOnSongPart) {

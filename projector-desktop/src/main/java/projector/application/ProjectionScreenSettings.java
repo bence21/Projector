@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import projector.controller.ProjectionScreenController;
 import projector.controller.SettingsController;
 import projector.controller.util.ProjectionScreenHolder;
+import projector.model.Bible;
 import projector.utils.AppProperties;
 import projector.utils.monitors.Monitor;
 import projector.utils.monitors.MonitorUtil;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static projector.application.ScreenProjectionType.copyList;
+import static projector.utils.StringUtils.copyStringList;
 
 public class ProjectionScreenSettings {
 
@@ -117,6 +119,8 @@ public class ProjectionScreenSettings {
     private String name;
     @Expose
     private Boolean guideView;
+    @Expose
+    private List<String> parallelBibleUuidSkipping;
     // check for copy constructor!
     private Listener onChangedListener = null;
     private transient String nameForMonitorForScreen;
@@ -176,6 +180,7 @@ public class ProjectionScreenSettings {
         this.nextSectionHeight = projectionScreenSettings.nextSectionHeight;
         this.name = projectionScreenSettings.name;
         this.guideView = projectionScreenSettings.guideView;
+        this.parallelBibleUuidSkipping = copyStringList(projectionScreenSettings.parallelBibleUuidSkipping);
         // Also copy fromJson in load method!!!
         return settings;
     }
@@ -385,6 +390,7 @@ public class ProjectionScreenSettings {
             this.nextSectionHeight = fromJson.nextSectionHeight;
             this.name = fromJson.name;
             this.guideView = fromJson.guideView;
+            this.parallelBibleUuidSkipping = fromJson.parallelBibleUuidSkipping;
         } catch (FileNotFoundException ignored) {
         } catch (IOException e) {
             LOG.error(e.getMessage(), e);
@@ -830,6 +836,65 @@ public class ProjectionScreenSettings {
 
     public void setGuideView(boolean guideView) {
         this.guideView = guideView;
+    }
+
+    public List<Bible> getPreferredBibles(List<Bible> allBibles) {
+        List<String> parallelBibleUuidSkipping = getParallelBibleUuidSkipping();
+        if (parallelBibleUuidSkipping.isEmpty()) {
+            return null;
+        }
+        ArrayList<Bible> preferredBibles = new ArrayList<>();
+        for (Bible bible : allBibles) {
+            if (!parallelBibleUuidSkipping.contains(bible.getUuid())) {
+                preferredBibles.add(bible);
+            }
+        }
+        if (allBibles.size() == preferredBibles.size()) {
+            return null;
+        }
+        return preferredBibles;
+    }
+
+    public List<String> getParallelBibleUuidSkipping() {
+        if (parallelBibleUuidSkipping == null) {
+            parallelBibleUuidSkipping = new ArrayList<>();
+        }
+        return parallelBibleUuidSkipping;
+    }
+
+    public boolean hasSkippedBible() {
+        return getParallelBibleUuidSkipping().size() > 0;
+    }
+
+    public boolean isSkipped(Bible bible) {
+        if (bible == null || bible.getUuid() == null) {
+            return false;
+        }
+        String bibleUuid = bible.getUuid();
+        List<String> parallelBibleUuidSkipping = getParallelBibleUuidSkipping();
+        for (String skippedUuid : parallelBibleUuidSkipping) {
+            if (skippedUuid.equals(bibleUuid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void handleBibleSkipping(Bible bible, boolean skip) {
+        if (bible == null || bible.getUuid() == null) {
+            return;
+        }
+        String bibleUuid = bible.getUuid();
+        List<String> parallelBibleUuidSkipping = getParallelBibleUuidSkipping();
+        if (parallelBibleUuidSkipping.contains(bibleUuid)) {
+            if (!skip) {
+                parallelBibleUuidSkipping.remove(bibleUuid);
+            }
+        } else {
+            if (skip) {
+                parallelBibleUuidSkipping.add(bibleUuid);
+            }
+        }
     }
 
     public interface Listener {

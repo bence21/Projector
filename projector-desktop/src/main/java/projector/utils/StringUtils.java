@@ -172,4 +172,13 @@ public class StringUtils {
         System.out.println(a.length());
         System.out.println(b.length());
     }
+
+    public static List<String> copyStringList(List<String> strings) {
+        if (strings == null) {
+            return null;
+        }
+        ArrayList<String> copiedList = new ArrayList<>(strings.size());
+        copiedList.addAll(strings);
+        return copiedList;
+    }
 }
