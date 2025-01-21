@@ -666,10 +666,22 @@ public class ProjectionScreenController {
         if (!projectionType.isCountdownTimer() && !isLock) {
             countDownTimerRunning = false;
         }
-        this.setTextCounter++;
-        Platform.runLater(() -> {
-            --this.setTextCounter;
-            if (this.setTextCounter > 0) {
+        incSetTextCounter();
+        Platform.runLater(() -> onMainThread_setText(newText, projectionType, projectionData));
+    }
+
+    private synchronized void incSetTextCounter() {
+        ++this.setTextCounter;
+    }
+
+    private synchronized boolean decAndCheckSetTextCounter() {
+        --this.setTextCounter;
+        return this.setTextCounter > 0;
+    }
+
+    private void onMainThread_setText(String newText, ProjectionType projectionType, ProjectionData projectionData) {
+        try {
+            if (decAndCheckSetTextCounter()) {
                 return;
             }
             hideImageIfNotImageType(projectionType);
@@ -713,7 +725,9 @@ public class ProjectionScreenController {
             alignX();
             textFlow1.setText2("", 0, height);
             onViewChanged();
-        });
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
     }
 
     private Song getSong() {
