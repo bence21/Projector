@@ -187,6 +187,7 @@ public class BibleSearchController {
     }
 
     private void searchInBible(String text3, List<TextFlow> tmpSearchListView, List<Integer> tmpSearchIBook, List<Integer> tmpSearchIPart, List<Integer> tmpSearchIVerse, Bible bible, List<Bible> tmpSearchIBible) {
+        boolean withAccents = Settings.getInstance().isWithAccents();
         int results = 0;
         List<Book> books = bible.getBooks();
         for (int iBook = 0; iBook < books.size() && results < maxResults; ++iBook) {
@@ -199,7 +200,7 @@ public class BibleSearchController {
                     String text2;
                     BibleVerse bibleVerse = bibleVerses.get(iVerse);
                     String verse = bibleVerse.getText();
-                    if (Settings.getInstance().isWithAccents()) {
+                    if (withAccents) {
                         text2 = bibleVerse.getText();
                     } else {
                         text2 = bibleVerse.getStrippedText();

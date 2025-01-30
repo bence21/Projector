@@ -140,7 +140,7 @@ public class Settings {
         this.maxFont = maxFont;
     }
 
-    public synchronized boolean isWithAccents() {
+    public boolean isWithAccents() {
         return withAccents;
     }
 

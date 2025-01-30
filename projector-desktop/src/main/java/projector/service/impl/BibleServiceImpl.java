@@ -5,13 +5,17 @@ import projector.model.Language;
 import projector.repository.DAOFactory;
 import projector.repository.ormLite.VerseIndexRepositoryImpl;
 import projector.service.BibleService;
+import projector.service.ServiceException;
 import projector.service.ServiceManager;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BibleServiceImpl extends AbstractBaseService<Bible> implements BibleService {
     private final VerseIndexRepositoryImpl verseIndexRepository;
+    private final ConcurrentHashMap<Long, Bible> bibleHashMap = new ConcurrentHashMap<>();
 
     public BibleServiceImpl() {
         super(DAOFactory.getInstance().getBibleDAO());
@@ -66,5 +70,71 @@ public class BibleServiceImpl extends AbstractBaseService<Bible> implements Bibl
             }
             return 0;
         });
+    }
+
+    @Override
+    public List<Bible> findAll() throws ServiceException {
+        List<Bible> repositoryBibles = super.findAll();
+        return getBiblesByHashMap(repositoryBibles);
+    }
+
+    private List<Bible> getBiblesByHashMap(List<Bible> repositoryBibles) {
+        List<Bible> bibles = new ArrayList<>();
+        for (Bible bible : repositoryBibles) {
+            bibles.add(getByHashMap(bible));
+        }
+        return bibles;
+    }
+
+    private Bible getByHashMap(Bible bible) {
+        if (bible == null) {
+            return null;
+        }
+        Long id = bible.getId();
+        if (id == null) {
+            return bible;
+        }
+        if (bibleHashMap.containsKey(id)) {
+            return bibleHashMap.get(id);
+        }
+        bibleHashMap.put(id, bible);
+        return bible;
+    }
+
+    @Override
+    public Bible create(Bible bible) throws ServiceException {
+        return getByHashMap(super.create(bible));
+    }
+
+    @Override
+    public List<Bible> create(List<Bible> bibles) throws ServiceException {
+        return getBiblesByHashMap(super.create(bibles));
+    }
+
+    @Override
+    public boolean delete(Bible bible) throws ServiceException {
+        if (bible == null) {
+            return false;
+        }
+        bibleHashMap.remove(bible.getId());
+        return super.delete(bible);
+    }
+
+    @Override
+    public boolean delete(List<Bible> bibles) throws ServiceException {
+        for (Bible bible : bibles) {
+            delete(bible);
+        }
+        return true;
+    }
+
+    @Override
+    public Bible findByUuid(String uuid) {
+        return getByHashMap(super.findByUuid(uuid));
+    }
+
+    @Override
+    public Bible findById(Long id) {
+        return getByHashMap(super.findById(id));
     }
 }
