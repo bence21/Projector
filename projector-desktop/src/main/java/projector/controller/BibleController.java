@@ -85,6 +85,7 @@ import static projector.utils.ColorUtil.getReferenceTextColor;
 import static projector.utils.ContextMenuUtil.getDeleteMenuItem;
 import static projector.utils.ContextMenuUtil.initializeContextMenu;
 import static projector.utils.KeyEventUtil.getTextFromEvent;
+import static projector.utils.NumberUtil.parseSafeInt;
 import static projector.utils.SceneUtils.getAStage;
 import static projector.utils.SceneUtils.getCustomStage2;
 
@@ -939,7 +940,7 @@ public class BibleController {
                                 bookIndex = bible.getBookIndex(bookName);
                                 // System.out.println(bookName + " " + bookIndex);
                             } else {
-                                part = Integer.parseInt(bookName.trim());
+                                part = parseSafeInt(bookName.trim(), part);
                             }
                             if (startIndex >= line.length()) {
                                 startIndex -= line.length() + 1;

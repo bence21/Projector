@@ -314,9 +314,24 @@ public class ProjectionScreenSettings {
         }
     }
 
+    private void clearMonitorScreen() {
+        ProjectionScreenController projectionScreenController = getProjectionScreenController();
+        if (projectionScreenController != null) {
+            Monitor monitor = projectionScreenController.getMonitor();
+            if (monitor != null) {
+                monitor.setScreen(null);
+            }
+        }
+    }
+
+    public void clearMonitorCache() {
+        clearMonitorScreen();
+        nameForMonitorForScreen = null;
+    }
+
     public void reload() {
         try {
-            nameForMonitorForScreen = null;
+            clearMonitorCache();
             File file = new File(getFileName());
             if (!file.exists()) {
                 copyFromOther(this);
@@ -413,10 +428,7 @@ public class ProjectionScreenSettings {
     private String getNameForMonitorForScreen() {
         try {
             if (nameForMonitorForScreen == null) {
-                if (projectionScreenHolder == null) {
-                    return null;
-                }
-                ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
+                ProjectionScreenController projectionScreenController = getProjectionScreenController();
                 if (projectionScreenController == null) {
                     return null;
                 }
@@ -427,6 +439,13 @@ public class ProjectionScreenSettings {
             LOG.error(e.getMessage(), e);
             return null;
         }
+    }
+
+    private ProjectionScreenController getProjectionScreenController() {
+        if (projectionScreenHolder == null) {
+            return null;
+        }
+        return projectionScreenHolder.getProjectionScreenController();
     }
 
     // Function to calculate the overlap area between two rectangles

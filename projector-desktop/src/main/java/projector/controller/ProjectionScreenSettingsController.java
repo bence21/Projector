@@ -252,6 +252,7 @@ public class ProjectionScreenSettingsController {
             projectionScreenSettings2.renameSettingsFile2(temporarySwappingScreen, true);
             projectionScreenSettings1.renameSettingsFile2(projectionScreenHolder2.getName(), true);
             projectionScreenSettings2.renameSettingsFile3(temporarySwappingScreen, temp, true);
+            projectionScreenHolder1.clearMonitorCache();
             projectionScreenHolder1.reload();
             projectionScreenHolder2.reload();
             stage.close();
@@ -376,7 +377,9 @@ public class ProjectionScreenSettingsController {
         marginTextFieldBind(bottomMarginTextField, projectionScreenSettingsModel::setBottomMargin);
         marginTextFieldBind(leftMarginTextField, projectionScreenSettingsModel::setLeftMargin);
         asPaddingCheckbox.selectedProperty().addListener((observableValue, oldValue, newValue) -> {
-            projectionScreenSettingsModel.setAsPadding(newValue);
+            if (projectionScreenSettingsModel != null) {
+                projectionScreenSettingsModel.setAsPadding(newValue);
+            }
             setMarginsResetVisibility();
         });
     }

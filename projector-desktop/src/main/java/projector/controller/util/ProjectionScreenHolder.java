@@ -146,7 +146,12 @@ public class ProjectionScreenHolder {
 
     public void reload() {
         projectionScreenSettings.reload();
-        projectionScreenController.repaint();
+        onSettingsChanged();
+        onNameChanged();
+    }
+
+    public void clearMonitorCache() {
+        projectionScreenSettings.clearMonitorCache();
     }
 
     public void setLock(boolean lock) {
