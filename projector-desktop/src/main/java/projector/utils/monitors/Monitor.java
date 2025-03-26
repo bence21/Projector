@@ -5,6 +5,7 @@ import javafx.stage.Screen;
 
 import java.awt.*;
 
+import static java.lang.Math.round;
 import static projector.utils.monitors.MonitorInfo.SEPARATOR;
 
 public class Monitor {
@@ -13,7 +14,6 @@ public class Monitor {
     private Rectangle monitorArea;
     private boolean primaryMonitor;
     private double dpiScale = 1.0;
-    private String identifier;
     private double dpiX;
     private double dpiY;
     private double dpiWidth;
@@ -69,17 +69,14 @@ public class Monitor {
         return monitorArea.x == x && monitorArea.y == y;
     }
 
-    public void setIdentifier(String identifier) {
-        this.identifier = identifier;
-    }
-
     public static String makeFilenameSafe(String filename) {
         // Keep a-z, A-Z, 0-9, -, _, space, period, comma (and add any other good characters)
         return filename.replaceAll("[^a-zA-Z0-9-_ .,]", "");
     }
 
     public String getMonitorIdentifier() {
-        return makeFilenameSafe(identifier + SEPARATOR + monitorDeviceId);
+        return makeFilenameSafe(monitorArea.x + SEPARATOR + monitorArea.y + SEPARATOR +
+                round(getWidth()) + SEPARATOR + round(getHeight()));
     }
 
     public double getX() {

@@ -142,7 +142,7 @@ public class ProjectionScreenSettings {
         this.useGlobalSettings = projectionScreenSettings.useGlobalSettings;
     }
 
-    private Settings copyFromOther(ProjectionScreenSettings projectionScreenSettings) {
+    public Settings copyFromOther(ProjectionScreenSettings projectionScreenSettings) {
         final Settings settings = projectionScreenSettings.settings;
         this.maxFont = projectionScreenSettings.maxFont;
         this.backgroundColor = projectionScreenSettings.backgroundColor;
@@ -412,11 +412,19 @@ public class ProjectionScreenSettings {
         }
     }
 
+    public Screen getScreen() {
+        ProjectionScreenController projectionScreenController = getProjectionScreenController();
+        if (projectionScreenController == null) {
+            return null;
+        }
+        return projectionScreenController.getScreen();
+    }
+
     private String getFileName() {
         return getFileName(getNameForMonitor());
     }
 
-    private String getNameForMonitor() {
+    public String getNameForMonitor() {
         String nameForMonitor = getNameForMonitorForScreen();
         if (nameForMonitor != null) {
             return nameForMonitor;
@@ -709,22 +717,28 @@ public class ProjectionScreenSettings {
     }
 
     public void renameSettingsFile2(String newValue, boolean ignoreFileNotExists) {
-        renameSettingsFile3(projectionScreenHolder.getName(), newValue, ignoreFileNotExists);
+        renameSettingsFile3(getNameForMonitor(), newValue, ignoreFileNotExists);
     }
 
     public void renameSettingsFile3(String oldFileName, String newValue, boolean ignoreFileNotExists) {
         try {
-            File oldFile = new File(getFileName(oldFileName));
+            String oldFileJson = getFileName(oldFileName);
+            File oldFile = new File(oldFileJson);
             if (!oldFile.exists()) {
                 if (ignoreFileNotExists) {
                     return;
                 }
                 LOG.warn("File not exists: {}", oldFileName);
             }
-            File newFile = new File(getFileName(newValue));
+            String newFileJson = getFileName(newValue);
+            File newFile = new File(newFileJson);
+            if (newFile.exists()) {
+                boolean deleted = newFile.delete();
+                LOG.debug("Deleted existing target file: {}", deleted);
+            }
             boolean success = oldFile.renameTo(newFile);
             if (!success) {
-                LOG.warn("Could not rename: {} to {}", oldFileName, newValue);
+                LOG.warn("Could not rename: {} to {}", oldFileJson, newFileJson);
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);

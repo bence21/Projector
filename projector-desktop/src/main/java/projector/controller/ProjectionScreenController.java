@@ -1115,6 +1115,7 @@ public class ProjectionScreenController {
                 root2 = loader2.load();
 
                 doubleProjectionScreenController = loader2.getController();
+                doubleProjectionScreenController.setScreen(screen);
                 ProjectionScreensUtil.getInstance().addDoubleProjectionScreenController(doubleProjectionScreenController);
                 Scene scene2 = new Scene(root2, 400, 300);
                 setStyleFile(scene2);
@@ -1193,7 +1194,7 @@ public class ProjectionScreenController {
         }
     }
 
-    public ProjectionScreenController duplicate2() {
+    public ProjectionScreenController duplicate2(Screen screen) {
         FXMLLoader loader2 = new FXMLLoader();
         loader2.setLocation(MainDesktop.class.getResource("/view/ProjectionScreen.fxml"));
         try {
@@ -1201,6 +1202,7 @@ public class ProjectionScreenController {
             ProjectionScreenController doubleProjectionScreenController = loader2.getController();
             doubleProjectionScreenController.setRoot(root);
             ProjectionScreensUtil.getInstance().addAutomaticDoubleProjectionScreenController(doubleProjectionScreenController);
+            doubleProjectionScreenController.setScreen(screen);
             setSomeInitializationForDoubleProjectionScreenController(doubleProjectionScreenController);
             return doubleProjectionScreenController;
         } catch (IOException e) {

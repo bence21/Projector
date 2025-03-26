@@ -476,7 +476,7 @@ public class MainDesktop extends Application {
         while (it.hasNext()) {
             Screen nextScreen = it.next();
             try {
-                ProjectionScreenController projectionScreenController = getProjectionScreenControllerOrDuplicate(index);
+                ProjectionScreenController projectionScreenController = getProjectionScreenControllerOrDuplicate(index, nextScreen);
                 ProjectionScreenHolder projectionScreenHolder = projectionScreenController.getProjectionScreenSettings().getProjectionScreenHolder();
                 projectionScreenHolder.setScreenIndex(index + 2);
                 projectionScreenController.setPrimaryStageVariable(primaryStage);
@@ -489,13 +489,13 @@ public class MainDesktop extends Application {
         ProjectionScreensUtil.getInstance().closeFromIndex(index);
     }
 
-    private ProjectionScreenController getProjectionScreenControllerOrDuplicate(Integer index) {
+    private ProjectionScreenController getProjectionScreenControllerOrDuplicate(Integer index, Screen screen) {
         ProjectionScreenHolder projectionScreenHolder = ProjectionScreensUtil.getInstance().getScreenHolderByIndex(index);
         ProjectionScreenController projectionScreenController;
         if (projectionScreenHolder != null) {
             projectionScreenController = projectionScreenHolder.getProjectionScreenController();
         } else {
-            projectionScreenController = this.projectionScreenController.duplicate2();
+            projectionScreenController = this.projectionScreenController.duplicate2(screen);
         }
         return projectionScreenController;
     }
