@@ -39,7 +39,7 @@ public class Updater {
     private static final Logger LOG = LoggerFactory.getLogger(Updater.class);
     private static Updater instance;
     @SuppressWarnings("FieldCanBeLocal")
-    private final int projectorVersionNumber = 95;
+    private final int projectorVersionNumber = 96;
     private final Settings settings = Settings.getInstance();
     private final String updaterPath = "data\\updater.zip";
 
