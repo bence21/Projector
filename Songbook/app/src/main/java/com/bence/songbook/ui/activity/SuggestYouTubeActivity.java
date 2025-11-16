@@ -80,7 +80,7 @@ public class SuggestYouTubeActivity extends AppCompatActivity {
                     if (youtubeId.length() < 21 && youtubeId.length() > 9) {
                         youTubeView.setVisibility(View.VISIBLE);
                         if (youTubeView != null) {
-                            setYouTubeIFrameToWebView(youTubeView, youtubeId);
+                            setYouTubeIFrameToWebView(youTubeView, youtubeId, SuggestYouTubeActivity.this);
                         }
                     }
                 } catch (Exception e) {

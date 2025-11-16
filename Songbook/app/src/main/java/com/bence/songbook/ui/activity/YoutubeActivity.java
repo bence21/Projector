@@ -213,7 +213,7 @@ public class YoutubeActivity extends AppCompatActivity {
             if (song == null) {
                 return;
             }
-            setYouTubeIFrameToWebView(webView, song.getYoutubeUrl());
+            setYouTubeIFrameToWebView(webView, song.getYoutubeUrl(), this);
         } catch (Exception e) {
             Toast.makeText(this, "Could not create webView. " + e.getMessage(), Toast.LENGTH_LONG).show();
             logE(e);
