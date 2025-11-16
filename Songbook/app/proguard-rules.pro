@@ -9,17 +9,10 @@
 
 # Add any project specific keep options here:
 
-# Keep application classes - keep main components but allow obfuscation of implementation details
--keep class com.bence.songbook.ui.activity.** { *; }
--keep class com.bence.songbook.ui.fragment.** { *; }
--keep class com.bence.songbook.** extends android.app.Activity
--keep class com.bence.songbook.** extends android.app.Fragment
--keep class com.bence.songbook.** extends android.app.Service
--keep class com.bence.songbook.** extends android.content.BroadcastReceiver
--keep class com.bence.songbook.** extends android.content.ContentProvider
--keepclassmembers class com.bence.songbook.** {
-    public <init>(...);
-}
+# Keep ALL classes in com.bence.songbook package with their original names
+# This prevents obfuscation issues with reflection-based frameworks (ORMLite, Gson, etc.)
+-keep class com.bence.songbook.** { *; }
+-keepnames class com.bence.songbook.** { *; }
 
 # Retrofit and Gson
 -keepattributes Signature
@@ -38,7 +31,7 @@
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 
-# Gson model classes
+# Gson model classes - keep classes with SerializedName annotations
 -keepclassmembers,allowobfuscation class * {
   @com.google.gson.annotations.SerializedName <fields>;
 }
@@ -55,13 +48,18 @@
 -keep class okhttp3.** { *; }
 -keep interface okhttp3.** { *; }
 
-# ORMLite
+# ORMLite - keep ORMLite classes
 -keep class com.j256.ormlite.** { *; }
+
+# Keep ORMLite annotated fields and classes
 -keepclassmembers class * {
     @com.j256.ormlite.field.DatabaseField <fields>;
 }
 -keepclassmembers class * {
     @com.j256.ormlite.field.ForeignCollectionField <fields>;
+}
+-keepclassmembers class * {
+    @com.j256.ormlite.table.DatabaseTable <methods>;
 }
 # ORMLite optional dependencies (not needed for Android)
 -dontwarn javax.sql.rowset.serial.SerialBlob
