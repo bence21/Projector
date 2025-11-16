@@ -23,7 +23,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
@@ -37,7 +39,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class YoutubeActivity extends AppCompatActivity {
+public class YoutubeActivity extends BaseActivity {
 
     private static final int UI_ANIMATION_DELAY = 300;
     private final Handler mHideHandler = new Handler();
@@ -71,6 +73,7 @@ public class YoutubeActivity extends AppCompatActivity {
     private SongRepositoryImpl songRepository;
     private Date lastDatePressedAtEnd = null;
     private boolean show_title_switch;
+    private Integer insetsTop = null;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -222,6 +225,33 @@ public class YoutubeActivity extends AppCompatActivity {
 
     private static void logE(Exception e) {
         logWithNullCheck(e, YoutubeActivity.class.getSimpleName());
+    }
+
+    @Override
+    protected void setupWindowInsets() {
+        // Only apply window insets handling on Android 15 (API 35) and above
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            return;
+        }
+
+        // YoutubeActivity uses fullscreen mode, but we still need to handle insets
+        // when system UI is visible. Apply height to the spacer view.
+        View spacer = findViewById(R.id.status_bar_spacer);
+        if (spacer != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(spacer, (v, windowInsets) -> {
+                Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+                // Set the spacer height to match the status bar height
+                android.view.ViewGroup.LayoutParams params = v.getLayoutParams();
+                if (insetsTop == null) {
+                    insetsTop = insets.top;
+                }
+                params.height = insetsTop;
+                v.setLayoutParams(params);
+
+                return windowInsets;
+            });
+        }
     }
 
     @Override

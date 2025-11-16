@@ -14,7 +14,6 @@ import android.widget.PopupWindow;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.Lifecycle;
 
@@ -28,7 +27,7 @@ import com.bence.songbook.ui.utils.CheckSongForUpdate;
 import com.bence.songbook.ui.utils.CheckSongForUpdateListener;
 import com.bence.songbook.ui.utils.Preferences;
 
-public class SuggestEditsChooseActivity extends AppCompatActivity {
+public class SuggestEditsChooseActivity extends BaseActivity {
     public final static int LINKING = 2;
     private final Memory memory = Memory.getInstance();
     private Song song;

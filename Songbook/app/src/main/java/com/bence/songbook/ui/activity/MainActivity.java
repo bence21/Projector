@@ -52,7 +52,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -124,7 +123,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 @SuppressWarnings({"ConstantConditions", "deprecation"})
-public class MainActivity extends AppCompatActivity
+public class MainActivity extends BaseActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     public static final String TAG = MainActivity.class.getSimpleName();
@@ -252,6 +251,12 @@ public class MainActivity extends AppCompatActivity
         } catch (InterruptedException e1) {
             logError(e1);
         }
+    }
+
+    @Override
+    protected void setupWindowInsets() {
+        // MainActivity uses DrawerLayout with fitsSystemWindows="true" which handles insets automatically
+        // So we skip the default BaseActivity window insets handling
     }
 
     @SuppressLint({"ShowToast", "ClickableViewAccessibility"})

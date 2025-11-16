@@ -10,7 +10,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.projector.common.dto.SongListDTO;
@@ -34,7 +33,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-public class SongListActivity extends AppCompatActivity {
+public class SongListActivity extends BaseActivity {
     public static final String TAG = SongListActivity.class.getSimpleName();
     private static final int NEW_SONG_LIST_REQUEST_CODE = 1;
     private final Memory memory = Memory.getInstance();

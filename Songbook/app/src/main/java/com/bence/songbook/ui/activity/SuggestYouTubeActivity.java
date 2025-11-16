@@ -24,8 +24,6 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.bence.projector.common.dto.SuggestionDTO;
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
@@ -39,7 +37,7 @@ import com.bence.songbook.ui.utils.CheckSongForUpdateListener;
 import com.bence.songbook.ui.utils.Preferences;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-public class SuggestYouTubeActivity extends AppCompatActivity {
+public class SuggestYouTubeActivity extends BaseActivity {
     private static final String TAG = SuggestYouTubeActivity.class.getSimpleName();
 
     private Song song;

@@ -9,6 +9,11 @@
     android:screenOrientation="portrait"
     tools:context=".ui.activity.YoutubeActivity">
 
+    <View
+        android:id="@+id/status_bar_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp" />
+
     <WebView
         android:id="@+id/webView"
         android:layout_width="match_parent"

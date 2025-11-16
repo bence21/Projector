@@ -17,7 +17,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.songbook.Memory;
@@ -34,7 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class VersionsActivity extends AppCompatActivity {
+public class VersionsActivity extends BaseActivity {
 
     private boolean shortCollectionName;
 

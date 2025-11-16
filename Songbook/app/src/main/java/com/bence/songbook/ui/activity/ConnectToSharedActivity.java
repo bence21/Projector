@@ -16,7 +16,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.songbook.Memory;
@@ -31,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
-public class ConnectToSharedActivity extends AppCompatActivity {
+public class ConnectToSharedActivity extends BaseActivity {
 
     private static int timeout = 3400;
     private Button tryAgainButton;

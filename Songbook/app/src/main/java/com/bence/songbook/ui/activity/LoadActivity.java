@@ -16,7 +16,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.bence.songbook.Memory;
 import com.bence.songbook.ProgressMessage;
@@ -39,7 +38,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
-public class LoadActivity extends AppCompatActivity {
+public class LoadActivity extends BaseActivity {
 
     private Toast noInternetConnectionToast;
     private LoadActivity loadActivity;

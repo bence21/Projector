@@ -6,7 +6,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ListView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.songbook.Memory;
@@ -18,7 +17,7 @@ import com.bence.songbook.ui.utils.SongListAdapter;
 
 import java.util.List;
 
-public class LibraryActivity extends AppCompatActivity {
+public class LibraryActivity extends BaseActivity {
     public static final String TAG = LibraryActivity.class.getSimpleName();
     private final int NEW_SONG_LIST_REQUEST_CODE = 1;
 

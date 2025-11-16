@@ -41,7 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class NewSongActivity extends AppCompatActivity {
+public class NewSongActivity extends BaseActivity {
     public static final String TAG = NewSongActivity.class.getSimpleName();
     public static final int SAVE_RESULT_CODE = 14;
     public static final int UPLOAD_RESULT_CODE = 15;

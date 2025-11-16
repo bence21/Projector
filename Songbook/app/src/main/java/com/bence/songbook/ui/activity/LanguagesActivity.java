@@ -16,8 +16,6 @@ import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
 import com.bence.songbook.api.LanguageApiBean;
@@ -29,7 +27,7 @@ import com.bence.songbook.ui.adapter.LanguageAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LanguagesActivity extends AppCompatActivity {
+public class LanguagesActivity extends BaseActivity {
 
     public static String syncAutomatically = "syncAutomatically";
     private LanguageAdapter dataAdapter = null;
