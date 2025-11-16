@@ -21,8 +21,9 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false // if it's true app from play store doesn't open
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
