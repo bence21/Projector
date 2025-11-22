@@ -324,6 +324,9 @@ public class NewSongActivity extends BaseActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SongActivity.NEW_SONG_REQUEST) {
+            if (song == null) {
+                return;
+            }
             if (resultCode == SAVE_RESULT_CODE) {
                 song.setSavedOnlyToDevice(true);
                 saveSong();
