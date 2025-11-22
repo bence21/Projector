@@ -96,9 +96,57 @@
     java.lang.Object readResolve();
 }
 
+# Keep DTO classes for Gson/Retrofit serialization
+# This prevents ClassCastException when deserializing API responses
+-keep class com.bence.projector.common.dto.** { *; }
+-keepnames class com.bence.projector.common.dto.** { *; }
+
 # If your project uses WebView with JS, uncomment the following
 # and specify the fully qualified class name to the JavaScript interface
 # class:
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# Kotlin standard library - required for AndroidX test runner
+-keep class kotlin.** { *; }
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+-keepclassmembers class **$WhenMappings {
+    <fields>;
+}
+-keepclassmembers class kotlin.Metadata {
+    public <methods>;
+}
+-assumenosideeffects class kotlin.jvm.internal.Intrinsics {
+    static void checkParameterIsNotNull(java.lang.Object, java.lang.String);
+}
+
+# AndroidX Test framework - keep all test classes
+-keep class androidx.test.** { *; }
+-keep interface androidx.test.** { *; }
+-dontwarn androidx.test.**
+
+# Keep JUnit test classes
+-keep class org.junit.** { *; }
+-keep interface org.junit.** { *; }
+-dontwarn org.junit.**
+
+# Keep Hamcrest matchers (used by JUnit and Espresso)
+-keep class org.hamcrest.** { *; }
+-dontwarn org.hamcrest.**
+
+# Keep Espresso classes
+-keep class androidx.test.espresso.** { *; }
+-keep interface androidx.test.espresso.** { *; }
+-dontwarn androidx.test.espresso.**
+
+# Keep test runner classes
+-keep class androidx.test.runner.** { *; }
+-keep interface androidx.test.runner.** { *; }
+-dontwarn androidx.test.runner.**
+
+# Keep test storage and platform classes
+-keep class androidx.test.platform.** { *; }
+-keep interface androidx.test.platform.** { *; }
+-dontwarn androidx.test.platform.**
