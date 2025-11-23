@@ -179,17 +179,22 @@ public class UtilsController {
 
     private void loadCountdownTimes(boolean setFirst) {
         try {
-            List<CountdownTime> countdownTimes = ServiceManager.getCountdownTimeService().findAll();
+            List<CountdownTime> countdownTimes = getCountdownTimes();
             if (!countdownTimes.isEmpty()) {
-                sortCountdownTimes(countdownTimes);
                 if (setFirst) {
                     fillWithSelected(countdownTimes.get(0));
                 }
             }
-            createCountdownTimesMenu(countdownTimes);
+            createCountdownTimesMenu();
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
+    }
+
+    private static List<CountdownTime> getCountdownTimes() {
+        List<CountdownTime> countdownTimes = ServiceManager.getCountdownTimeService().findAll();
+        sortCountdownTimes(countdownTimes);
+        return countdownTimes;
     }
 
     private static void sortCountdownTimes(List<CountdownTime> countdownTimes) {
@@ -266,9 +271,9 @@ public class UtilsController {
         }
     }
 
-    private void createCountdownTimesMenu(List<CountdownTime> countdownTimes) {
+    private void createCountdownTimesMenu() {
         timeTextField.setOnMouseClicked(event -> {
-            sortCountdownTimes(countdownTimes);
+            List<CountdownTime> countdownTimes = getCountdownTimes();
             ContextMenu contextMenu = createContextMenu(countdownTimes);
             contextMenu.show(timeTextField, Side.BOTTOM, 0, 0);
             hideDeleteContextMenu();
