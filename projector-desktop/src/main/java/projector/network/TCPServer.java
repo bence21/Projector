@@ -27,17 +27,16 @@ public class TCPServer {
         Settings.getInstance().setShareOnNetwork(true);
         // Clear any previous error message
         Settings.getInstance().setNetworkSharingError(null);
-        if (thread == null) {
-            createThreads(projectionScreenController, songController);
-        } else {
-            close();
-            createThreads(projectionScreenController, songController);
-        }
+        createThreads(projectionScreenController, songController);
         thread.start();
         imageThread.start();
     }
 
     private static void createThreads(ProjectionScreenController projectionScreenController, SongController songController) {
+        // Close previously started threads if any
+        if (thread != null || imageThread != null) {
+            close();
+        }
         thread = getSenderThread(projectionScreenController, songController, TCPClient.PORT, SenderType.TEXT);
         imageThread = getSenderThread(projectionScreenController, songController, TCPImageClient.PORT, SenderType.IMAGE);
     }
@@ -78,8 +77,11 @@ public class TCPServer {
         for (Sender sender : senders) {
             sender.stop();
         }
+        senders.clear();
         interruptTread(thread);
         interruptTread(imageThread);
+        thread = null;
+        imageThread = null;
         for (ServerSocket welcomeSocket : welcomeSockets) {
             try {
                 welcomeSocket.close();
@@ -87,6 +89,8 @@ public class TCPServer {
                 LOG.error(e.getMessage(), e);
             }
         }
+        welcomeSockets.clear();
+        closed = false;
     }
 
     private static void interruptTread(Thread thread) {
@@ -103,17 +107,26 @@ public class TCPServer {
         LOG.error("Address already in use: bind", e);
         Platform.runLater(() -> {
             Settings settings = Settings.getInstance();
-            String errorMessage;
+            String newErrorMessage;
             if (senderType == SenderType.IMAGE) {
                 // Image port failure is non-critical - text sharing can still work
-                errorMessage = settings.getResourceBundle().getString("Image sharing port is unavailable, but text sharing is working.");
+                newErrorMessage = settings.getResourceBundle().getString("Image sharing port is unavailable.");
                 // Don't stop network sharing for image port issues
             } else {
                 // Text port failure is critical - stop network sharing
                 settings.setShareOnNetwork(false);
-                errorMessage = settings.getResourceBundle().getString("Port already in use. Another application may be using the required port. Please close it and try again.");
+                newErrorMessage = settings.getResourceBundle().getString("Port already in use. Another application may be using the required port. Please close it and try again.");
             }
-            settings.setNetworkSharingError(errorMessage);
+
+            // Append to existing error message if both ports failed
+            String existingError = settings.networkSharingErrorProperty().get();
+            String finalErrorMessage;
+            if (existingError != null && !existingError.isEmpty()) {
+                finalErrorMessage = existingError + "\n" + newErrorMessage;
+            } else {
+                finalErrorMessage = newErrorMessage;
+            }
+            settings.setNetworkSharingError(finalErrorMessage);
         });
     }
 }
