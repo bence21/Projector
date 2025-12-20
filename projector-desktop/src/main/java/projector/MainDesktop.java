@@ -370,7 +370,7 @@ public class MainDesktop extends Application {
         Updater.getInstance().checkForUpdate();
         if (startDate != null) {
             Date date1 = new Date();
-            LOG.info((date1.getTime() - startDate.getTime()) + " ms");
+            LOG.info("{} ms", date1.getTime() - startDate.getTime());
         }
     }
 
@@ -418,10 +418,62 @@ public class MainDesktop extends Application {
         if (tmpStage != null) {
             tmpStage.close();
         }
+        // Close all settings windows
+        closeAllSettingsWindows();
         myController.closeAllPdfFiles();
         myController.close();
         ProjectionScreensUtil.getInstance().onClose();
         CustomCanvasService.getInstance().save();
+    }
+
+    private void closeAllSettingsWindows() {
+        closeMainSettingsWindow();
+        closeProjectionScreenSettingsWindows();
+    }
+
+    private void closeMainSettingsWindow() {
+        try {
+            if (myController != null && myController.getSettingsController() != null) {
+                Stage settingsStage = myController.getSettingsController().getStage();
+                if (settingsStage != null && settingsStage.isShowing()) {
+                    settingsStage.close();
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("Error closing main settings window: {}", e.getMessage(), e);
+        }
+    }
+
+    private void closeProjectionScreenSettingsWindows() {
+        try {
+            javafx.stage.Window.getWindows().stream()
+                    .filter(window -> window instanceof Stage)
+                    .map(window -> (Stage) window)
+                    .filter(this::isSettingsWindow)
+                    .forEach(this::closeStageSafely);
+        } catch (Exception e) {
+            LOG.error("Error closing projection screen settings windows: {}", e.getMessage(), e);
+        }
+    }
+
+    private boolean isSettingsWindow(Stage stage) {
+        try {
+            String title = stage.getTitle();
+            return title != null && title.contains("Settings");
+        } catch (Exception e) {
+            LOG.warn("Error checking if stage is settings window: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private void closeStageSafely(Stage stage) {
+        try {
+            if (stage != null && stage.isShowing()) {
+                stage.close();
+            }
+        } catch (Exception e) {
+            LOG.warn("Error closing stage: {}", e.getMessage(), e);
+        }
     }
 
     private void primarySceneEventHandler() {

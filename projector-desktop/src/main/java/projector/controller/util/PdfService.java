@@ -155,8 +155,16 @@ public class PdfService {
     }
 
     public Image renderCurrentPageAsImage(String filePath, float scale) {
-        int currentPage = getCurrentPage(filePath);
+        int currentPage = getCurrentPageForRender(filePath);
         return renderPageAsImage(filePath, currentPage, scale);
+    }
+
+    private int getCurrentPageForRender(String filePath) {
+        int currentPage = getCurrentPage(filePath);
+        if (currentPage == NO_PAGE_SET) {
+            return 0;
+        }
+        return currentPage;
     }
 
     private PDDocument getDocument(String filePath) {
