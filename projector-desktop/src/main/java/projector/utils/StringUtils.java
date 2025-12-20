@@ -19,6 +19,28 @@ public class StringUtils {
         return s;
     }
 
+    /**
+     * Strips accents from a string while preserving all other characters (structure).
+     * This is useful for file names, paths, and other cases where structure should be maintained.
+     *
+     * @param s the string to strip accents from
+     * @return the string with accents removed, or null if input is null
+     */
+    public static String stripAccentsPreservingStructure(String s) {
+        if (s == null) {
+            return null;
+        }
+        try {
+            String normalized = Normalizer.normalize(s, Normalizer.Form.NFD);
+            // Remove combining diacritical marks (accents) but keep everything else
+            normalized = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+            return normalized;
+        } catch (Exception e) {
+            // Return original string if normalization fails
+            return s;
+        }
+    }
+
     public static synchronized int highestCommonSubStringInt(String a, String b) {
         if (t == null) {
             t = new int[N][];

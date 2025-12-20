@@ -11,6 +11,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SingleSelectionModel;
@@ -28,6 +29,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Screen;
@@ -55,6 +57,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
@@ -70,8 +73,24 @@ import static projector.controller.util.ImageCacheService.saveImage;
 public class GalleryController {
 
     private static final String FOLDER_PATH = "gallery";
+    private static final String GALLERY_ROOT_NAME = "Gallery";
     private static final Logger LOG = LoggerFactory.getLogger(GalleryController.class);
     private static final Settings settings = Settings.getInstance();
+
+    // Folder icon rendering constants
+    private static final double FOLDER_ICON_PADDING = 20.0;
+    private static final double FOLDER_ICON_TAB_OFFSET = 30.0;
+    private static final double FOLDER_ICON_TAB_CORNER_OFFSET = 10.0;
+    private static final double FOLDER_ICON_TEXT_SPACE = 30.0;
+    private static final double FOLDER_ICON_TEXT_BOTTOM_OFFSET = 10.0;
+    private static final double FOLDER_ICON_TAB_TOP_OFFSET = 10.0;
+    private static final double TEXT_WIDTH_MULTIPLIER = 9.5;
+    private static final int FOLDER_ICON_FONT_SIZE = 16;
+    private static final int FOLDER_ICON_STROKE_WIDTH = 2;
+    private static final javafx.scene.paint.Color FOLDER_BODY_COLOR = javafx.scene.paint.Color.rgb(255, 235, 155);
+    private static final javafx.scene.paint.Color FOLDER_TAB_COLOR = javafx.scene.paint.Color.rgb(255, 220, 100);
+    private static final javafx.scene.paint.Color FOLDER_OUTLINE_COLOR = javafx.scene.paint.Color.rgb(200, 150, 50);
+    private static final javafx.scene.paint.Color FOLDER_TEXT_COLOR = javafx.scene.paint.Color.BLACK;
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     public BorderPane borderPane;
     private ImageContainer selectedImageContainer; // to keep track of the selected image container
@@ -86,8 +105,10 @@ public class GalleryController {
     private BorderPane contrastBorderPane = null;
     private BorderPane saturationBorderPane = null;
     private HBox toolHBox = null;
+    private HBox breadcrumbBar = null;
     private Image previewImage = null;
     private ScrollPane scrollPane = null;
+    private String currentFolderPath = FOLDER_PATH;
 
     public static void clearCanvas(Canvas canvas) {
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -103,6 +124,7 @@ public class GalleryController {
         drawMiddle(image, canvas, gc);
     }
 
+    @SuppressWarnings("CommentedOutCode")
     public static void main(String[] args) {
         // GalleryController galleryController = new GalleryController();
         // for (int i = 1; i <= 464 * 2; ++i) {
@@ -298,12 +320,15 @@ public class GalleryController {
     }
 
     public void onTabOpened() {
-        // if (flowPane != null) {
-        //     return;
-        // }
+        HBox breadcrumb = getBreadcrumbBar();
         HBox hBox = getToolHBox();
         BorderPane borderPane1 = new BorderPane();
-        borderPane1.setTop(hBox);
+        VBox topBox = new VBox();
+        if (breadcrumb != null) {
+            topBox.getChildren().add(breadcrumb);
+        }
+        topBox.getChildren().add(hBox);
+        borderPane1.setTop(topBox);
         borderPane1.setCenter(createGalleryPane()); // TODO: this should be optimized
         borderPane.setCenter(borderPane1);
         borderPane.setRight(createRightBorderPane());
@@ -328,7 +353,7 @@ public class GalleryController {
                 List<File> files = dragboard.getFiles();
                 for (File file : files) {
                     try {
-                        Path destinationFolder = Path.of(FOLDER_PATH);
+                        Path destinationFolder = Path.of(currentFolderPath);
                         // Create the destination file path within the folder
                         Path destinationFilePath = destinationFolder.resolve(file.getName());
                         Files.copy(file.toPath(), destinationFilePath, StandardCopyOption.REPLACE_EXISTING);
@@ -443,29 +468,252 @@ public class GalleryController {
     }
 
     private HBox getToolHBox() {
-        if (toolHBox == null) {
-            toolHBox = new HBox();
-            toolHBox.setSpacing(10);
-            toolHBox.setPadding(new Insets(10, 10, 0, 10));
-            Button addImagesButton = new Button("Add images");
-            Button openFileButton = new Button("Open file");
-            ComboBox<ImageOrderMethod> sortComboBox = getSortComboBox();
-            addImagesButton.setOnAction((event) -> {
-                try {
-                    Files.createDirectories(Paths.get(FOLDER_PATH));
-                } catch (IOException ignored) {
-                }
-                openExplorer(FOLDER_PATH);
-            });
-            openFileButton.setOnAction((event -> {
-                if (selectedImageContainer == null) {
-                    return;
-                }
-                openExplorer(selectedImageContainer.getFileImagePath());
-            }));
-            toolHBox.getChildren().addAll(addImagesButton, openFileButton, sortComboBox);
-        }
+        toolHBox = createToolHBox();
+
+        Button addImagesButton = createAddImagesButton();
+        Button openFileButton = createOpenFileButton();
+        ComboBox<ImageOrderMethod> sortComboBox = getSortComboBox();
+
+        toolHBox.getChildren().addAll(addImagesButton, openFileButton, sortComboBox);
+
         return toolHBox;
+    }
+
+    private HBox createToolHBox() {
+        HBox hBox = new HBox();
+        hBox.setSpacing(10);
+        hBox.setPadding(new Insets(10, 10, 0, 10));
+        return hBox;
+    }
+
+    private Button createAddImagesButton() {
+        Button addImagesButton = new Button("Add images");
+        addImagesButton.setOnAction((event) -> {
+            try {
+                Files.createDirectories(Paths.get(currentFolderPath));
+            } catch (IOException ignored) {
+            }
+            openExplorer(currentFolderPath);
+        });
+        return addImagesButton;
+    }
+
+    private Button createOpenFileButton() {
+        Button openFileButton = new Button("Open file");
+        openFileButton.setOnAction((event -> {
+            if (selectedImageContainer == null) {
+                return;
+            }
+            openExplorer(selectedImageContainer.getFileImagePath());
+        }));
+        return openFileButton;
+    }
+
+    private boolean shouldShowBackButton() {
+        try {
+            File currentFolder = new File(currentFolderPath);
+            File rootFolder = new File(FOLDER_PATH);
+            String currentAbsolutePath = currentFolder.getAbsolutePath();
+            String rootAbsolutePath = rootFolder.getAbsolutePath();
+            return !currentAbsolutePath.equals(rootAbsolutePath);
+        } catch (Exception e) {
+            LOG.error("Error comparing folder paths", e);
+            return !currentFolderPath.equals(FOLDER_PATH);
+        }
+    }
+
+    private HBox getBreadcrumbBar() {
+        if (breadcrumbBar == null) {
+            breadcrumbBar = createBreadcrumbBar();
+        }
+        return breadcrumbBar;
+    }
+
+    private HBox createBreadcrumbBar() {
+        List<BreadcrumbItem> pathItems = buildBreadcrumbPath();
+
+        // Hide breadcrumb if only at Gallery root
+        if (pathItems.size() <= 1) {
+            return null;
+        }
+
+        HBox breadcrumb = initializeBreadcrumbContainer();
+        boolean isDarkTheme = settings.isDarkTheme();
+
+        addUpButtonIfNeeded(breadcrumb, isDarkTheme);
+        addBreadcrumbPathItems(breadcrumb, pathItems, isDarkTheme);
+
+        return breadcrumb;
+    }
+
+    private HBox initializeBreadcrumbContainer() {
+        HBox breadcrumb = new HBox();
+        breadcrumb.setSpacing(5);
+        breadcrumb.setPadding(new Insets(5, 10, 5, 10));
+        breadcrumb.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        return breadcrumb;
+    }
+
+    private void addUpButtonIfNeeded(HBox breadcrumb, boolean isDarkTheme) {
+        if (shouldShowBackButton()) {
+            Button upButton = createUpButton();
+            breadcrumb.getChildren().add(upButton);
+
+            Label separator = createSeparator("|", isDarkTheme);
+            breadcrumb.getChildren().add(separator);
+        }
+    }
+
+    private void addBreadcrumbPathItems(HBox breadcrumb, List<BreadcrumbItem> pathItems, boolean isDarkTheme) {
+        for (int i = 0; i < pathItems.size(); i++) {
+            BreadcrumbItem item = pathItems.get(i);
+
+            if (i > 0) {
+                Label separator = createSeparator(">", isDarkTheme);
+                breadcrumb.getChildren().add(separator);
+            }
+
+            Hyperlink link = createBreadcrumbLink(item, i == pathItems.size() - 1, isDarkTheme);
+            breadcrumb.getChildren().add(link);
+        }
+    }
+
+    private Label createSeparator(String text, boolean isDarkTheme) {
+        Label separator = new Label(text);
+        String color = isDarkTheme ? "#aaaaaa" : "#666666";
+        separator.setStyle("-fx-text-fill: " + color + ";");
+        return separator;
+    }
+
+    private Hyperlink createBreadcrumbLink(BreadcrumbItem item, boolean isCurrentFolder, boolean isDarkTheme) {
+        Hyperlink link = new Hyperlink(item.name());
+        link.setOnAction(event -> navigateToFolder(item.path()));
+
+        if (isCurrentFolder) {
+            styleCurrentFolderLink(link, isDarkTheme);
+        } else {
+            styleParentFolderLink(link, isDarkTheme);
+        }
+
+        return link;
+    }
+
+    private void styleCurrentFolderLink(Hyperlink link, boolean isDarkTheme) {
+        String color = isDarkTheme ? "#ffffff" : "#000000";
+        link.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold;");
+    }
+
+    private void styleParentFolderLink(Hyperlink link, boolean isDarkTheme) {
+        String normalColor = isDarkTheme ? "#7cc8ff" : "#0066cc";
+        String hoverColor = isDarkTheme ? "#94d2ff" : "#0052a3";
+
+        link.setStyle("-fx-text-fill: " + normalColor + ";");
+        link.setOnMouseEntered(e -> link.setStyle("-fx-text-fill: " + hoverColor + "; -fx-underline: true;"));
+        link.setOnMouseExited(e -> link.setStyle("-fx-text-fill: " + normalColor + "; -fx-underline: false;"));
+    }
+
+    private Button createUpButton() {
+        Button upButton = new Button("↑ Up");
+        upButton.setOnAction((event) -> {
+            File currentFolder = new File(currentFolderPath);
+            File parentFolder = currentFolder.getParentFile();
+            if (parentFolder != null) {
+                navigateToFolder(parentFolder.getAbsolutePath());
+            }
+        });
+        return upButton;
+    }
+
+    private List<BreadcrumbItem> buildBreadcrumbPath() {
+        List<BreadcrumbItem> items = new ArrayList<>();
+
+        try {
+            String rootAbsolutePath = getRootAbsolutePath();
+            String currentAbsolutePath = getCurrentAbsolutePath();
+
+            items.add(new BreadcrumbItem(GALLERY_ROOT_NAME, rootAbsolutePath));
+
+            if (!currentAbsolutePath.equals(rootAbsolutePath)) {
+                addSubfolderPathComponents(items, rootAbsolutePath, currentAbsolutePath);
+            }
+        } catch (Exception e) {
+            LOG.error("Error building breadcrumb path", e);
+            addFallbackBreadcrumbItem(items);
+        }
+
+        return items;
+    }
+
+    private String getRootAbsolutePath() {
+        File rootFolder = new File(FOLDER_PATH);
+        return rootFolder.getAbsolutePath();
+    }
+
+    private String getCurrentAbsolutePath() {
+        File currentFolder = new File(currentFolderPath);
+        return currentFolder.getAbsolutePath();
+    }
+
+    private void addSubfolderPathComponents(List<BreadcrumbItem> items, String rootAbsolutePath, String currentAbsolutePath) {
+        Path rootPath = Paths.get(rootAbsolutePath);
+        Path currentPath = Paths.get(currentAbsolutePath);
+
+        try {
+            addPathComponentsUsingRelativize(items, rootPath, currentPath);
+        } catch (IllegalArgumentException e) {
+            // Paths are not relative (different roots), build from current path
+            addPathComponentsUsingParentTraversal(items, rootPath, currentPath, rootAbsolutePath);
+        }
+    }
+
+    private void addPathComponentsUsingRelativize(List<BreadcrumbItem> items, Path rootPath, Path currentPath) {
+        Path relativePath = rootPath.relativize(currentPath);
+        if (relativePath.toString().isEmpty()) {
+            return; // Already at root
+        }
+
+        Path current = rootPath;
+        for (Path component : relativePath) {
+            current = current.resolve(component);
+            String folderName = component.toString();
+            items.add(new BreadcrumbItem(folderName, current.toString()));
+        }
+    }
+
+    private void addPathComponentsUsingParentTraversal(List<BreadcrumbItem> items, Path rootPath, Path currentPath, String rootAbsolutePath) {
+        List<String> pathComponents = collectPathComponents(currentPath, rootAbsolutePath);
+
+        Path current = rootPath;
+        for (String component : pathComponents) {
+            current = current.resolve(component);
+            items.add(new BreadcrumbItem(component, current.toString()));
+        }
+    }
+
+    private List<String> collectPathComponents(Path currentPath, String rootAbsolutePath) {
+        List<String> pathComponents = new ArrayList<>();
+        Path path = currentPath;
+
+        while (path != null && !path.toString().equals(rootAbsolutePath)) {
+            pathComponents.add(0, path.getFileName().toString());
+            path = path.getParent();
+            if (path == null) {
+                break;
+            }
+        }
+
+        return pathComponents;
+    }
+
+    private void addFallbackBreadcrumbItem(List<BreadcrumbItem> items) {
+        String folderName = new File(currentFolderPath).getName();
+        if (folderName.isEmpty()) {
+            folderName = GALLERY_ROOT_NAME;
+        }
+        items.add(new BreadcrumbItem(folderName, currentFolderPath));
+    }
+
+    private record BreadcrumbItem(String name, String path) {
     }
 
     private ComboBox<ImageOrderMethod> getSortComboBox() {
@@ -491,7 +739,7 @@ public class GalleryController {
             return;
         }
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
-        saveImage(bufferedImage, FOLDER_PATH + "/" + getFileNameFromUrlPath(image.getUrl()));
+        saveImage(bufferedImage, currentFolderPath + "/" + getFileNameFromUrlPath(image.getUrl()));
         onTabOpened();
     }
 
@@ -559,6 +807,15 @@ public class GalleryController {
         galleryPane.setPadding(new Insets(10));
         galleryPane.setFocusTraversable(true);
 
+        initializeFlowPane();
+        populateGalleryItems();
+
+        ScrollPane scrollPane = createScrollPane();
+        galleryPane.getChildren().addAll(scrollPane);
+        return galleryPane;
+    }
+
+    private void initializeFlowPane() {
         flowPane = new FlowPane(10, 10);
         flowPane.setPadding(new Insets(0));
         flowPane.setPrefWrapLength(780);
@@ -566,68 +823,121 @@ public class GalleryController {
         flowPane.setFocusTraversable(true);
         flowPane.setHgap(10);
         containerHolders = new ArrayList<>();
+    }
+
+    private void populateGalleryItems() {
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        List<String> paths = getImagePathsFromFolder(currentFolderPath);
         ObservableList<Node> flowPaneChildren = flowPane.getChildren();
 
-        ExecutorService executorService = Executors.newFixedThreadPool(1);
-        List<String> imagePaths = getImagePathsFromFolder(FOLDER_PATH);
-        for (String imagePath : imagePaths) {
+        for (String path : paths) {
+            StackPane itemPane = createGalleryItem(path, executorService);
+            flowPaneChildren.add(itemPane);
+        }
 
-            Canvas canvas = new Canvas(200, 200);
-            // Image image = new Image(fileImagePath);
+        executorService.shutdown();
+    }
+
+    private StackPane createGalleryItem(String path, ExecutorService executorService) {
+        File file = new File(path);
+        boolean isFolder = file.isDirectory();
+        int itemCount = isFolder ? countItemsInFolder(path) : 0;
+
+        Canvas canvas = createItemCanvas(path, isFolder, itemCount, executorService);
+        ImageContainer imageContainer = createImageContainer(path, canvas, isFolder);
+        return createItemStackPane(path, imageContainer, isFolder);
+    }
+
+    private Canvas createItemCanvas(String path, boolean isFolder, int itemCount, ExecutorService executorService) {
+        Canvas canvas = new Canvas(200, 200);
+
+        if (isFolder) {
+            renderFolderIcon(canvas, itemCount);
+        } else {
             executorService.submit(() -> {
                 try {
-                    loadImagePathToCanvas(imagePath, canvas);
+                    loadImagePathToCanvas(path, canvas);
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
             });
-
-            Label filenameLabel = new Label(getFileNameFromPath(imagePath));
-            BorderPane borderPane = new BorderPane();
-            borderPane.setCenter(canvas);
-            // borderPane.setCenter(imageView);
-            borderPane.setBottom(filenameLabel);
-            BorderPane.setAlignment(filenameLabel, javafx.geometry.Pos.CENTER);
-            BorderPane.setMargin(canvas, new Insets(5));
-            // BorderPane.setMargin(imageView, new Insets(5));
-
-            ImageContainer imageContainer = new ImageContainer(filenameLabel, borderPane);
-            imageContainer.setFileImagePath(imagePath);
-
-            StackPane stackPane = new StackPane();
-            stackPane.getChildren().addAll(imageContainer.getHighlightRect(), imageContainer.getContainer());
-            stackPane.setOnMouseClicked(event -> {
-                try {
-                    pauseSelectByFocus = true;
-                    stackPane.requestFocus();
-                    selectImageContainer(imageContainer);
-                } finally {
-                    pauseSelectByFocus = false;
-                }
-            });
-            stackPane.focusedProperty().addListener((observable, oldValue, newValue) -> {
-                if (pauseSelectByFocus) {
-                    return;
-                }
-                if (newValue != null && newValue && selectedImageContainer != imageContainer) {
-                    selectImageContainer(imageContainer);
-                }
-            });
-            stackPane.setFocusTraversable(true);
-            containerHolders.add(imageContainer);
-            imageContainer.setMainPane(stackPane);
-            flowPaneChildren.add(stackPane);
         }
-        executorService.shutdown();
 
+        return canvas;
+    }
+
+    private ImageContainer createImageContainer(String path, Canvas canvas, boolean isFolder) {
+        Label filenameLabel = new Label(getFileNameFromPath(path));
+        BorderPane borderPane = new BorderPane();
+        borderPane.setCenter(canvas);
+        borderPane.setBottom(filenameLabel);
+        BorderPane.setAlignment(filenameLabel, javafx.geometry.Pos.CENTER);
+        BorderPane.setMargin(canvas, new Insets(5));
+
+        ImageContainer imageContainer = new ImageContainer(borderPane);
+        imageContainer.setFileImagePath(path);
+        imageContainer.setFolder(isFolder);
+
+        return imageContainer;
+    }
+
+    private StackPane createItemStackPane(String path, ImageContainer imageContainer, boolean isFolder) {
+        StackPane stackPane = new StackPane();
+        stackPane.getChildren().addAll(imageContainer.getHighlightRect(), imageContainer.getContainer());
+
+        setupItemClickHandler(stackPane, path, imageContainer, isFolder);
+        setupItemFocusHandler(stackPane, imageContainer, isFolder);
+
+        stackPane.setFocusTraversable(true);
+        containerHolders.add(imageContainer);
+        imageContainer.setMainPane(stackPane);
+
+        return stackPane;
+    }
+
+    private void setupItemClickHandler(StackPane stackPane, String path, ImageContainer imageContainer, boolean isFolder) {
+        stackPane.setOnMouseClicked(event -> {
+            try {
+                pauseSelectByFocus = true;
+                stackPane.requestFocus();
+                if (isFolder) {
+                    navigateToFolder(path);
+                } else {
+                    selectImageContainer(imageContainer);
+                }
+            } finally {
+                pauseSelectByFocus = false;
+            }
+        });
+    }
+
+    private void setupItemFocusHandler(StackPane stackPane, ImageContainer imageContainer, boolean isFolder) {
+        stackPane.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (pauseSelectByFocus) {
+                return;
+            }
+            if (newValue != null && newValue && !isFolder && selectedImageContainer != imageContainer) {
+                selectImageContainer(imageContainer);
+            }
+        });
+    }
+
+    private ScrollPane createScrollPane() {
         ScrollPane scrollPane = new ScrollPane(flowPane);
         this.scrollPane = scrollPane;
         scrollPane.setFitToWidth(true);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setFocusTraversable(false);
         scrollPane.setOnKeyPressed(this::handleKeyPress);
-        galleryPane.getChildren().addAll(scrollPane);
-        return galleryPane;
+        return scrollPane;
+    }
+
+    private void navigateToFolder(String folderPath) {
+        currentFolderPath = folderPath;
+        selectedImageContainer = null;
+        toolHBox = null; // Force recreation to update back button
+        breadcrumbBar = null; // Force recreation to update breadcrumb
+        onTabOpened();
     }
 
     @SuppressWarnings("unused")
@@ -647,6 +957,10 @@ public class GalleryController {
 
     private boolean selectImageContainer(ImageContainer imageContainer) {
         try {
+            // Skip folders - only images can be selected
+            if (imageContainer.isFolder()) {
+                return false;
+            }
             if (selectedImageContainer != null) {
                 selectedImageContainer.getHighlightRect().setVisible(false);
             }
@@ -660,7 +974,7 @@ public class GalleryController {
                 if (openMultiPagePdfIfNeeded(fileImagePath)) {
                     return true;
                 }
-                
+
                 projectionScreensUtil.setImage(fileImagePath, ProjectionType.IMAGE, nextFileImagePath);
                 loadImagePathToPreviewCanvas(fileImagePath);
                 return true;
@@ -686,25 +1000,25 @@ public class GalleryController {
 
     private String getNextFileImagePath() {
         int selectedIndex = getSelectedImageIndex();
-        ImageContainer nextImageContainer = getImageContainer(selectedIndex + 1);
-        String nextFileImagePath;
-        if (nextImageContainer != null) {
-            nextFileImagePath = nextImageContainer.getFileImagePath();
-        } else {
-            nextFileImagePath = null;
+        // Find next image (skip folders)
+        for (int i = selectedIndex + 1; i < containerHolders.size(); i++) {
+            ImageContainer container = getImageContainer(i);
+            if (container != null && !container.isFolder()) {
+                return container.getFileImagePath();
+            }
         }
-        return nextFileImagePath;
+        return null;
     }
 
     private List<String> getImagePathsFromFolder(@SuppressWarnings("SameParameterValue") String folderPath) {
-        List<String> imagePaths = new ArrayList<>();
+        List<String> paths = new ArrayList<>();
         File folder = new File(folderPath);
         List<File> orderedFiles = new ArrayList<>();
         if (folder.exists() && folder.isDirectory()) {
             File[] files = folder.listFiles();
             if (files != null) {
                 for (File file : files) {
-                    if (isImageFile(file.getName())) {
+                    if (file.isDirectory() || isImageFile(file.getName())) {
                         orderedFiles.add(file);
                     }
                 }
@@ -712,16 +1026,84 @@ public class GalleryController {
         }
         orderedFiles.sort(getComparator());
         for (File file : orderedFiles) {
-            imagePaths.add(file.getAbsolutePath());
+            paths.add(file.getAbsolutePath());
         }
-        return imagePaths;
+        return paths;
+    }
+
+    private int countItemsInFolder(String folderPath) {
+        File folder = new File(folderPath);
+        if (!folder.exists() || !folder.isDirectory()) {
+            return 0;
+        }
+        File[] files = folder.listFiles();
+        if (files == null) {
+            return 0;
+        }
+        return (int) Arrays.stream(files)
+                .filter(file -> isImageFile(file.getName()))
+                .count();
+    }
+
+    private void renderFolderIcon(Canvas canvas, int itemCount) {
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        // Draw folder icon (simple representation)
+        double width = canvas.getWidth();
+        double height = canvas.getHeight();
+        double padding = FOLDER_ICON_PADDING;
+        double folderWidth = width - 2 * padding;
+        double folderHeight = height - 2 * padding - FOLDER_ICON_TEXT_SPACE;
+
+        double bodyTop = padding + FOLDER_ICON_TAB_TOP_OFFSET;
+
+        // Folder body (rectangle)
+        gc.setFill(FOLDER_BODY_COLOR);
+        gc.fillRect(padding, bodyTop, folderWidth, folderHeight);
+
+        // Folder tab (trapezoid-like shape)
+        gc.setFill(FOLDER_TAB_COLOR);
+        double[] xPoints = {
+                padding,
+                padding + FOLDER_ICON_TAB_OFFSET,
+                padding + folderWidth - FOLDER_ICON_TAB_CORNER_OFFSET,
+                padding + folderWidth
+        };
+        double[] yPoints = {
+                bodyTop,
+                padding,
+                padding,
+                bodyTop
+        };
+        gc.fillPolygon(xPoints, yPoints, 4);
+
+        // Folder outline
+        gc.setStroke(FOLDER_OUTLINE_COLOR);
+        gc.setLineWidth(FOLDER_ICON_STROKE_WIDTH);
+        gc.strokeRect(padding, bodyTop, folderWidth, folderHeight);
+        gc.strokePolyline(xPoints, yPoints, 4);
+
+        // Item count text
+        gc.setFill(FOLDER_TEXT_COLOR);
+        Font font = Font.font(FOLDER_ICON_FONT_SIZE);
+        gc.setFont(font);
+        String countText = formatItemCount(itemCount);
+        // Approximate text width (roughly 9-10 pixels per character for 16pt font)
+        // This is simpler and more efficient than creating a scene for measurement
+        double textWidth = countText.length() * TEXT_WIDTH_MULTIPLIER;
+        gc.fillText(countText, (width - textWidth) / 2, height - FOLDER_ICON_TEXT_BOTTOM_OFFSET);
+    }
+
+    private String formatItemCount(int count) {
+        return count + " item" + (count != 1 ? "s" : "");
     }
 
     private static Comparator<File> getComparator() {
         ImageOrderMethod imageOrderMethod = settings.getImageOrderMethod();
-        return switch (imageOrderMethod) {
-            case ASCENDING_BY_TITLE -> Comparator.comparing(File::getName);
-            case DESCENDING_BY_TITLE -> (o1, o2) -> o2.getName().compareTo(o1.getName());
+        Comparator<File> secondaryComparator = switch (imageOrderMethod) {
+            case ASCENDING_BY_TITLE -> (o1, o2) -> naturalCompare(o1.getName(), o2.getName());
+            case DESCENDING_BY_TITLE -> (o1, o2) -> naturalCompare(o2.getName(), o1.getName());
             case BY_MODIFIED_DATE -> (o1, o2) -> {
                 FileTime fileLastModifiedTime1 = getFileLastModifiedTime(o1);
                 FileTime fileLastModifiedTime2 = getFileLastModifiedTime(o2);
@@ -744,6 +1126,78 @@ public class GalleryController {
                 return lastAccessedTimeCompare;
             };
         };
+
+        // First compare by type (folders first, then files), then by secondary comparator
+        return Comparator.comparing((File file) -> file.isDirectory() ? 0 : 1)
+                .thenComparing(secondaryComparator);
+    }
+
+    private static int naturalCompare(String s1, String s2) {
+        if (s1 == null && s2 == null) {
+            return 0;
+        }
+        if (s1 == null) {
+            return -1;
+        }
+        if (s2 == null) {
+            return 1;
+        }
+
+        // Strip accents for comparison while preserving structure
+        String normalized1 = projector.utils.StringUtils.stripAccentsPreservingStructure(s1);
+        String normalized2 = projector.utils.StringUtils.stripAccentsPreservingStructure(s2);
+
+        int len1 = normalized1.length();
+        int len2 = normalized2.length();
+        int i1 = 0;
+        int i2 = 0;
+
+        while (i1 < len1 && i2 < len2) {
+            char c1 = normalized1.charAt(i1);
+            char c2 = normalized2.charAt(i2);
+
+            boolean isDigit1 = Character.isDigit(c1);
+            boolean isDigit2 = Character.isDigit(c2);
+
+            if (isDigit1 && isDigit2) {
+                // Both are digits - parse and compare as numbers
+                int num1 = 0;
+                int num2 = 0;
+
+                // Parse number from normalized1
+                while (i1 < len1 && Character.isDigit(normalized1.charAt(i1))) {
+                    num1 = num1 * 10 + Character.getNumericValue(normalized1.charAt(i1));
+                    i1++;
+                }
+
+                // Parse number from normalized2
+                while (i2 < len2 && Character.isDigit(normalized2.charAt(i2))) {
+                    num2 = num2 * 10 + Character.getNumericValue(normalized2.charAt(i2));
+                    i2++;
+                }
+
+                if (num1 != num2) {
+                    return Integer.compare(num1, num2);
+                }
+            } else if (isDigit1) {
+                // normalized1 has digit, normalized2 has non-digit - digits come after non-digits
+                return 1;
+            } else if (isDigit2) {
+                // normalized2 has digit, normalized1 has non-digit - digits come after non-digits
+                return -1;
+            } else {
+                // Both are non-digits - compare as characters (case-insensitive)
+                int compare = Character.compare(Character.toLowerCase(c1), Character.toLowerCase(c2));
+                if (compare != 0) {
+                    return compare;
+                }
+                i1++;
+                i2++;
+            }
+        }
+
+        // One string is shorter
+        return Integer.compare(len1, len2);
     }
 
     private boolean isImageFile(String fileName) {
@@ -793,10 +1247,6 @@ public class GalleryController {
         return -1;
     }
 
-    private int getNumImages() {
-        return flowPane.getChildren().size();
-    }
-
     private void setSelectedImage(int index) {
         try {
             pauseSelectByFocus = true;
@@ -806,7 +1256,7 @@ public class GalleryController {
                 return;
             }
             ImageContainer imageContainer = getImageContainer(index);
-            if (imageContainer != null) {
+            if (imageContainer != null && !imageContainer.isFolder()) {
                 if (selectImageContainer(imageContainer)) {
                     Bounds boundsInParent = stackPane.getBoundsInParent();
                     double yPos = boundsInParent.getMinY();
@@ -835,15 +1285,25 @@ public class GalleryController {
 
     public void setNext() {
         int selectedIndex = getSelectedImageIndex();
-        if (selectedIndex < getNumImages() - 1) {
-            setSelectedImage(selectedIndex + 1);
+        // Find next image (skip folders)
+        for (int i = selectedIndex + 1; i < containerHolders.size(); i++) {
+            ImageContainer container = getImageContainer(i);
+            if (container != null && !container.isFolder()) {
+                setSelectedImage(i);
+                return;
+            }
         }
     }
 
     public void setPrevious() {
         int selectedIndex = getSelectedImageIndex();
-        if (selectedIndex > 0) {
-            setSelectedImage(selectedIndex - 1);
+        // Find previous image (skip folders)
+        for (int i = selectedIndex - 1; i >= 0; i--) {
+            ImageContainer container = getImageContainer(i);
+            if (container != null && !container.isFolder()) {
+                setSelectedImage(i);
+                return;
+            }
         }
     }
 

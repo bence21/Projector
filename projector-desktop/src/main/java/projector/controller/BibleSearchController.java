@@ -22,7 +22,6 @@ import projector.model.Book;
 import projector.model.Chapter;
 import projector.utils.BibleVerseTextFlow;
 
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -57,14 +56,7 @@ public class BibleSearchController {
     private List<Bible> bibles;
 
     private static String strip(String s) {
-        s = stripAccents(s).replaceAll("[^a-zA-Z]", "").toLowerCase(Locale.US).trim();
-        return s;
-    }
-
-    private static String stripAccents(String s) {
-        s = Normalizer.normalize(s, Normalizer.Form.NFD);
-        //noinspection RegExpSimplifiable
-        s = s.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
+        s = projector.utils.StringUtils.stripAccentsPreservingStructure(s).replaceAll("[^a-zA-Z]", "").toLowerCase(Locale.US).trim();
         return s;
     }
 
@@ -211,7 +203,7 @@ public class BibleSearchController {
                         Text reference = new Text(book.getShortOrTitle() + " " + (iPart + 1) + ":" + (iVerse + 1) + " ");
                         setReferenceTextColor(reference);
                         textFlow.getChildren().add(reference);
-                        char[] chars = stripAccents(verse).toLowerCase().toCharArray();
+                        char[] chars = projector.utils.StringUtils.stripAccentsPreservingStructure(verse).toLowerCase().toCharArray();
                         char[] searchTextChars = text3.toCharArray();
                         int verseIndex = 0;
                         int fromIndex = 0;
