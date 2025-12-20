@@ -41,3 +41,7 @@ mysql/
 /.cache/
 /gallery/
 /Projector-server/aPublic_folder/update/app
+/Projector-server/bin/
+/projector-common/bin/
+/.settings/
+/projector-desktop-updater/bin
