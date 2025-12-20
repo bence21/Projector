@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ProjectionScreensUtil {
     private static ProjectionScreensUtil instance = null;
@@ -176,14 +177,13 @@ public class ProjectionScreensUtil {
     }
 
     public void addProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
-        List<ProjectionTextChangeListener> projectionTextChangeListeners = getProjectionTextChangeListeners();
-        projectionTextChangeListeners.add(projectionTextChangeListener);
+        getProjectionTextChangeListeners().add(projectionTextChangeListener);
         projectionTextChangeListener.onSetText(text, projectionType, projectionData);
     }
 
-    private List<ProjectionTextChangeListener> getProjectionTextChangeListeners() {
+    private synchronized List<ProjectionTextChangeListener> getProjectionTextChangeListeners() {
         if (projectionTextChangeListeners == null) {
-            projectionTextChangeListeners = new ArrayList<>();
+            projectionTextChangeListeners = new CopyOnWriteArrayList<>();
         }
         return projectionTextChangeListeners;
     }
