@@ -2004,6 +2004,7 @@ public class ProjectionScreenController {
         canvas.setHeight(height);
         clearCanvas(canvas);
         this.image = image; // if we need to make adjustments later
+        this.lastImage = image; // needed to add so newly connected over network would receive correctly the last image
         drawImageOnCanvasColorAdjustments(image, canvas);
         setImageComponentVisibility(true);
     }
