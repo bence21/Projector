@@ -28,6 +28,8 @@ public class ProjectionScreensUtil {
     private String text = "";
     private ProjectionType projectionType = null;
     private ProjectionData projectionData = null;
+    private String fileImagePath = null;
+    private Image lastImage = null;
     private ProjectionScreenController mainProjectionScreenController = null;
 
     private ProjectionScreensUtil() {
@@ -162,6 +164,9 @@ public class ProjectionScreensUtil {
         this.text = text;
         this.projectionType = projectionType;
         this.projectionData = projectionData;
+        // Clear image context when setting text-based projection types
+        this.fileImagePath = null;
+        this.lastImage = null;
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
             projectionScreenHolder.setText(text, projectionType, projectionData);
         }
@@ -171,8 +176,15 @@ public class ProjectionScreensUtil {
     }
 
     public void drawImage(Image image) {
+        ProjectionType projectionType = ProjectionType.IMAGE;
+        this.projectionType = projectionType;
+        this.lastImage = image;
+        this.fileImagePath = null;
+        // Clear text context when setting image
+        this.text = "";
+        this.projectionData = null;
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
-            projectionScreenHolder.drawImage(image);
+            projectionScreenHolder.drawImage(image, projectionType);
         }
     }
 
@@ -209,11 +221,18 @@ public class ProjectionScreensUtil {
     }
 
     public void clearAll() {
+        // Update context for CLEAR projection type
+        ProjectionType projectionType = ProjectionType.CLEAR;
+        this.projectionType = projectionType;
+        this.text = "";
+        this.projectionData = null;
+        this.fileImagePath = null;
+        this.lastImage = null;
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
-            projectionScreenHolder.clearAll();
+            projectionScreenHolder.clearAll(projectionType);
         }
         for (ProjectionTextChangeListener projectionTextChangeListener : getProjectionTextChangeListeners()) {
-            projectionTextChangeListener.onSetText("", ProjectionType.CLEAR, projectionData);
+            projectionTextChangeListener.onSetText("", projectionType, projectionData);
         }
     }
 
@@ -238,14 +257,34 @@ public class ProjectionScreensUtil {
     }
 
     public void setImage(String fileImagePath, ProjectionType projectionType, String nextFileImagePath) {
+        this.projectionType = projectionType;
+        updateImageContext(fileImagePath);
+        // Clear text context when setting image
+        this.text = "";
+        this.projectionData = null;
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
             projectionScreenHolder.setImage(fileImagePath, projectionType, nextFileImagePath);
         }
     }
 
+    /**
+     * Updates the image context without broadcasting to controllers.
+     * Used internally to avoid circular updates.
+     */
+    private void updateImageContext(String fileImagePath) {
+        this.fileImagePath = fileImagePath;
+        this.lastImage = null;
+    }
+
     public void songEnding() {
+        // Update context for SONG_ENDING projection type
+        ProjectionType projectionType = ProjectionType.SONG_ENDING;
+        this.projectionType = projectionType;
+        // Clear image context when setting song ending
+        this.fileImagePath = null;
+        this.lastImage = null;
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
-            projectionScreenHolder.songEnding();
+            projectionScreenHolder.songEnding(projectionType);
         }
     }
 
@@ -283,5 +322,26 @@ public class ProjectionScreensUtil {
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
             projectionScreenHolder.setNextScheduledSong(nextScheduledSong);
         }
+    }
+
+    // Getters for application context state
+    public String getText() {
+        return text;
+    }
+
+    public ProjectionType getProjectionType() {
+        return projectionType;
+    }
+
+    public ProjectionData getProjectionData() {
+        return projectionData;
+    }
+
+    public String getFileImagePath() {
+        return fileImagePath;
+    }
+
+    public Image getLastImage() {
+        return lastImage;
     }
 }

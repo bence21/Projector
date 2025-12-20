@@ -411,7 +411,7 @@ public class ProjectionScreenController {
             if (fileImagePath != null) {
                 setImage(fileImagePath, projectionType, null);
             } else {
-                drawImage(this.lastImage);
+                drawImage(this.lastImage, projectionType);
             }
             return;
         }
@@ -502,8 +502,8 @@ public class ProjectionScreenController {
         setText(newText, projectionType, null);
     }
 
-    public void songEnding() {
-        setText2("", ProjectionType.SONG_ENDING); // this should send also over network. The simple clear button not
+    public void songEnding(ProjectionType projectionType) {
+        setText2("", projectionType); // this should send also over network. The simple clear button not
     }
 
     public void setText(String newText, ProjectionType projectionType, ProjectionData projectionData) {
@@ -512,15 +512,15 @@ public class ProjectionScreenController {
 
     private void setText5(String newText, ProjectionType projectionType, ProjectionData projectionData) {
         if (projectionType == ProjectionType.SONG) {
-            setSongVerseProjection(projectionData, newText);
+            setSongVerseProjection(projectionData, newText, projectionType);
         } else if (projectionType == ProjectionType.BIBLE) {
-            setBibleVerseProjection(projectionData, newText);
+            setBibleVerseProjection(projectionData, newText, projectionType);
         } else {
             setText3(newText, projectionType, projectionData);
         }
     }
 
-    private void setSongVerseProjection(ProjectionData projectionData, String text) {
+    private void setSongVerseProjection(ProjectionData projectionData, String text, ProjectionType projectionType) {
         if (projectionData != null) {
             List<SongVerseProjectionDTO> songVerseProjectionDTOS = null;
             ProjectionDTO projectionDTO = projectionData.getProjectionDTO();
@@ -533,7 +533,7 @@ public class ProjectionScreenController {
                 if (focusOnSongPart && !guideView) {
                     String focusedText = getFocusedText(songVerseProjectionDTOS);
                     if (!focusedText.isEmpty()) {
-                        setText3(focusedText, ProjectionType.SONG, projectionData);
+                        setText3(focusedText, projectionType, projectionData);
                         return;
                     }
                 }
@@ -543,7 +543,7 @@ public class ProjectionScreenController {
                 }
             }
         }
-        setText3(text, ProjectionType.SONG, projectionData);
+        setText3(text, projectionType, projectionData);
     }
 
     private static Bible getSelectedBible(ProjectionDTO projectionDTO, List<Bible> bibles) {
@@ -612,15 +612,15 @@ public class ProjectionScreenController {
         return preferred.isParallelSelected();
     }
 
-    private void setBibleVerseProjection(ProjectionData projectionData, String text) {
+    private void setBibleVerseProjection(ProjectionData projectionData, String text, ProjectionType projectionType) {
         if (projectionData != null) {
             ProjectionDTO projectionDTO = projectionData.getProjectionDTO();
             if (projectionDTO != null) {
-                setText3(getTextFromProjectionDTO(projectionDTO, text), ProjectionType.BIBLE, projectionData);
+                setText3(getTextFromProjectionDTO(projectionDTO, text), projectionType, projectionData);
                 return;
             }
         }
-        setText3(text, ProjectionType.BIBLE, projectionData);
+        setText3(text, projectionType, projectionData);
     }
 
     private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS, boolean guideView, boolean focusOnSongPart) {
@@ -846,6 +846,10 @@ public class ProjectionScreenController {
         boolean visible = projectionType == ProjectionType.SONG && song != null && projectionScreenSettings.isProgressBar() && settings.isShowProgressLine();
         if (visible) {
             List<SongVersePartTextFlow> songVersePartTextFlows = projectionData.getSongVersePartTextFlows();
+            if (songVersePartTextFlows == null || songVersePartTextFlows.isEmpty()) {
+                setVisibility(progressBarHBox, false);
+                return;
+            }
             int n = songVersePartTextFlows.size();
             progressBarHBox.setPrefWidth(paneForPadding.getWidth());
             double width = paneForPadding.getWidth() / n;
@@ -884,6 +888,10 @@ public class ProjectionScreenController {
             pane.setClip(new Rectangle(currentSongVerseWidth, height));
             progressBarHBoxChildren.add(pane);
             List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+            if (songVersePartTextFlows == null || songVersePartTextFlows.isEmpty()) {
+                ++i;
+                continue;
+            }
             ObservableList<Node> stackPaneChildren = stackPane.getChildren();
 
             createProgressBarBackgroundPane(songVersePartTextFlows, currentSongVerseWidth, width, stackPaneChildren);
@@ -909,6 +917,9 @@ public class ProjectionScreenController {
             return null;
         }
         List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+        if (songVersePartTextFlows == null || songVersePartTextFlows.isEmpty()) {
+            return null;
+        }
         return getFromList(songVersePartTextFlows, songVersePartTextFlows.size() - 1);
     }
 
@@ -1042,16 +1053,16 @@ public class ProjectionScreenController {
                 return true;
             }
             case CLEAR -> {
-                clear();
+                clear(ProjectionType.CLEAR);
                 return true;
             }
         }
         return false;
     }
 
-    private void clear() {
+    private void clear(ProjectionType projectionType) {
         activeText = "";
-        projectionType = ProjectionType.CLEAR;
+        this.projectionType = projectionType;
         textFlow.setText2("", 0, 10);
         textFlow1.setText2("", 0, 10);
         progressLine.setVisible(false);
@@ -1061,11 +1072,11 @@ public class ProjectionScreenController {
         stopCountDownTimer();
     }
 
-    public void clearAll() {
+    public void clearAll(ProjectionType projectionType) {
         if (isLock) {
             return;
         }
-        clear();
+        clear(projectionType);
     }
 
     private void hideImageIfNotImageType(ProjectionType projectionType) {
@@ -1222,7 +1233,36 @@ public class ProjectionScreenController {
     private void setSomeInitializationForDoubleProjectionScreenController(ProjectionScreenController doubleProjectionScreenController) {
         doubleProjectionScreenController.setBlank(isBlank);
         doubleProjectionScreenController.setParentProjectionScreenController(doubleProjectionScreenController);
-        doubleProjectionScreenController.setText(activeText, projectionType, projectionData);
+        doubleProjectionScreenController.initializeFromApplicationContext();
+    }
+
+    /**
+     * Initializes this controller from the application context state.
+     * This ensures newly created controllers have the latest projection state.
+     */
+    public void initializeFromApplicationContext() {
+        ProjectionScreensUtil util = ProjectionScreensUtil.getInstance();
+        String contextText = util.getText();
+        ProjectionType contextProjectionType = util.getProjectionType();
+        ProjectionData contextProjectionData = util.getProjectionData();
+        String contextFileImagePath = util.getFileImagePath();
+        Image contextLastImage = util.getLastImage();
+
+        // Initialize based on projection type
+        if (contextProjectionType == ProjectionType.IMAGE) {
+            if (contextFileImagePath != null) {
+                // Use fileImagePath if available
+                setImage(contextFileImagePath, contextProjectionType, null);
+            } else if (contextLastImage != null) {
+                // Use lastImage if available
+                drawImage(contextLastImage, contextProjectionType);
+            }
+        } else {
+            // For text-based projections
+            if (contextText != null && contextProjectionType != null) {
+                setText(contextText, contextProjectionType, contextProjectionData);
+            }
+        }
     }
 
     public void createCustomStageWithIterator(Iterator<CustomCanvas> iterator) {
@@ -1300,7 +1340,7 @@ public class ProjectionScreenController {
             });
             customCanvasClose(stage2, customCanvas, () -> onCloseCustomCanvasStage(customStageController));
             customStageController.setBlank(isBlank);
-            customStageController.setText(activeText, projectionType, projectionData);
+            customStageController.initializeFromApplicationContext();
             customCanvas.setStage(stage2);
             customStageController.createCustomStageWithIterator(iterator);
         } catch (IOException e) {
@@ -1394,7 +1434,7 @@ public class ProjectionScreenController {
             stage.show();
         }
         if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.setText(activeText, projectionType, projectionData);
+            previewProjectionScreenController.initializeFromApplicationContext();
         }
     }
 
@@ -1943,8 +1983,8 @@ public class ProjectionScreenController {
         }
     }
 
-    public void drawImage(Image image) {
-        this.projectionType = ProjectionType.IMAGE;
+    public void drawImage(Image image, ProjectionType projectionType) {
+        this.projectionType = projectionType;
         this.lastImage = image;
         this.fileImagePath = null;
         if (isLock) {

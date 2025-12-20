@@ -27,6 +27,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Popup;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import projector.application.ProjectionType;
 import projector.application.Settings;
 import projector.controller.listener.ProjectionScreenListener;
 import projector.controller.util.ProjectionScreenHolder;
@@ -288,7 +289,7 @@ public class ProjectionScreensController {
         clearButton.setPrefHeight(BUTTON_SIZE);
         clearButton.setTextAlignment(TextAlignment.CENTER);
         clearButton.setPadding(new Insets(4.0));
-        clearButton.setOnAction(event -> projectionScreenController.clearAll());
+        clearButton.setOnAction(event -> projectionScreenController.clearAll(ProjectionType.CLEAR));
         return clearButton;
     }
 

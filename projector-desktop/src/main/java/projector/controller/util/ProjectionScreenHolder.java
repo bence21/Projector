@@ -166,16 +166,16 @@ public class ProjectionScreenHolder {
         projectionScreenController.setText(text, projectionType, projectionData);
     }
 
-    public void drawImage(Image image) {
-        projectionScreenController.drawImage(image);
+    public void drawImage(Image image, ProjectionType projectionType) {
+        projectionScreenController.drawImage(image, projectionType);
     }
 
     public void stopCountDownTimer() {
         projectionScreenController.stopCountDownTimer();
     }
 
-    public void clearAll() {
-        projectionScreenController.clearAll();
+    public void clearAll(ProjectionType projectionType) {
+        projectionScreenController.clearAll(projectionType);
     }
 
     public void onClose() {
@@ -194,8 +194,8 @@ public class ProjectionScreenHolder {
         projectionScreenController.setNextScheduledSong(nextScheduledSong);
     }
 
-    public void songEnding() {
-        projectionScreenController.songEnding();
+    public void songEnding(ProjectionType projectionType) {
+        projectionScreenController.songEnding(projectionType);
     }
 
     public void setProgress(double progress) {
