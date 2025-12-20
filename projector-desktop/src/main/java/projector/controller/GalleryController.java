@@ -38,6 +38,7 @@ import projector.application.Settings;
 import projector.controller.util.ImageCacheService;
 import projector.controller.util.ImageContainer;
 import projector.controller.util.ImageOrderMethod;
+import projector.controller.util.PdfService;
 import projector.controller.util.ProjectionScreensUtil;
 
 import java.awt.*;
@@ -95,7 +96,7 @@ public class GalleryController {
     }
 
     public static void drawImageOnCanvas(Image image, Canvas canvas) {
-        if (image == null) {
+        if (image == null || canvas == null) {
             return;
         }
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -271,9 +272,21 @@ public class GalleryController {
         if (isMediaFile(imagePath)) {
             return null;
         }
-        Image image = getImageForCanvas(imagePath, canvas);
-        getProjectionScreenController().drawImageOnCanvasColorAdjustments(image, canvas);
+        Image image = loadImageForCanvas(imagePath, canvas);
+        if (image != null) {
+            getProjectionScreenController().drawImageOnCanvasColorAdjustments(image, canvas);
+        }
         return image;
+    }
+
+    private Image loadImageForCanvas(String imagePath, Canvas canvas) {
+        if (PdfService.isPdfFile(imagePath)) {
+            // Render current PDF page for preview
+            float dpi = (float) (Math.max(canvas.getWidth(), canvas.getHeight()) * 72.0 / 400.0);
+            return PdfService.getInstance().renderCurrentPageAsImage(imagePath, dpi);
+        } else {
+            return getImageForCanvas(imagePath, canvas);
+        }
     }
 
     private void reloadPreviewCanvas() {
@@ -526,7 +539,7 @@ public class GalleryController {
                 LOG.warn("Invalid or null image data");
             }
         } catch (Exception e) {
-            LOG.error("Error decoding image data: " + e.getMessage(), e);
+            LOG.error("Error decoding image data: {}", e.getMessage(), e);
         }
         return null;
     }
@@ -643,6 +656,11 @@ public class GalleryController {
                 String nextFileImagePath = getNextFileImagePath();
                 String fileImagePath = imageContainer.getFileImagePath();
                 setLastAccessTime(Path.of(fileImagePath));
+
+                if (openMultiPagePdfIfNeeded(fileImagePath)) {
+                    return true;
+                }
+                
                 projectionScreensUtil.setImage(fileImagePath, ProjectionType.IMAGE, nextFileImagePath);
                 loadImagePathToPreviewCanvas(fileImagePath);
                 return true;
@@ -651,6 +669,17 @@ public class GalleryController {
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
+        }
+        return false;
+    }
+
+    private boolean openMultiPagePdfIfNeeded(String filePath) {
+        if (PdfService.isPdfFile(filePath)) {
+            int pageCount = PdfService.getInstance().getPageCount(filePath);
+            if (pageCount > 1) {
+                MyController.getInstance().openPdfViewerTab(filePath);
+                return true;
+            }
         }
         return false;
     }
@@ -718,7 +747,7 @@ public class GalleryController {
     }
 
     private boolean isImageFile(String fileName) {
-        String[] imageExtensions = {".jpg", ".jpeg", ".png", ".gif", ".mp4"};
+        String[] imageExtensions = {".jpg", ".jpeg", ".png", ".gif", ".mp4", ".pdf"};
         for (String extension : imageExtensions) {
             if (fileName.toLowerCase().endsWith(extension)) {
                 return true;
@@ -819,7 +848,6 @@ public class GalleryController {
     }
 
     private record Result(BorderPane borderPane, TextField valueTextField, Slider slider) {
-
 
     }
 

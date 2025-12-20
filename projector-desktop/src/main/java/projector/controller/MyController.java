@@ -17,6 +17,10 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 import org.jnativehook.GlobalScreen;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,6 +101,8 @@ public class MyController {
     private Tab projectionScreensTab;
     private MainDesktop mainDesktop;
     private Stage settingsStage;
+    private final Map<String, Tab> openPdfTabs = new HashMap<>();
+    private final Map<String, PdfViewerController> openPdfControllers = new HashMap<>();
 
     public static MyController getInstance() {
         return instance;
@@ -455,5 +461,84 @@ public class MyController {
 
     public void clearButtonOnAction() {
         projectionScreensUtil.clearAll();
+    }
+
+    public void openPdfViewerTab(String filePath) {
+        if (!projector.controller.util.PdfService.isPdfFile(filePath)) {
+            return;
+        }
+
+        // Check if PDF tab is already open
+        if (openPdfTabs.containsKey(filePath)) {
+            Tab existingTab = openPdfTabs.get(filePath);
+            tabPane.getSelectionModel().select(existingTab);
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/view/PdfViewer.fxml"));
+            loader.setResources(Settings.getInstance().getResourceBundle());
+            Pane root = loader.load();
+            Tab pdfTab = getPdfTab(filePath, loader, root);
+
+            openPdfTabs.put(filePath, pdfTab);
+            tabPane.getTabs().add(pdfTab);
+            tabPane.getSelectionModel().select(pdfTab);
+        } catch (Exception e) {
+            LOG.error("Error opening PDF viewer tab for: {}", filePath, e);
+        }
+    }
+
+    private Tab getPdfTab(String filePath, FXMLLoader loader, Pane root) {
+        PdfViewerController controller = loader.getController();
+        controller.setPdfFile(filePath);
+
+        File file = new File(filePath);
+        String fileName = file.getName();
+        Tab pdfTab = new Tab(fileName, root);
+        pdfTab.setClosable(true);
+
+        // Store controller reference
+        openPdfControllers.put(filePath, controller);
+
+        // Handle tab closing
+        pdfTab.setOnClosed(event -> {
+            controller.cleanup();
+            projector.controller.util.PdfService.getInstance().closeDocument(filePath);
+            openPdfTabs.remove(filePath);
+            openPdfControllers.remove(filePath);
+        });
+        return pdfTab;
+    }
+
+    public void closeAllPdfFiles() {
+        // Create a copy of the file paths to avoid concurrent modification
+        java.util.List<String> filePaths = new java.util.ArrayList<>(openPdfTabs.keySet());
+
+        // First, shutdown all executor services and wait for them to finish
+        // This prevents background threads from accessing closed PDF documents
+        for (String filePath : filePaths) {
+            PdfViewerController controller = openPdfControllers.get(filePath);
+            if (controller != null) {
+                controller.cleanup();
+            }
+        }
+
+        // Now that all rendering tasks are finished, close the documents
+        for (String filePath : filePaths) {
+            projector.controller.util.PdfService.getInstance().closeDocument(filePath);
+
+            Tab tab = openPdfTabs.get(filePath);
+            if (tab != null) {
+                tabPane.getTabs().remove(tab);
+            }
+        }
+
+        openPdfTabs.clear();
+        openPdfControllers.clear();
+
+        // Also close any remaining documents in PdfService as a safety measure
+        projector.controller.util.PdfService.getInstance().closeAllDocuments();
     }
 }

@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static projector.controller.GalleryController.isMediaFile;
+import static projector.controller.util.PdfService.isPdfFile;
 
 public class ImageCacheService {
 
@@ -87,6 +88,8 @@ public class ImageCacheService {
             hashMap.remove(cacheImagePath);
             if (isMediaFile(filePath)) {
                 image = getVideoThumbnail(filePath, width, height);
+            } else if (isPdfFile(filePath)) {
+                image = getPdfThumbnail(filePath, width, height);
             } else {
                 image = getImageFromFile(filePath);
             }
@@ -190,6 +193,33 @@ public class ImageCacheService {
         mediaPlayer.dispose();
     }
 
+    private Image getPdfThumbnail(String filePath, int width, int height) {
+        if (!isPdfFile(filePath)) {
+            return null;
+        }
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return null;
+        }
+
+        try {
+            // Render first page of PDF at appropriate DPI for thumbnail
+            float dpi = Math.max(width, height) * 72.0f / 200.0f; // Scale DPI based on thumbnail size
+            BufferedImage bufferedImage = PdfService.getInstance().renderPage(filePath, 0, dpi);
+            if (bufferedImage != null) {
+                Image fxImage = SwingFXUtils.toFXImage(bufferedImage, null);
+                // Resize to fit thumbnail dimensions using existing resizeImage method
+                BufferedImage resizedBufferedImage = resizeImage(fxImage, width, height);
+                if (resizedBufferedImage != null) {
+                    return SwingFXUtils.toFXImage(resizedBufferedImage, null);
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("Error creating PDF thumbnail", e);
+        }
+        return null;
+    }
+
     public void checkForImage(String filePath, int width, int height) {
         File file = new File(filePath);
         if (!file.exists()) {
@@ -200,7 +230,12 @@ public class ImageCacheService {
         if (path.toFile().exists()) {
             return;
         }
-        Image image = getImageFromFile(filePath);
+        Image image;
+        if (isPdfFile(filePath)) {
+            image = getPdfThumbnail(filePath, width, height);
+        } else {
+            image = getImageFromFile(filePath);
+        }
         if (image != null) {
             createCache(image, width, height, cacheImagePath);
         }

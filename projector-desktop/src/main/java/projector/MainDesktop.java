@@ -418,6 +418,7 @@ public class MainDesktop extends Application {
         if (tmpStage != null) {
             tmpStage.close();
         }
+        myController.closeAllPdfFiles();
         myController.close();
         ProjectionScreensUtil.getInstance().onClose();
         CustomCanvasService.getInstance().save();
@@ -565,6 +566,9 @@ public class MainDesktop extends Application {
         if (projectionScreenSettings != null) {
             ProjectionScreenHolder projectionScreenHolder = projectionScreenSettings.getProjectionScreenHolder();
             if (projectionScreenHolder != null) {
+                if (projectionScreenHolder.getScreenIndex() == null) {
+                    projectionScreenHolder.setScreenIndex(1);
+                }
                 projectionScreenHolder.popupCreated();
             }
         }

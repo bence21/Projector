@@ -61,6 +61,7 @@ import projector.controller.song.SongController;
 import projector.controller.util.AutomaticAction;
 import projector.controller.util.ImageCacheService;
 import projector.controller.util.OnResultListener;
+import projector.controller.util.PdfService;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
@@ -91,6 +92,7 @@ import static java.lang.Thread.sleep;
 import static projector.controller.BibleController.getBibleVerseWithReferenceText;
 import static projector.controller.GalleryController.clearCanvas;
 import static projector.controller.GalleryController.isMediaFile;
+import static projector.controller.util.PdfService.isPdfFile;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
 import static projector.network.TCPClient.getFromIntegers;
@@ -298,7 +300,13 @@ public class ProjectionScreenController {
                     }
                 }
             } else if (projectionType == ProjectionType.IMAGE) {
-                if (galleryController != null) {
+                if (isPdfFile(fileImagePath)) {
+                    if (next) {
+                        nextPdfPage();
+                    } else {
+                        previousPdfPage();
+                    }
+                } else if (galleryController != null) {
                     if (next) {
                         galleryController.setNext();
                     } else {
@@ -1863,6 +1871,8 @@ public class ProjectionScreenController {
                 String path = ProjectionScreenController.this.fileImagePath;
                 if (isMediaFile(path)) {
                     handleMediaFile(path);
+                } else if (isPdfFile(path)) {
+                    handlePdfFile(path);
                 } else {
                     handleImage(path);
                 }
@@ -1876,11 +1886,44 @@ public class ProjectionScreenController {
         playVideo(path);
     }
 
+    private void handlePdfFile(String filePath) {
+        try {
+            if (isLock) {
+                return;
+            }
+            // Calculate DPI based on screen size
+            // This ensures the PDF renders at high quality for projection
+            float dpi = getDpiByMaxScreenSize();
+            Image pdfImage = PdfService.getInstance().renderCurrentPageAsImage(filePath, dpi);
+            if (pdfImage != null) {
+                drawImageAndNotifyListeners(pdfImage);
+            }
+        } catch (Exception e) {
+            LOG.error("Error handling PDF file: {}", filePath, e);
+        }
+    }
+
+    private float getDpiByMaxScreenSize() {
+        float DEFAULT_DPI = 150.0f;
+        try {
+            ScaledSizes scaledSizes = getGetScaledSizes();
+            double TESTED_OUT_HEIGHT_VALUE = 1691;
+            return (float) (DEFAULT_DPI * scaledSizes.height() / TESTED_OUT_HEIGHT_VALUE);
+        } catch (Exception e) {
+            LOG.error("Error calculating DPI by max screen size", e);
+            return DEFAULT_DPI; // Default fallback on error
+        }
+    }
+
     private void handleImage(String fileImagePath) {
         Image image = getImageForProjectorScreenController(fileImagePath);
         if (isLock) {
             return; // load remains before this, to be eager
         }
+        drawImageAndNotifyListeners(image);
+    }
+
+    private void drawImageAndNotifyListeners(Image image) {
         drawAnImageOnCanvas(image);
         callOnImageListeners(image);
     }
@@ -1967,6 +2010,20 @@ public class ProjectionScreenController {
             } catch (Exception e) {
                 LOG.error("Failed to stop", e);
             }
+        }
+    }
+
+    public void nextPdfPage() {
+        if (isPdfFile(fileImagePath)) {
+            PdfService.getInstance().nextPage(fileImagePath);
+            handlePdfFile(fileImagePath);
+        }
+    }
+
+    public void previousPdfPage() {
+        if (isPdfFile(fileImagePath)) {
+            PdfService.getInstance().previousPage(fileImagePath);
+            handlePdfFile(fileImagePath);
         }
     }
 
