@@ -1,11 +1,13 @@
 package projector.network;
 
+import javafx.application.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
 import projector.controller.ProjectionScreenController;
 import projector.controller.song.SongController;
 
+import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -23,6 +25,8 @@ public class TCPServer {
 
     public synchronized static void startShareNetwork(ProjectionScreenController projectionScreenController, SongController songController) {
         Settings.getInstance().setShareOnNetwork(true);
+        // Clear any previous error message
+        Settings.getInstance().setNetworkSharingError(null);
         if (thread == null) {
             createThreads(projectionScreenController, songController);
         } else {
@@ -48,6 +52,8 @@ public class TCPServer {
                     Sender sender = new Sender(connectionSocket, projectionScreenController, songController, senderType);
                     addSocket(sender);
                 }
+            } catch (BindException e) {
+                handleBindException(e, senderType);
             } catch (SocketException e) {
                 try {
                     if (e.getMessage().equalsIgnoreCase("socket closed")) {
@@ -91,5 +97,23 @@ public class TCPServer {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
+    }
+
+    private static void handleBindException(BindException e, SenderType senderType) {
+        LOG.error("Address already in use: bind", e);
+        Platform.runLater(() -> {
+            Settings settings = Settings.getInstance();
+            String errorMessage;
+            if (senderType == SenderType.IMAGE) {
+                // Image port failure is non-critical - text sharing can still work
+                errorMessage = settings.getResourceBundle().getString("Image sharing port is unavailable, but text sharing is working.");
+                // Don't stop network sharing for image port issues
+            } else {
+                // Text port failure is critical - stop network sharing
+                settings.setShareOnNetwork(false);
+                errorMessage = settings.getResourceBundle().getString("Port already in use. Another application may be using the required port. Please close it and try again.");
+            }
+            settings.setNetworkSharingError(errorMessage);
+        });
     }
 }

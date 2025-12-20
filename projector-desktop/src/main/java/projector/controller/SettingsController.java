@@ -1,6 +1,7 @@
 package projector.controller;
 
 import javafx.application.Platform;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
@@ -8,6 +9,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.RadioButton;
@@ -89,6 +91,8 @@ public class SettingsController {
     private Button connectToSharedButton;
     @FXML
     private Button shareOnLocalNetworkButton;
+    @FXML
+    private Label networkSharingErrorLabel;
     @FXML
     private CheckBox referenceChapterSorting;
     @FXML
@@ -327,6 +331,16 @@ public class SettingsController {
         connectToSharedButton.setOnAction(event -> TCPClient.connectToShared());
         settings.connectedToSharedProperty().addListener((observable, oldValue, newValue) -> shareOnLocalNetworkButton.setDisable(newValue));
         allowRemoteButton.setSelected(settings.isAllowRemote());
+        initializeNetworkSharingErrorLabel();
+    }
+
+    private void initializeNetworkSharingErrorLabel() {
+        if (networkSharingErrorLabel != null) {
+            StringProperty networkSharingErrorProperty = settings.networkSharingErrorProperty();
+            networkSharingErrorLabel.textProperty().bind(networkSharingErrorProperty);
+            networkSharingErrorLabel.managedProperty().bind(networkSharingErrorProperty.isNotEmpty());
+            networkSharingErrorLabel.visibleProperty().bind(networkSharingErrorProperty.isNotEmpty());
+        }
     }
 
     private void initializeProgressLine() {

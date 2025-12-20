@@ -2,6 +2,8 @@ package projector.application;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeType;
 import javafx.scene.text.FontWeight;
@@ -37,6 +39,7 @@ public class Settings {
     private final BooleanProperty connectedToShared = new SimpleBooleanProperty(false);
     private final SimpleBooleanProperty showProgressLine = new SimpleBooleanProperty(true);
     private final SimpleBooleanProperty progressLinePositionIsTop = new SimpleBooleanProperty(true);
+    private final SimpleStringProperty networkSharingError = new SimpleStringProperty("");
     private int maxFont = 80;
     private boolean withAccents = false;
     private Color backgroundColor = Color.BLACK;
@@ -810,6 +813,14 @@ public class Settings {
 
     public synchronized BooleanProperty connectedToSharedProperty() {
         return connectedToShared;
+    }
+
+    public synchronized StringProperty networkSharingErrorProperty() {
+        return networkSharingError;
+    }
+
+    public synchronized void setNetworkSharingError(String error) {
+        javafx.application.Platform.runLater(() -> networkSharingError.set(error == null ? "" : error));
     }
 
     public synchronized OrderMethod getSongOrderMethod() {
