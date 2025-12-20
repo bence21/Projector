@@ -1599,6 +1599,10 @@ public class ProjectionScreenController {
             projectionImageChangeListeners = new ArrayList<>();
         }
         projectionImageChangeListeners.add(projectionTextChangeListener);
+        // Send current image if one is displayed, similar to how text works
+        if (projectionType == ProjectionType.IMAGE && lastImage != null) {
+            projectionTextChangeListener.onImageChanged(lastImage, projectionType, projectionData);
+        }
     }
 
     public void removeProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
