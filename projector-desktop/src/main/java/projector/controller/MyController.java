@@ -17,10 +17,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
-
-import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 import org.jnativehook.GlobalScreen;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +37,10 @@ import projector.utils.GlobalKeyListenerExample;
 import projector.utils.scene.text.SongVersePartTextFlow;
 
 import java.awt.*;
+import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 
@@ -103,6 +102,8 @@ public class MyController {
     private Stage settingsStage;
     private final Map<String, Tab> openPdfTabs = new HashMap<>();
     private final Map<String, PdfViewerController> openPdfControllers = new HashMap<>();
+    private final Map<String, Tab> openVideoTabs = new HashMap<>();
+    private final Map<String, VideoViewerController> openVideoControllers = new HashMap<>();
 
     public static MyController getInstance() {
         return instance;
@@ -512,6 +513,54 @@ public class MyController {
         return pdfTab;
     }
 
+    public void openVideoViewerTab(String filePath) {
+        if (!GalleryController.isMediaFile(filePath)) {
+            return;
+        }
+
+        // Check if video tab is already open
+        if (openVideoTabs.containsKey(filePath)) {
+            Tab existingTab = openVideoTabs.get(filePath);
+            tabPane.getSelectionModel().select(existingTab);
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/view/VideoViewer.fxml"));
+            loader.setResources(Settings.getInstance().getResourceBundle());
+            Pane root = loader.load();
+            Tab videoTab = getVideoTab(filePath, loader, root);
+
+            openVideoTabs.put(filePath, videoTab);
+            tabPane.getTabs().add(videoTab);
+            tabPane.getSelectionModel().select(videoTab);
+        } catch (Exception e) {
+            LOG.error("Error opening video viewer tab for: {}", filePath, e);
+        }
+    }
+
+    private Tab getVideoTab(String filePath, FXMLLoader loader, Pane root) {
+        VideoViewerController controller = loader.getController();
+        controller.setVideoFile(filePath);
+
+        File file = new File(filePath);
+        String fileName = file.getName();
+        Tab videoTab = new Tab(fileName, root);
+        videoTab.setClosable(true);
+
+        // Store controller reference
+        openVideoControllers.put(filePath, controller);
+
+        // Handle tab closing
+        videoTab.setOnClosed(event -> {
+            controller.cleanup();
+            openVideoTabs.remove(filePath);
+            openVideoControllers.remove(filePath);
+        });
+        return videoTab;
+    }
+
     public void closeAllPdfFiles() {
         // Create a copy of the file paths to avoid concurrent modification
         java.util.List<String> filePaths = new java.util.ArrayList<>(openPdfTabs.keySet());
@@ -540,5 +589,26 @@ public class MyController {
 
         // Also close any remaining documents in PdfService as a safety measure
         projector.controller.util.PdfService.getInstance().closeAllDocuments();
+    }
+
+    public void closeAllVideoFiles() {
+        // Create a copy of the file paths to avoid concurrent modification
+        java.util.List<String> filePaths = new java.util.ArrayList<>(openVideoTabs.keySet());
+
+        // Cleanup all video controllers
+        for (String filePath : filePaths) {
+            VideoViewerController controller = openVideoControllers.get(filePath);
+            if (controller != null) {
+                controller.cleanup();
+            }
+
+            Tab tab = openVideoTabs.get(filePath);
+            if (tab != null) {
+                tabPane.getTabs().remove(tab);
+            }
+        }
+
+        openVideoTabs.clear();
+        openVideoControllers.clear();
     }
 }

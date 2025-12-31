@@ -421,6 +421,7 @@ public class MainDesktop extends Application {
         // Close all settings windows
         closeAllSettingsWindows();
         myController.closeAllPdfFiles();
+        myController.closeAllVideoFiles();
         myController.close();
         ProjectionScreensUtil.getInstance().onClose();
         CustomCanvasService.getInstance().save();

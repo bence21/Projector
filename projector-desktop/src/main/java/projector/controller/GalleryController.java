@@ -975,6 +975,10 @@ public class GalleryController {
                     return true;
                 }
 
+                if (openVideoIfNeeded(fileImagePath)) {
+                    return true;
+                }
+
                 projectionScreensUtil.setImage(fileImagePath, ProjectionType.IMAGE, nextFileImagePath);
                 loadImagePathToPreviewCanvas(fileImagePath);
                 return true;
@@ -994,6 +998,14 @@ public class GalleryController {
                 MyController.getInstance().openPdfViewerTab(filePath);
                 return true;
             }
+        }
+        return false;
+    }
+
+    private boolean openVideoIfNeeded(String filePath) {
+        if (isMediaFile(filePath)) {
+            MyController.getInstance().openVideoViewerTab(filePath);
+            return true;
         }
         return false;
     }

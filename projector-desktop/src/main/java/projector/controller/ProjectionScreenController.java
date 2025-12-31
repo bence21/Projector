@@ -92,9 +92,9 @@ import static java.lang.Thread.sleep;
 import static projector.controller.BibleController.getBibleVerseWithReferenceText;
 import static projector.controller.GalleryController.clearCanvas;
 import static projector.controller.GalleryController.isMediaFile;
-import static projector.controller.util.PdfService.isPdfFile;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
+import static projector.controller.util.PdfService.isPdfFile;
 import static projector.network.TCPClient.getFromIntegers;
 import static projector.utils.ColorUtil.getColorWithOpacity;
 import static projector.utils.ColorUtil.getGeneralTextColorByTheme;
@@ -1491,7 +1491,23 @@ public class ProjectionScreenController {
             previewProjectionScreenController.onClose();
         }
         countDownTimerRunning = false;
-        getExecutorService().shutdown();
+        if (countDownTimerThread != null) {
+            countDownTimerThread.interrupt();
+        }
+        stopMediaPlayer(); // Stop and dispose MediaPlayer
+        // Shutdown executor service and wait for tasks to complete
+        if (executorService != null) {
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                    executorService.shutdownNow();
+                    executorService.awaitTermination(1, java.util.concurrent.TimeUnit.SECONDS);
+                }
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
         closeStage();
     }
 
@@ -1927,7 +1943,8 @@ public class ProjectionScreenController {
     }
 
     private void handleMediaFile(String path) {
-        playVideo(path);
+        // MediaPlayer operations must be on JavaFX Application Thread
+        Platform.runLater(() -> playVideo(path));
     }
 
     private void handlePdfFile(String filePath) {
@@ -2035,8 +2052,13 @@ public class ProjectionScreenController {
         mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
         mediaView.setMediaPlayer(mediaPlayer);
 
-        // Auto-play the video
-        mediaPlayer.play();
+        // Set volume based on whether this is the first projection screen
+        // Volume will be set by ProjectionScreensUtil when synchronizing, but we need to check here
+        // For now, mute by default - volume will be set via synchronization methods
+        mediaPlayer.setVolume(0.0);
+
+        // Don't auto-play - video will start when play button is pressed in VideoViewerController
+        // The playVideoOnAllScreens() method will be called to start playback
         setImageComponentVisibility(false);
     }
 
@@ -2046,7 +2068,7 @@ public class ProjectionScreenController {
         return mediaPlayer;
     }
 
-    private void stopMediaPlayer() {
+    public void stopMediaPlayer() {
         if (mediaPlayer != null) {
             try {
                 mediaPlayer.stop();
@@ -2056,6 +2078,82 @@ public class ProjectionScreenController {
                 LOG.error("Failed to stop", e);
             }
         }
+    }
+
+    public void playVideoPlayer() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.play();
+            } catch (Exception e) {
+                LOG.error("Failed to play video", e);
+            }
+        }
+    }
+
+    public void pauseVideoPlayer() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.pause();
+            } catch (Exception e) {
+                LOG.error("Failed to pause video", e);
+            }
+        }
+    }
+
+    public void seekVideoPlayer(javafx.util.Duration time) {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.seek(time);
+            } catch (Exception e) {
+                LOG.error("Failed to seek video", e);
+            }
+        }
+    }
+
+    public void setVideoVolume(double volume) {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.setVolume(Math.max(0.0, Math.min(1.0, volume)));
+            } catch (Exception e) {
+                LOG.error("Failed to set video volume", e);
+            }
+        }
+    }
+
+    public javafx.util.Duration getVideoCurrentTime() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                javafx.util.Duration currentTime = mediaPlayer.getCurrentTime();
+                if (currentTime != null && !currentTime.isUnknown()) {
+                    return currentTime;
+                }
+            } catch (Exception e) {
+                LOG.error("Failed to get video current time", e);
+            }
+        }
+        return null;
+    }
+
+    public double getVideoVolume() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                return mediaPlayer.getVolume();
+            } catch (Exception e) {
+                LOG.error("Failed to get video volume", e);
+            }
+        }
+        return 0.0;
+    }
+
+    public MediaPlayer.Status getVideoStatus() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                return mediaPlayer.getStatus();
+            } catch (Exception e) {
+                LOG.error("Failed to get video status", e);
+            }
+        }
+        return null;
     }
 
     public void nextPdfPage() {
