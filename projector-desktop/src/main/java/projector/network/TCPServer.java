@@ -45,7 +45,9 @@ public class TCPServer {
         return new Thread(() -> {
             try {
                 ServerSocket welcomeSocket = new ServerSocket(port);
-                welcomeSockets.add(welcomeSocket);
+                synchronized (welcomeSockets) {
+                    welcomeSockets.add(welcomeSocket);
+                }
                 while (!closed) {
                     Socket connectionSocket = welcomeSocket.accept();
                     Sender sender = new Sender(connectionSocket, projectionScreenController, songController, senderType);
@@ -82,14 +84,16 @@ public class TCPServer {
         interruptTread(imageThread);
         thread = null;
         imageThread = null;
-        for (ServerSocket welcomeSocket : welcomeSockets) {
-            try {
-                welcomeSocket.close();
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
+        synchronized (welcomeSockets) {
+            for (ServerSocket welcomeSocket : welcomeSockets) {
+                try {
+                    welcomeSocket.close();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
             }
+            welcomeSockets.clear();
         }
-        welcomeSockets.clear();
         closed = false;
     }
 
