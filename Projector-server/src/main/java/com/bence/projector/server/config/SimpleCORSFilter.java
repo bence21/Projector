@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1) // Run after RequestValidationFilter
 public class SimpleCORSFilter implements Filter {
     @Override
     public void init(FilterConfig filterConfig) {
@@ -26,8 +26,23 @@ public class SimpleCORSFilter implements Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
+        if (!(req instanceof HttpServletRequest request)) {
+            chain.doFilter(req, res);
+            return;
+        }
+
         HttpServletResponse response = (HttpServletResponse) res;
-        HttpServletRequest request = (HttpServletRequest) req;
+
+        // Validate request before processing
+        String requestURI = request.getRequestURI();
+        if (requestURI == null) {
+            // Request validation filter should have caught this, but handle it here as well
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("text/plain");
+            response.getWriter().write("Bad Request: Invalid HTTP request");
+            return;
+        }
+
         final String allowedOrigin = request.getHeader("Origin");
         response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
         response.setHeader("Access-Control-Allow-Credentials", "true");
@@ -39,15 +54,20 @@ public class SimpleCORSFilter implements Filter {
             chain.doFilter(req, res);
         } catch (RequestRejectedException e) {
             System.out.println("RequestRejectedException: " + e.getMessage());
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         } catch (IllegalStateException e) {
             System.out.println("IllegalStateException: " + e.getMessage());
+            if (!response.isCommitted()) {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
         } catch (NullPointerException e) {
-            System.out.println("NullPointerException: " + e.getMessage());
+            // Log with more context
+            System.out.println("NullPointerException in filter chain: " + e.getMessage() + 
+                             " (URI: " + requestURI + ", Method: " + request.getMethod() + ")");
+            if (!response.isCommitted()) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            }
         }
     }
 
-    @Override
-    public void destroy() {
-
-    }
 }
