@@ -38,4 +38,16 @@ public class MainPageAdapter extends FragmentStatePagerAdapter {
     public int getItemPosition(@NonNull Object object) {
         return POSITION_NONE;
     }
+
+    /**
+     * Safely update the songs list and notify the adapter of the change.
+     * This method ensures atomic updates to prevent ViewPager crashes.
+     *
+     * @param newSongs The new list of songs to use
+     */
+    public void updateSongs(List<Song> newSongs) {
+        this.songs.clear();
+        this.songs.addAll(newSongs);
+        notifyDataSetChanged();
+    }
 }
