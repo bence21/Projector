@@ -6,14 +6,14 @@ ext {
     support_version = "27.1.1"
 }
 android {
-    compileSdk 36
+    compileSdkVersion 36
     defaultConfig {
         applicationId "com.bence.songbook.dev"
         minSdkVersion 21
         //noinspection OldTargetApi
         targetSdkVersion 35
-        versionCode 135
-        versionName '2.16.4'
+        versionCode 136
+        versionName '2.16.5'
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled true
 
