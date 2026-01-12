@@ -954,8 +954,7 @@ public class MainActivity extends BaseActivity
             case SONG_REQUEST:
                 switch (resultCode) {
                     case 1:
-                        values.clear();
-                        values.addAll(memory.getValues());
+                        updateValuesList(memory.getValues());
                         break;
                     case SONG_DELETED:
                         refreshSongs();
@@ -1017,14 +1016,40 @@ public class MainActivity extends BaseActivity
         sortLanguagesByRecentlyViewedSongs(languages, this);
     }
 
+    /**
+     * Updates the values list with new data and notifies the pageAdapter if it exists.
+     * This ensures atomic updates to prevent ViewPager crashes.
+     * This method ensures execution on the UI thread.
+     *
+     * @param newValues The new list of songs to set as values
+     */
+    private void updateValuesList(List<Song> newValues) {
+        Runnable updateTask = () -> {
+            if (pageAdapter != null) {
+                // Use adapter's update method for cleaner separation
+                pageAdapter.updateSongs(newValues);
+            } else {
+                // If adapter doesn't exist yet, update values directly
+                values.clear();
+                values.addAll(newValues);
+            }
+        };
+
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            // Already on UI thread
+            updateTask.run();
+        } else {
+            // Post to UI thread
+            runOnUiThread(updateTask);
+        }
+    }
+
     private void refreshSongs() {
         setSongs(memory.getSongsOrEmptyList());
-        values.clear();
-        values.addAll(songs);
-        adapter.setSongList(values);
-        if (pageAdapter != null) {
-            pageAdapter.notifyDataSetChanged();
-        }
+        runOnUiThread(() -> {
+            updateValuesList(songs);
+            adapter.setSongList(values);
+        });
     }
 
     private void setShortNamesForSongCollections(List<SongCollection> songCollections) {
@@ -1305,8 +1330,7 @@ public class MainActivity extends BaseActivity
             }
         }
         runOnUiThread(() -> {
-            values.clear();
-            values.addAll(tempSongList);
+            updateValuesList(tempSongList);
             previouslyTitleSearchText = title;
             previouslyInSongSearchText = "";
         });
@@ -1561,8 +1585,7 @@ public class MainActivity extends BaseActivity
             }
         }
         runOnUiThread(() -> {
-            values.clear();
-            values.addAll(tempSongList);
+            updateValuesList(tempSongList);
             previouslyInSongSearchText = title;
             previouslyTitleSearchText = "";
         });
