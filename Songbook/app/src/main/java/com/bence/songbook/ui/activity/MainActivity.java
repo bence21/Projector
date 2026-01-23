@@ -2402,12 +2402,26 @@ public class MainActivity extends BaseActivity
     }
 
     public void onShareQueue(View view) {
+        StringBuilder ids = getQueueSongUuids();
+        String idsString = ids.length() > 0 ? ids.substring(1) : "";
+
+        if (idsString.isEmpty()) {
+            showToaster(getString(R.string.no_shareable_songs_in_queue), Toast.LENGTH_SHORT);
+            return;
+        }
+        
         Intent share = new Intent(android.content.Intent.ACTION_SEND);
         share.setType("text/plain");
         share.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
         String string = getString(R.string.queue);
         share.putExtra(Intent.EXTRA_SUBJECT, string);
         share.putExtra(Intent.EXTRA_TITLE, string);
+        share.putExtra(Intent.EXTRA_TEXT, BASE_URL + "queue?ids=" + idsString);
+        startActivity(Intent.createChooser(share, "Share queue!"));
+    }
+
+    @NonNull
+    private StringBuilder getQueueSongUuids() {
         StringBuilder ids = new StringBuilder();
         for (QueueSong queueSong : memory.getQueue()) {
             Song song = queueSong.getSong();
@@ -2419,8 +2433,7 @@ public class MainActivity extends BaseActivity
                 ids.append(",").append(uuid);
             }
         }
-        share.putExtra(Intent.EXTRA_TEXT, BASE_URL + "queue?ids=" + ids.substring(1, ids.length()));
-        startActivity(Intent.createChooser(share, "Share queue!"));
+        return ids;
     }
 
     public void onSaveQueue(View view) {

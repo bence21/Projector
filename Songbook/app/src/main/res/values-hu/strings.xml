@@ -97,6 +97,7 @@
     <string name="drag">Húzza</string>
     <string name="queue">Várakozási sor</string>
     <string name="added_to_queue">Hozzáadva a várakozási sorhoz</string>
+    <string name="no_shareable_songs_in_queue">Nincs megosztható ének a várakozási sorban</string>
     <string name="search_in_verses">Keresés a szövegben</string>
     <string name="edit_song_list">Éneklista modosítása</string>
     <string name="delete">Töröl</string>

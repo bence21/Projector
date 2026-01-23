@@ -97,6 +97,7 @@
     <string name="drag">Ziehen</string>
     <string name="queue">Warteliste</string>
     <string name="added_to_queue">Zur Warteliste hinzugefügt</string>
+    <string name="no_shareable_songs_in_queue">Keine teilbaren Lieder in der Warteliste</string>
     <string name="search_in_verses">Suche in Versen</string>
     <string name="my_library">Meine Bibliothek</string>
     <string name="song_lists">Songlisten</string>
