@@ -14,6 +14,7 @@ import static com.bence.projector.server.utils.StringUtils.normalizeAccents;
                 @Index(name = "normalized_word_index", columnList = "normalized_word")
         }
 )
+@org.hibernate.annotations.DynamicUpdate
 public class ReviewedWord extends AbstractModel {
 
     @Column(nullable = false, length = 500)

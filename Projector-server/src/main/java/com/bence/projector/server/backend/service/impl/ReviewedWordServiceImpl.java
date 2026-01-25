@@ -8,7 +8,9 @@ import com.bence.projector.server.backend.repository.ReviewedWordRepository;
 import com.bence.projector.server.backend.service.ReviewedWordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -36,6 +38,7 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
     }
 
     @Override
+    @Transactional
     public ReviewedWord saveOrUpdate(ReviewedWord reviewedWord, User reviewedBy) {
         if (reviewedWord == null) {
             return null;
@@ -63,6 +66,37 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
             }
         }
         return reviewedWordRepository.save(targetWord);
+    }
+
+    @Override
+    @Transactional
+    public List<ReviewedWord> saveBulkNewWords(List<String> words, Language language, User reviewedBy) {
+        if (words == null || words.isEmpty() || language == null) {
+            return new ArrayList<>();
+        }
+
+        List<ReviewedWord> reviewedWords = new ArrayList<>();
+        Date reviewedDate = new Date();
+
+        for (String word : words) {
+            if (word == null || word.isEmpty()) {
+                continue;
+            }
+
+            ReviewedWord reviewedWord = new ReviewedWord();
+            reviewedWord.setWord(word); // This automatically sets normalizedWord via setWord()
+            reviewedWord.setLanguage(language);
+            reviewedWord.setStatus(ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
+            reviewedWord.setReviewedBy(reviewedBy);
+            reviewedWord.setReviewedDate(reviewedDate);
+            reviewedWords.add(reviewedWord);
+        }
+
+        if (reviewedWords.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return (List<ReviewedWord>) reviewedWordRepository.saveAll(reviewedWords);
     }
 
     @Override

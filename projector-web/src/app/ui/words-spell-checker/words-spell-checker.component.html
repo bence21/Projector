@@ -13,11 +13,12 @@
         <mat-select [(ngModel)]="filterType" (selectionChange)="onFilterChange()">
           <mat-option value="unreviewed">Unreviewed</mat-option>
           <mat-option value="problematic">Problematic Only</mat-option>
-          <mat-option value="banned">Banned Words</mat-option>
           <mat-option value="reviewed-good">Reviewed Good</mat-option>
           <mat-option value="context-specific">Context-Specific</mat-option>
           <mat-option value="accepted">Accepted</mat-option>
           <mat-option value="rejected">Rejected</mat-option>
+          <mat-option value="banned">Banned Words</mat-option>
+          <mat-option value="auto-accepted-from-public">Auto Accepted From Public</mat-option>
           <mat-option value="all">All</mat-option>
         </mat-select>
       </mat-form-field>

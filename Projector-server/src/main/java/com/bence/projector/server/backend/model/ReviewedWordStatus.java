@@ -5,5 +5,6 @@ public enum ReviewedWordStatus {
     CONTEXT_SPECIFIC,
     ACCEPTED,
     REJECTED,
-    BANNED
+    BANNED,
+    AUTO_ACCEPTED_FROM_PUBLIC
 }

@@ -9,7 +9,9 @@ import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ReviewedWordService;
+import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.UserService;
+import com.bence.projector.server.utils.AutoAcceptWordsFromPublicSongsUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 import java.util.List;
@@ -31,18 +34,21 @@ public class ReviewedWordResource {
     private final ReviewedWordAssembler reviewedWordAssembler;
     private final LanguageService languageService;
     private final UserService userService;
+    private final SongService songService;
 
     @Autowired
     public ReviewedWordResource(
             ReviewedWordService reviewedWordService,
             ReviewedWordAssembler reviewedWordAssembler,
             LanguageService languageService,
-            UserService userService
+            UserService userService,
+            SongService songService
     ) {
         this.reviewedWordService = reviewedWordService;
         this.reviewedWordAssembler = reviewedWordAssembler;
         this.languageService = languageService;
         this.userService = userService;
+        this.songService = songService;
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/admin/api/reviewedWord/{languageId}")
@@ -157,6 +163,39 @@ public class ReviewedWordResource {
         }
 
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(savedWords), HttpStatus.ACCEPTED);
+    }
+
+    @RequestMapping(method = {RequestMethod.GET}, value = "/admin/api/reviewedWord/{languageId}/autoAcceptFromPublicSongs")
+    public ResponseEntity<Object> autoAcceptWordsFromPublicSongs(
+            Principal principal,
+            @PathVariable final String languageId,
+            @RequestParam(value = "minScore", required = false, defaultValue = "50") final long minScore
+    ) {
+        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        if (validationError != null) {
+            return validationError;
+        }
+
+        try {
+            AutoAcceptWordsFromPublicSongsUtil.AutoAcceptResult result = AutoAcceptWordsFromPublicSongsUtil
+                    .autoAcceptWordsFromPublicSongs(
+                            languageService,
+                            reviewedWordService,
+                            songService,
+                            languageId,
+                            minScore
+                    );
+
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("songsProcessed", result.songsProcessed());
+            response.put("minScore", minScore);
+
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error processing request: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     private ResponseEntity<Object> validateUserAndLanguage(Principal principal, String languageId) {

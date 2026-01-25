@@ -6,7 +6,8 @@ export enum ReviewedWordStatus {
   CONTEXT_SPECIFIC = 'CONTEXT_SPECIFIC',
   ACCEPTED = 'ACCEPTED',
   REJECTED = 'REJECTED',
-  BANNED = 'BANNED'
+  BANNED = 'BANNED',
+  AUTO_ACCEPTED_FROM_PUBLIC = 'AUTO_ACCEPTED_FROM_PUBLIC'
 }
 
 export class ReviewedWord extends BaseModel {

@@ -26,6 +26,8 @@ import static com.bence.projector.server.utils.SetLanguages.addWordsInCollection
 )
 public class Song extends AbstractModel {
 
+    private static final long THIRTY_DAYS_IN_MILLISECONDS = 2592000000L;
+
     private String originalId;
     private String title;
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "song")
@@ -593,7 +595,7 @@ public class Song extends AbstractModel {
             for (String word : words) {
                 wordHashMap.put(word.toLowerCase(), true);
             }
-        }getText();
+        }
         return wordHashMap;
     }
 
@@ -602,5 +604,26 @@ public class Song extends AbstractModel {
             wordHashMapKeySet = getWordHashMap().keySet();
         }
         return wordHashMapKeySet;
+    }
+
+    public long getScore() {
+        long score = 0;
+        score += getViews();
+        score += getFavourites() * 3;
+        if (getYoutubeUrl() != null && !getYoutubeUrl().isEmpty()) {
+            score += 10;
+        }
+        if (createdDate != null && modifiedDate != null) {
+            long currentDate = System.currentTimeMillis();
+            long timeSinceCreated = currentDate - createdDate.getTime();
+            if (timeSinceCreated < THIRTY_DAYS_IN_MILLISECONDS) {
+                score += (long) (14 * (1 - (double) timeSinceCreated / THIRTY_DAYS_IN_MILLISECONDS));
+            }
+            long timeSinceModified = currentDate - modifiedDate.getTime();
+            if (timeSinceModified < THIRTY_DAYS_IN_MILLISECONDS) {
+                score += (long) (4 * (1 - (double) timeSinceModified / THIRTY_DAYS_IN_MILLISECONDS));
+            }
+        }
+        return score;
     }
 }

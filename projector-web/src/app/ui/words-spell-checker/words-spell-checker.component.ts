@@ -94,7 +94,7 @@ export class WordsSpellCheckerComponent implements OnInit {
   normalizedWordBunchRows: NormalizedWordBunchRow[] = [];
   languages: Language[] = [];
   selectedLanguage: Language;
-  filterType: string = 'all'; // 'all', 'problematic', 'banned', 'reviewed-good', 'context-specific', 'accepted', 'rejected', 'unreviewed'
+  filterType: string = 'all'; // 'all', 'problematic', 'banned', 'reviewed-good', 'context-specific', 'accepted', 'rejected', 'auto-accepted-from-public', 'unreviewed'
   allSelected: boolean = false;
   someSelected: boolean = false;
 
@@ -437,6 +437,8 @@ export class WordsSpellCheckerComponent implements OnInit {
         return NormalizedWordBunchFilterType.ACCEPTED;
       case 'rejected':
         return NormalizedWordBunchFilterType.REJECTED;
+      case 'auto-accepted-from-public':
+        return NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_PUBLIC;
       case 'unreviewed':
         return NormalizedWordBunchFilterType.UNREVIEWED;
       default:

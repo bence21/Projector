@@ -108,6 +108,11 @@ public class NormalizedWordResource {
         return getWordBunchesByStatus(languageId, ReviewedWordStatus.REJECTED);
     }
 
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/auto-accepted-from-public")
+    public ResponseEntity<Object> getAutoAcceptedFromPublicWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+        return getWordBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
+    }
+
     @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/unreviewed")
     public ResponseEntity<Object> getUnreviewedWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
         Language language = languageService.findOneByUuid(languageId);
