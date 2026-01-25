@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.bence.projector.server.utils.SetLanguages.changeWordsInSongVerse;
@@ -52,6 +53,9 @@ public class NormalizedWordResource {
     private final NormalizedWordBunchAssembler normalizedWordBunchAssembler;
     private final ReviewedWordService reviewedWordService;
     private final ReviewedWordAssembler reviewedWordAssembler;
+    
+    // Cache for word bunches by language UUID
+    private final ConcurrentHashMap<String, List<NormalizedWordBunch>> wordBunchesCache = new ConcurrentHashMap<>();
 
     @Autowired
     public NormalizedWordResource(
@@ -206,11 +210,24 @@ public class NormalizedWordResource {
     }
 
     private List<NormalizedWordBunch> getAllWordBunchesForLanguage(Language language) {
-        return getNormalizedWordBunches(
-                songService.findAllByLanguage(language.getUuid()),
+        String languageUuid = language.getUuid();
+        // Check cache first
+        List<NormalizedWordBunch> cached = wordBunchesCache.get(languageUuid);
+        if (cached != null) {
+            return cached;
+        }
+        // Compute and cache
+        List<NormalizedWordBunch> result = getNormalizedWordBunches(
+                songService.findAllByLanguage(languageUuid),
                 languageService.findAll(),
                 language
         );
+        wordBunchesCache.put(languageUuid, result);
+        return result;
+    }
+    
+    private void clearCacheForLanguage(String languageUuid) {
+        wordBunchesCache.remove(languageUuid);
     }
 
     private Set<String> getReviewedWordsSet(Language language) {
@@ -327,6 +344,12 @@ public class NormalizedWordResource {
             HttpServletRequest httpServletRequest,
             @PathVariable final String languageId
     ) {
+        // Get language object early for cache operations
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
+        }
+        
         String word = changeWordDTO.getWord();
         List<Song> songs = getContainsInSongs(languageId, word);
 
@@ -334,6 +357,15 @@ public class NormalizedWordResource {
         if (count != changeWordDTO.getOccurrence()) {
             return new ResponseEntity<>("Found matches: " + count + " not equals " + changeWordDTO.getOccurrence(), HttpStatus.NOT_ACCEPTABLE);
         }
+        
+        // Get cached word bunches and compute word bunches for songs BEFORE changes
+        List<NormalizedWordBunch> cachedBunches = getAllWordBunchesForLanguage(language);
+        List<NormalizedWordBunch> oldBunches = getNormalizedWordBunches(
+                songs,
+                languageService.findAll(),
+                language
+        );
+        
         String correction = changeWordDTO.getCorrection();
         Date modifiedDate = new Date();
         for (Song song : songs) {
@@ -343,6 +375,18 @@ public class NormalizedWordResource {
             song.setModifiedDate(modifiedDate);
         }
         songService.saveAllAndRemoveCache(songs);
+        
+        // Compute word bunches for songs AFTER changes
+        List<NormalizedWordBunch> newBunches = getNormalizedWordBunches(
+                songs,
+                languageService.findAll(),
+                language
+        );
+        
+        // Merge old and new bunches into cached bunches
+        List<NormalizedWordBunch> mergedBunches = mergeWordBunches(cachedBunches, oldBunches, newBunches);
+        wordBunchesCache.put(languageId, mergedBunches);
+        
         return new ResponseEntity<>(changeWordDTO, HttpStatus.ACCEPTED);
     }
 
@@ -357,5 +401,148 @@ public class NormalizedWordResource {
             }
         }
         return count;
+    }
+
+    /**
+     * Merges word bunches by subtracting old counts and adding new counts.
+     * Updates the cached word bunches with changes from modified songs.
+     */
+    private List<NormalizedWordBunch> mergeWordBunches(
+            List<NormalizedWordBunch> cached,
+            List<NormalizedWordBunch> oldBunches,
+            List<NormalizedWordBunch> newBunches) {
+        
+        // Create a deep copy of cached bunches to avoid modifying the original
+        List<NormalizedWordBunch> merged = new ArrayList<>();
+        Map<String, NormalizedWordBunch> normalizedWordMap = new HashMap<>();
+        
+        // Copy cached bunches and create lookup map by normalized word
+        copyCachedBunchesAndCreateMap(cached, merged, normalizedWordMap);
+        
+        // Subtract counts from old bunches
+        subtractWordBunches(normalizedWordMap, oldBunches);
+        
+        // Add counts from new bunches
+        addWordBunches(merged, normalizedWordMap, newBunches);
+        
+        // Remove word bunches with zero or negative counts and recalculate
+        cleanupAndRecalculate(merged);
+        
+        return merged;
+    }
+    
+    private void copyCachedBunchesAndCreateMap(List<NormalizedWordBunch> cached,
+                                                List<NormalizedWordBunch> merged,
+                                                Map<String, NormalizedWordBunch> normalizedWordMap) {
+        for (NormalizedWordBunch nwb : cached) {
+            NormalizedWordBunch copy = copyNormalizedWordBunch(nwb);
+            merged.add(copy);
+            // Use the first word bunch's normalized word as the key
+            if (!copy.getWordBunches().isEmpty()) {
+                String normalizedWord = copy.getWordBunches().get(0).getNormalizedWord();
+                normalizedWordMap.put(normalizedWord, copy);
+            }
+        }
+    }
+    
+    private NormalizedWordBunch copyNormalizedWordBunch(NormalizedWordBunch original) {
+        NormalizedWordBunch copy = new NormalizedWordBunch();
+        for (WordBunch wb : original.getWordBunches()) {
+            WordBunch wbCopy = new WordBunch();
+            wbCopy.setWord(wb.getWord());
+            wbCopy.setCount(wb.getCount());
+            copy.add(wbCopy);
+        }
+        return copy;
+    }
+    
+    private void subtractWordBunches(Map<String, NormalizedWordBunch> normalizedWordMap,
+                                     List<NormalizedWordBunch> oldBunches) {
+        for (NormalizedWordBunch oldNwb : oldBunches) {
+            for (WordBunch oldWb : oldNwb.getWordBunches()) {
+                String normalizedWord = oldWb.getNormalizedWord();
+                NormalizedWordBunch targetNwb = normalizedWordMap.get(normalizedWord);
+                if (targetNwb != null) {
+                    // Find matching word bunch by exact word
+                    WordBunch targetWb = findWordBunchByWord(targetNwb, oldWb.getWord());
+                    if (targetWb != null) {
+                        targetWb.setCount(targetWb.getCount() - oldWb.getCount());
+                    }
+                }
+            }
+        }
+    }
+    
+    private void addWordBunches(List<NormalizedWordBunch> merged,
+                                Map<String, NormalizedWordBunch> normalizedWordMap,
+                                List<NormalizedWordBunch> newBunches) {
+        for (NormalizedWordBunch newNwb : newBunches) {
+            // Get normalized word from first word bunch (all should have same normalized word)
+            if (newNwb.getWordBunches().isEmpty()) {
+                continue;
+            }
+            String normalizedWord = newNwb.getWordBunches().get(0).getNormalizedWord();
+            NormalizedWordBunch targetNwb = normalizedWordMap.get(normalizedWord);
+            
+            if (targetNwb != null) {
+                // Add all word bunches from new normalized word bunch
+                for (WordBunch newWb : newNwb.getWordBunches()) {
+                    // Find or create matching word bunch by exact word
+                    WordBunch targetWb = findWordBunchByWord(targetNwb, newWb.getWord());
+                    if (targetWb != null) {
+                        targetWb.setCount(targetWb.getCount() + newWb.getCount());
+                    } else {
+                        // Create new word bunch
+                        WordBunch wbCopy = new WordBunch();
+                        wbCopy.setWord(newWb.getWord());
+                        wbCopy.setCount(newWb.getCount());
+                        targetNwb.add(wbCopy);
+                    }
+                }
+            } else {
+                // Create new normalized word bunch and add all its word bunches
+                NormalizedWordBunch newNwbCopy = copyNormalizedWordBunch(newNwb);
+                merged.add(newNwbCopy);
+                normalizedWordMap.put(normalizedWord, newNwbCopy);
+            }
+        }
+    }
+    
+    private WordBunch findWordBunchByWord(NormalizedWordBunch nwb, String word) {
+        for (WordBunch wb : nwb.getWordBunches()) {
+            if (wb.getWord().equals(word)) {
+                return wb;
+            }
+        }
+        return null;
+    }
+    
+    private void cleanupAndRecalculate(List<NormalizedWordBunch> merged) {
+        List<NormalizedWordBunch> toRemove = new ArrayList<>();
+        for (NormalizedWordBunch nwb : merged) {
+            // Remove word bunches with zero or negative counts
+            List<WordBunch> toRemoveWb = new ArrayList<>();
+            for (WordBunch wb : nwb.getWordBunches()) {
+                if (wb.getCount() <= 0) {
+                    toRemoveWb.add(wb);
+                }
+            }
+            nwb.getWordBunches().removeAll(toRemoveWb);
+            
+            // Remove normalized word bunches that have no word bunches left
+            if (nwb.getWordBunches().isEmpty()) {
+                toRemove.add(nwb);
+            } else {
+                // Recalculate best word and ratio
+                nwb.calculateBest();
+            }
+        }
+        merged.removeAll(toRemove);
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/admin/api/normalizedWordBunches/{languageId}/clearCache")
+    public ResponseEntity<Object> clearCache(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+        clearCacheForLanguage(languageId);
+        return new ResponseEntity<>("Cache cleared for language " + languageId, HttpStatus.ACCEPTED);
     }
 }

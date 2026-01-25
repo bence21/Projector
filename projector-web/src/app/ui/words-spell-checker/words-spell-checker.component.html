@@ -21,6 +21,9 @@
           <mat-option value="all">All</mat-option>
         </mat-select>
       </mat-form-field>
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh data" style="margin-left: 16px; vertical-align: middle;">
+        <mat-icon>refresh</mat-icon>
+      </button>
       <button *ngIf="someSelected" mat-raised-button color="primary" (click)="bulkMarkAsGood()" style="margin-left: 16px;">
         Mark Selected as Good
       </button>

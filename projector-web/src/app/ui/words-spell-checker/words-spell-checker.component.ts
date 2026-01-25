@@ -525,4 +525,23 @@ export class WordsSpellCheckerComponent implements OnInit {
     );
   }
 
+  /**
+   * Refreshes the data by clearing the cache and reloading.
+   * This method clears the backend cache for the current language and then reloads the data.
+   */
+  refresh() {
+    if (!this.selectedLanguage) {
+      return;
+    }
+    this.normalizedWordBunchDataService.clearCache(this.selectedLanguage).subscribe(
+      () => {
+        this.snackBar.open('Cache cleared, refreshing data...', 'Close', { duration: 2000 });
+        this.onFilterChange();
+      },
+      (err) => {
+        generalError(null, this, err, this.dialog, this.snackBar);
+      }
+    );
+  }
+
 }

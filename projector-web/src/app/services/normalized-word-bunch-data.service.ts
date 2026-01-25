@@ -51,4 +51,8 @@ export class NormalizedWordBunchDataService {
     const filterPath = getFilterPath(filterType);
     return this.api.getAll(NormalizedWordBunch, 'admin/api/normalizedWordBunches/' + language.uuid + '/' + filterPath);
   }
+
+  clearCache(language: Language): Observable<any> {
+    return this.api.post('admin/api/normalizedWordBunches/' + language.uuid + '/clearCache');
+  }
 }
