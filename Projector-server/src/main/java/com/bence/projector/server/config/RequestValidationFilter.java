@@ -67,6 +67,18 @@ public class RequestValidationFilter implements Filter {
             return;
         }
 
+        // Reject WebDAV methods (PROPFIND, etc.) early to prevent Spring Security firewall exceptions
+        // These are typically scanner probes and should be rejected silently
+        if ("PROPFIND".equals(method) || "PROPPATCH".equals(method) || 
+            "MKCOL".equals(method) || "COPY".equals(method) || 
+            "MOVE".equals(method) || "LOCK".equals(method) || 
+            "UNLOCK".equals(method)) {
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            response.setContentType("text/plain");
+            response.getWriter().write("Method Not Allowed");
+            return;
+        }
+
         // Request is valid, continue with the filter chain
         chain.doFilter(req, res);
     }

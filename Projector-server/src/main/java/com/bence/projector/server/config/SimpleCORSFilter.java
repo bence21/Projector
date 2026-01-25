@@ -53,8 +53,19 @@ public class SimpleCORSFilter implements Filter {
         try {
             chain.doFilter(req, res);
         } catch (RequestRejectedException e) {
-            System.out.println("RequestRejectedException: " + e.getMessage());
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            String message = e.getMessage();
+            // Suppress logging for PROPFIND and other WebDAV methods (scanner probes)
+            if (message != null && (message.contains("PROPFIND") || 
+                message.contains("PROPPATCH") || message.contains("MKCOL") ||
+                message.contains("COPY") || message.contains("MOVE") ||
+                message.contains("LOCK") || message.contains("UNLOCK"))) {
+                // Silently reject WebDAV methods with HTTP 405 (Method Not Allowed)
+                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            } else {
+                // Log other RequestRejectedException errors
+                System.out.println("RequestRejectedException: " + message);
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            }
         } catch (IllegalStateException e) {
             System.out.println("IllegalStateException: " + e.getMessage());
             if (!response.isCommitted()) {
