@@ -327,6 +327,16 @@ public class SettingsController {
         connectToSharedButton.setOnAction(event -> TCPClient.connectToShared());
         settings.connectedToSharedProperty().addListener((observable, oldValue, newValue) -> shareOnLocalNetworkButton.setDisable(newValue));
         allowRemoteButton.setSelected(settings.isAllowRemote());
+        
+        // Add listener for auto-connect checkbox
+        connectToSharedAutomaticallyCheckbox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            settings.setConnectToSharedAutomatically(newValue);
+            if (newValue) {
+                TCPClient.startAutoConnectLoop();
+            } else {
+                TCPClient.stopAutoConnectLoop();
+            }
+        });
     }
 
     private void initializeProgressLine() {

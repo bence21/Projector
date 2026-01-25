@@ -2,6 +2,7 @@ package projector.network;
 
 import com.bence.projector.common.dto.ProjectionDTO;
 import com.google.gson.Gson;
+import javafx.beans.value.ChangeListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
@@ -45,6 +46,8 @@ public class TCPClient {
     private static DataOutputStream outToServer;
     private static BufferedReader inFromServer;
     private static final List<String> openIps = Collections.synchronizedList(new ArrayList<>());
+    private static Thread autoConnectThread;
+    private static volatile boolean autoConnectEnabled = false;
 
     private static List<String> getIps() {
         List<String> ips = new ArrayList<>();
@@ -359,7 +362,117 @@ public class TCPClient {
     }
 
     public static void close() {
+        Settings settings = Settings.getInstance();
+        boolean wasConnected = settings.isConnectedToShared();
         close(outToServer, inFromServer, clientSocket, LOG, thread, null);
         TCPImageClient.closeInstance();
+        if (wasConnected) {
+            settings.setConnectedToShared(false);
+        }
+    }
+
+    private static ChangeListener<Boolean> connectionLossListener;
+
+    private static void setupConnectionLossListener(Settings settings) {
+        // Add listener for connection loss
+        if (connectionLossListener == null) {
+            connectionLossListener = (observable, oldValue, newValue) -> {
+                // If connection is lost and auto-connect is enabled, restart the loop
+                if (!newValue && oldValue && autoConnectEnabled) {
+                    // Restart in a separate thread to avoid deadlock
+                    new Thread(() -> {
+                        // Stop current loop if running
+                        synchronized (TCPClient.class) {
+                            if (autoConnectThread != null && autoConnectThread.isAlive()) {
+                                autoConnectThread.interrupt();
+                            }
+                        }
+                        // Wait a bit for the thread to stop
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        // Start new loop
+                        startAutoConnectLoop();
+                    }).start();
+                }
+            };
+            settings.connectedToSharedProperty().addListener(connectionLossListener);
+        }
+    }
+
+    @SuppressWarnings("BusyWait")
+    public synchronized static void startAutoConnectLoop() {
+        if (autoConnectThread != null && autoConnectThread.isAlive()) {
+            return;
+        }
+        autoConnectEnabled = true;
+        Settings settings = Settings.getInstance();
+        
+        setupConnectionLossListener(settings);
+        
+        autoConnectThread = new Thread(() -> {
+            while (autoConnectEnabled) {
+                try {
+                    if (!settings.isConnectedToShared()) {
+                        Thread connectionThread;
+                        synchronized (TCPClient.class) {
+                            connectToShared();
+                            connectionThread = thread;
+                        }
+                        // Wait for the connection attempt to finish (with timeout)
+                        if (connectionThread != null) {
+                            try {
+                                connectionThread.join(30000); // Wait up to 30 seconds for connection attempt
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                        }
+                        // Check if connection was established
+                        if (settings.isConnectedToShared()) {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                    // Wait 5 seconds before next attempt
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    break;
+                } catch (Exception e) {
+                    LOG.error("Error in auto-connect loop: {}", e.getMessage(), e);
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException ie) {
+                        break;
+                    }
+                }
+            }
+            synchronized (TCPClient.class) {
+                autoConnectThread = null;
+            }
+        });
+        autoConnectThread.setDaemon(true);
+        autoConnectThread.start();
+    }
+
+    public synchronized static void stopAutoConnectLoop() {
+        autoConnectEnabled = false;
+        if (autoConnectThread != null) {
+            autoConnectThread.interrupt();
+            try {
+                autoConnectThread.join(1000);
+            } catch (InterruptedException ignored) {
+            }
+            autoConnectThread = null;
+        }
+        // Remove connection loss listener
+        if (connectionLossListener != null) {
+            Settings settings = Settings.getInstance();
+            settings.connectedToSharedProperty().removeListener(connectionLossListener);
+            connectionLossListener = null;
+        }
     }
 }

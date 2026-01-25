@@ -224,7 +224,7 @@ public class MyController {
             TCPServer.startShareNetwork(projectionScreenController, songController);
         }
         if (settings.isConnectToSharedAutomatically()) {
-            TCPClient.connectToShared();
+            TCPClient.startAutoConnectLoop();
         }
     }
 
