@@ -153,6 +153,11 @@ export class SuggestionListComponent implements OnInit {
 
   openAuthenticateDialogOpened = false;
 
+  onLanguageChange(language: Language) {
+    this.selectedLanguage = language;
+    this.changeLanguage();
+  }
+
   changeLanguage() {
     localStorage.setItem(SELECTED_LANGUGAGE, JSON.stringify(this.selectedLanguage));
     this.loadSuggestions();

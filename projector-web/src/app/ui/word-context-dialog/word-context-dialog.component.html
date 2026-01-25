@@ -1,0 +1,42 @@
+<h2 mat-dialog-title>Mark Word as Context-Specific</h2>
+<mat-dialog-content>
+  <p><strong>Word:</strong> {{data.word}}</p>
+  <p style="color: #888; font-size: 0.9em;">This word is correct only in a specific context.</p>
+  <form [formGroup]="form">
+    <mat-form-field style="width: 100%;">
+      <mat-label>Context Category</mat-label>
+      <mat-select formControlName="contextCategory" (selectionChange)="onCategoryChange()">
+        <mat-option *ngFor="let cat of predefinedContextCategories" [value]="cat">
+          {{cat}}
+        </mat-option>
+        <mat-option value="custom">Custom</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('contextCategory').hasError('required')">
+        Context category is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field *ngIf="useCustomCategory" style="width: 100%;">
+      <mat-label>Custom Context Category</mat-label>
+      <input matInput formControlName="customContextCategory" placeholder="Enter custom context category">
+      <mat-error *ngIf="form.get('customContextCategory').hasError('required')">
+        Custom context category is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field style="width: 100%;">
+      <mat-label>Context Description (optional)</mat-label>
+      <textarea matInput formControlName="contextDescription" rows="3" 
+        placeholder="Describe the specific context where this word is correct (e.g., 'only in religious songs', 'only in formal poetry')"></textarea>
+    </mat-form-field>
+
+    <mat-form-field style="width: 100%;">
+      <mat-label>Notes (optional)</mat-label>
+      <textarea matInput formControlName="notes" rows="2" placeholder="Add any additional notes"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-button color="primary" (click)="onSave()" [disabled]="!form.valid">Save</button>
+</mat-dialog-actions>

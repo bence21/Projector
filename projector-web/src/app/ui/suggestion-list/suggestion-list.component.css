@@ -37,9 +37,3 @@
   background: #dadada;
   cursor: pointer;
 }
-
-#languageSelect {
-  min-width: 150px;
-  max-width: 300px;
-  width: 100%;
-}

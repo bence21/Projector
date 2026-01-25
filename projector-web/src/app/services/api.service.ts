@@ -92,6 +92,13 @@ export class ApiService {
       .catch(ApiService.handleError);
   }
 
+  public delete(api_url: string): Observable<null> {
+    return this.http
+      .delete(api_url)
+      .map(() => null)
+      .catch(ApiService.handleError);
+  }
+
   getAttribute<T>(c: new (data) => T, apiUrl: string) {
     return this.http
       .get(apiUrl)

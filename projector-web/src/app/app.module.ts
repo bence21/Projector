@@ -71,6 +71,7 @@ import { CompareSongsComponent } from './ui/compare-songs/compare-songs.componen
 import { SuggestionComponent } from './ui/suggestion/suggestion.component';
 import { SuggestionDataService } from "./services/suggestion-data.service";
 import { SuggestionListComponent } from "./ui/suggestion-list/suggestion-list.component";
+import { LanguageSelectorComponent } from "./ui/language-selector/language-selector.component";
 import { DownloadAppComponent } from './ui/download-app/download-app.component';
 import { ShareComponent } from './ui/share/share.component';
 import { HttpClientModule } from "@angular/common/http";
@@ -105,6 +106,9 @@ import { GuidelineDataService } from './services/guidelines-data.service';
 import { SongGuidelineCheckerComponent } from './ui/song-guideline-checker/song-guideline-checker.component';
 import { WordsSpellCheckerComponent } from './ui/words-spell-checker/words-spell-checker.component';
 import { NormalizedWordBunchDataService } from './services/normalized-word-bunch-data.service';
+import { ReviewedWordDataService } from './services/reviewed-word-data.service';
+import { WordReviewDialogComponent } from './ui/word-review-dialog/word-review-dialog.component';
+import { WordContextDialogComponent } from './ui/word-context-dialog/word-context-dialog.component';
 
 @NgModule({
   exports: [
@@ -170,6 +174,7 @@ export class PlunkerMaterialModule {
     CompareSongsComponent,
     SuggestionComponent,
     SuggestionListComponent,
+    LanguageSelectorComponent,
     DownloadAppComponent,
     ShareComponent,
     AuthenticateComponent,
@@ -198,6 +203,8 @@ export class PlunkerMaterialModule {
     SongGuidelinesCheckerComponent,
     SongGuidelineCheckerComponent,
     WordsSpellCheckerComponent,
+    WordReviewDialogComponent,
+    WordContextDialogComponent,
   ],
   imports: [
     BrowserModule,
@@ -219,6 +226,8 @@ export class PlunkerMaterialModule {
     OpenInAppComponent,
     AddToCollectionComponent,
     SongCollectionElementComponent,
+    WordReviewDialogComponent,
+    WordContextDialogComponent,
   ],
   providers: [
     ApiService,
@@ -235,6 +244,7 @@ export class PlunkerMaterialModule {
     SongLinkDataService,
     GuidelineDataService,
     NormalizedWordBunchDataService,
+    ReviewedWordDataService,
   ],
   bootstrap: [AppComponent]
 })
