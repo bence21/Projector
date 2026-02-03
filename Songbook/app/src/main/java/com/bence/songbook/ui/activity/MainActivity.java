@@ -130,6 +130,8 @@ public class MainActivity extends BaseActivity
     public static final int SONG_DELETED = 10;
     public static final int SONG_REQUEST = 3;
     public static final int SONG_UNDO_DELETION = 11;
+    private static final int VIEW_MODE_LIST = 0;
+    private static final int VIEW_MODE_PAGER = 1;
     private final Memory memory = Memory.getInstance();
     private final int DOWNLOAD_SONGS_REQUEST_CODE = 1;
     private final int LOGIN_IN_ACTIVITY_REQUEST_CODE = 12;
@@ -1158,7 +1160,7 @@ public class MainActivity extends BaseActivity
             adapter = new SongAdapter(values, new OnItemClickListener() {
                 @Override
                 public void onItemClick(Song song, int position) {
-                    if (view_mode == 0) {
+                    if (view_mode == VIEW_MODE_LIST) {
                         showSongFullscreen(song);
                     } else {
                         if (viewPager.getCurrentItem() == position) {
@@ -1183,7 +1185,7 @@ public class MainActivity extends BaseActivity
                 }
             });
             SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-            view_mode = sharedPreferences.getInt("view_mode", 0);
+            view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
             List<QueueSong> queue = memory.getQueue();
             if (queue == null) {
                 setDataToQueueSongs();
@@ -1221,7 +1223,7 @@ public class MainActivity extends BaseActivity
                 }
                 return false;
             });
-            if (view_mode == 1) {
+            if (view_mode == VIEW_MODE_PAGER) {
                 pageAdapter = new MainPageAdapter(getSupportFragmentManager(), values);
                 viewPager.setAdapter(pageAdapter);
             }
@@ -1230,28 +1232,25 @@ public class MainActivity extends BaseActivity
     }
 
     public void search(final String text, final SongAdapter adapter) {
-        Thread searchThread = new Thread(() -> {
-            if (inSongSearchSwitch && (searchInSongTextIsAvailable)) {
-                inSongSearch(text);
-            } else {
-                titleSearch(text);
+        final Runnable onSearchDone = () -> {
+            if (adapter == null) {
+                loadAll();
+                return;
             }
+            adapter.setSongList(values);
+            if (pageAdapter != null) {
+                pageAdapter.notifyDataSetChanged();
+            }
+        };
+        Thread searchThread = new Thread(() -> {
             if (Thread.interrupted()) {
                 return;
             }
-            runOnUiThread(() -> {
-                if (adapter == null) {
-                    loadAll();
-                    return;
-                }
-                if (Thread.interrupted()) {
-                    return;
-                }
-                adapter.setSongList(values);
-                if (pageAdapter != null) {
-                    pageAdapter.notifyDataSetChanged();
-                }
-            });
+            if (inSongSearchSwitch && (searchInSongTextIsAvailable)) {
+                inSongSearch(text, onSearchDone);
+            } else {
+                titleSearch(text, onSearchDone);
+            }
         });
         if (lastSearchThread != null && lastSearchThread.isAlive()) {
             lastSearchThread.interrupt();
@@ -1260,7 +1259,7 @@ public class MainActivity extends BaseActivity
         lastSearchThread = searchThread;
     }
 
-    public void titleSearch(final String title) {
+    public void titleSearch(final String title, final Runnable onSearchDone) {
         memory.setLastSearchedInText(null);
         String text = title.toLowerCase();
         String stripped = stripAccents(text);
@@ -1333,6 +1332,9 @@ public class MainActivity extends BaseActivity
             updateValuesList(tempSongList);
             previouslyTitleSearchText = title;
             previouslyInSongSearchText = "";
+            if (onSearchDone != null) {
+                onSearchDone.run();
+            }
         });
     }
 
@@ -1538,17 +1540,17 @@ public class MainActivity extends BaseActivity
         return b2;
     }
 
-    public void inSongSearch(final String title) {
+    public void inSongSearch(final String title, final Runnable onSearchDone) {
         try {
-            inSongSearch_(title);
+            inSongSearch_(title, onSearchDone);
         } catch (Exception e) {
             uploadExceptionStack(e);
         }
     }
 
-    private void inSongSearch_(final String title) {
+    private void inSongSearch_(final String title, final Runnable onSearchDone) {
         if (!searchInSongTextIsAvailable) {
-            titleSearch(title);
+            titleSearch(title, onSearchDone);
             return;
         }
         String text = stripAccents(title.toLowerCase());
@@ -1588,6 +1590,9 @@ public class MainActivity extends BaseActivity
             updateValuesList(tempSongList);
             previouslyInSongSearchText = title;
             previouslyTitleSearchText = "";
+            if (onSearchDone != null) {
+                onSearchDone.run();
+            }
         });
     }
 
@@ -2545,26 +2550,40 @@ public class MainActivity extends BaseActivity
 
     public void onChangeViewButtonClick(View view) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-        view_mode = sharedPreferences.getInt("view_mode", 0);
+        view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
         switch (view_mode) {
-            case 0:
-                sharedPreferences.edit().putInt("view_mode", 1).apply();
+            case VIEW_MODE_LIST:
+                sharedPreferences.edit().putInt("view_mode", VIEW_MODE_PAGER).apply();
                 break;
-            case 1:
-                sharedPreferences.edit().putInt("view_mode", 0).apply();
+            case VIEW_MODE_PAGER:
+                sharedPreferences.edit().putInt("view_mode", VIEW_MODE_LIST).apply();
                 break;
         }
-        loadAll();
         setView();
+        refreshContentForCurrentViewMode();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private void refreshContentForCurrentViewMode() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+        view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
+        if (view_mode == VIEW_MODE_PAGER) {
+            pageAdapter = new MainPageAdapter(getSupportFragmentManager(), values);
+            viewPager.setAdapter(pageAdapter);
+        } else {
+            if (adapter != null) {
+                adapter.notifyDataSetChanged();
+            }
+        }
     }
 
     private void setView() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-        int view_mode = sharedPreferences.getInt("view_mode", 0);
+        int view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
         ImageView changeViewButton = findViewById(R.id.changeViewButton);
         CenterLayoutManager layoutManager = (CenterLayoutManager) songListView.getLayoutManager();
         switch (view_mode) {
-            case 0:
+            case VIEW_MODE_LIST:
                 if (viewPager != null) {
                     int currentItem = viewPager.getCurrentItem();
                     if (currentItem >= 0 && values.size() > currentItem) {
@@ -2575,7 +2594,7 @@ public class MainActivity extends BaseActivity
                 findViewById(R.id.array_view).setVisibility(View.GONE);
                 layoutManager.setOrientation(CenterLayoutManager.VERTICAL);
                 break;
-            case 1:
+            case VIEW_MODE_PAGER:
                 if (songListView != null) {
                     int position = firstVisibleItemPosition;
                     if (position >= 0 && values.size() > position) {
@@ -2734,7 +2753,7 @@ public class MainActivity extends BaseActivity
         public void onBindViewHolder(@NonNull final MyViewHolder holder, int position) {
             View parentLayout = holder.parentLayout;
             LayoutParams layoutParams = parentLayout.getLayoutParams();
-            if (view_mode == 0) {
+            if (view_mode == VIEW_MODE_LIST) {
                 layoutParams.width = LayoutParams.MATCH_PARENT;
             } else {
                 layoutParams.width = LayoutParams.WRAP_CONTENT;
