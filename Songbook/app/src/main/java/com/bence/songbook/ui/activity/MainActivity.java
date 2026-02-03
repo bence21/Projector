@@ -1027,11 +1027,9 @@ public class MainActivity extends BaseActivity
      */
     private void updateValuesList(List<Song> newValues) {
         Runnable updateTask = () -> {
-            if (pageAdapter != null) {
-                // Use adapter's update method for cleaner separation
+            if (getViewMode() == VIEW_MODE_PAGER && pageAdapter != null) {
                 pageAdapter.updateSongs(newValues);
             } else {
-                // If adapter doesn't exist yet, update values directly
                 values.clear();
                 values.addAll(newValues);
             }
@@ -1184,8 +1182,7 @@ public class MainActivity extends BaseActivity
                     showToaster(getString(R.string.added_to_queue), Toast.LENGTH_SHORT);
                 }
             });
-            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-            view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
+            view_mode = getViewMode();
             List<QueueSong> queue = memory.getQueue();
             if (queue == null) {
                 setDataToQueueSongs();
@@ -1261,6 +1258,36 @@ public class MainActivity extends BaseActivity
 
     public void titleSearch(final String title, final Runnable onSearchDone) {
         memory.setLastSearchedInText(null);
+        TitleSearchParts parts = parseTitleSearchParts(title);
+        List<Song> songList = getSongListForTitleSearch(title);
+        wasOrdinalNumber = false;
+        List<Song> tempSongList = filterSongsByTitle(songList, parts);
+        if (Thread.interrupted()) {
+            return;
+        }
+        if (!sortSongsByOrdinalNumberIfNeeded(parts.collectionName, parts.ordinalNumber, parts.ordinalNumberInt, tempSongList)) {
+            return; // Thread was interrupted
+        }
+        applyTitleSearchResultsOnUiThread(tempSongList, title, onSearchDone);
+    }
+
+    private static class TitleSearchParts {
+        final String stripped;
+        final String other;
+        final String collectionName;
+        final String ordinalNumber;
+        final int ordinalNumberInt;
+
+        TitleSearchParts(String stripped, String other, String collectionName, String ordinalNumber, int ordinalNumberInt) {
+            this.stripped = stripped;
+            this.other = other;
+            this.collectionName = collectionName;
+            this.ordinalNumber = ordinalNumber;
+            this.ordinalNumberInt = ordinalNumberInt;
+        }
+    }
+
+    private TitleSearchParts parseTitleSearchParts(String title) {
         String text = title.toLowerCase();
         String stripped = stripAccents(text);
         String firstWord = stripAccents(text.split(" ")[0].toLowerCase());
@@ -1288,46 +1315,59 @@ public class MainActivity extends BaseActivity
             ordinalNumberInt = Integer.parseInt(ordinalNumber);
         } catch (Exception ignored) {
         }
-        wasOrdinalNumber = false;
+        return new TitleSearchParts(stripped, other, collectionName, ordinalNumber, ordinalNumberInt);
+    }
+
+    private List<Song> getSongListForTitleSearch(String title) {
         List<Song> songList = new ArrayList<>();
         if (!values.isEmpty() && title.contains(previouslyTitleSearchText) && !previouslyTitleSearchText.trim().isEmpty()) {
             songList.addAll(values);
         } else {
             songList.addAll(songs);
         }
-        final List<Song> tempSongList = new ArrayList<>();
+        return songList;
+    }
+
+    private List<Song> filterSongsByTitle(List<Song> songList, TitleSearchParts parts) {
+        List<Song> tempSongList = new ArrayList<>();
         for (Song song : songList) {
             if (song == null) {
                 continue;
             }
-            if (containsInTitle(stripped, song, other, collectionName, ordinalNumber, ordinalNumberInt)) {
+            if (containsInTitle(parts.stripped, song, parts.other, parts.collectionName, parts.ordinalNumber, parts.ordinalNumberInt)) {
                 tempSongList.add(song);
             }
             if (Thread.interrupted()) {
-                return;
+                return tempSongList;
             }
         }
-        if (wasOrdinalNumber) {
-            try {
-                String finalCollectionName = collectionName;
-                String finalOrdinalNumber = ordinalNumber;
-                int finalOrdinalNumberInt = ordinalNumberInt;
-                sortSongCollectionElementsForSongs(ordinalNumber, collectionName, ordinalNumberInt, tempSongList);
-                if (Thread.interrupted()) {
-                    return;
-                }
-                Collections.sort(tempSongList, (l, r) -> {
-                    List<SongCollectionElement> lSongCollectionElements = l.getSongCollectionElements();
-                    List<SongCollectionElement> rSongCollectionElements = r.getSongCollectionElements();
-                    return compareSongCollectionElementsFirstByOrdinalNumber(lSongCollectionElements, rSongCollectionElements, finalCollectionName, finalOrdinalNumber, finalOrdinalNumberInt);
-                });
-                if (Thread.interrupted()) {
-                    return;
-                }
-            } catch (Exception e) {
-                Log.e(TAG, e.getMessage(), e);
-            }
+        return tempSongList;
+    }
+
+    private boolean sortSongsByOrdinalNumberIfNeeded(String finalCollectionName, String finalOrdinalNumber, int finalOrdinalNumberInt, List<Song> tempSongList) {
+        if (!wasOrdinalNumber) {
+            return true;
         }
+        try {
+            sortSongCollectionElementsForSongs(finalOrdinalNumber, finalCollectionName, finalOrdinalNumberInt, tempSongList);
+            if (Thread.interrupted()) {
+                return false;
+            }
+            Collections.sort(tempSongList, (l, r) -> {
+                List<SongCollectionElement> lSongCollectionElements = l.getSongCollectionElements();
+                List<SongCollectionElement> rSongCollectionElements = r.getSongCollectionElements();
+                return compareSongCollectionElementsFirstByOrdinalNumber(lSongCollectionElements, rSongCollectionElements, finalCollectionName, finalOrdinalNumber, finalOrdinalNumberInt);
+            });
+            if (Thread.interrupted()) {
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return true;
+    }
+
+    private void applyTitleSearchResultsOnUiThread(List<Song> tempSongList, String title, Runnable onSearchDone) {
         runOnUiThread(() -> {
             updateValuesList(tempSongList);
             previouslyTitleSearchText = title;
@@ -2414,7 +2454,7 @@ public class MainActivity extends BaseActivity
             showToaster(getString(R.string.no_shareable_songs_in_queue), Toast.LENGTH_SHORT);
             return;
         }
-        
+
         Intent share = new Intent(android.content.Intent.ACTION_SEND);
         share.setType("text/plain");
         share.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
@@ -2550,7 +2590,7 @@ public class MainActivity extends BaseActivity
 
     public void onChangeViewButtonClick(View view) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-        view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
+        view_mode = getViewMode();
         switch (view_mode) {
             case VIEW_MODE_LIST:
                 sharedPreferences.edit().putInt("view_mode", VIEW_MODE_PAGER).apply();
@@ -2563,10 +2603,14 @@ public class MainActivity extends BaseActivity
         refreshContentForCurrentViewMode();
     }
 
+    private int getViewMode() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        return sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     private void refreshContentForCurrentViewMode() {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-        view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
+        view_mode = getViewMode();
         if (view_mode == VIEW_MODE_PAGER) {
             pageAdapter = new MainPageAdapter(getSupportFragmentManager(), values);
             viewPager.setAdapter(pageAdapter);
@@ -2578,8 +2622,7 @@ public class MainActivity extends BaseActivity
     }
 
     private void setView() {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-        int view_mode = sharedPreferences.getInt("view_mode", VIEW_MODE_LIST);
+        int view_mode = getViewMode();
         ImageView changeViewButton = findViewById(R.id.changeViewButton);
         CenterLayoutManager layoutManager = (CenterLayoutManager) songListView.getLayoutManager();
         switch (view_mode) {
