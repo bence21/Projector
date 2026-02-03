@@ -74,12 +74,14 @@ public class SongListActivity extends BaseActivity {
                 SongListElement temp = songListElements.get(indexOne);
                 SongListElement secondTmp = songListElements.get(indexTwo);
                 int queueNumber = temp.getNumber();
-                temp.setNumber(secondTmp.getNumber());
+                int secondTmpOriginalNumber = secondTmp.getNumber();
+                // In-memory swap for UI
+                temp.setNumber(secondTmpOriginalNumber);
                 secondTmp.setNumber(queueNumber);
                 songListElements.set(indexOne, secondTmp);
                 songListElements.set(indexTwo, temp);
-                songListElementRepository.save(temp);
-                songListElementRepository.save(secondTmp);
+                // Persist in a single transaction (placeholder avoids unique constraint)
+                songListElementRepository.saveSwap(temp, secondTmp, queueNumber, secondTmpOriginalNumber);
                 songList.setModifiedDate(new Date());
                 songListRepository.save(songList);
             }
