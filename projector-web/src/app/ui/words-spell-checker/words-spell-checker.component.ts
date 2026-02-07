@@ -167,7 +167,10 @@ export class WordsSpellCheckerComponent implements OnInit {
 
   private applyCaseByReference(source: string, target: string): string {
     if (source.length !== target.length) {
-      throw new Error("Source and target strings must have the same length.");
+      this.snackBar.open('Source and target strings must have the same length; showing correction as-is. Tip: run WordCanonicalizationGenerator on the server (enable @Component then start the app) to canonicalize Unicode in words and songs.', 'Close', {
+        duration: 3000
+      });
+      return target;
     }
 
     return target
