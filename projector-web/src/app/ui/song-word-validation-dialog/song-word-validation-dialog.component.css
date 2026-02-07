@@ -46,84 +46,157 @@ mat-dialog-content {
   margin-right: 8px;
 }
 
-.error-icon-small {
-  color: #f44336;
-  font-size: 18px;
-  margin-right: 8px;
-}
-
-.warning-icon-small {
-  color: #ff9800;
-  font-size: 18px;
-  margin-right: 8px;
-}
-
 .section-description {
   color: #666;
   font-size: 0.9em;
   margin-bottom: 15px;
 }
 
-.word-text {
+.word-list-container {
+  margin-top: 8px;
+}
+
+.word-item {
+  height: auto !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.word-item:last-child {
+  border-bottom: none;
+}
+
+.word-item > * {
+  flex-shrink: 0;
+}
+
+.status-icon {
+  margin-right: 12px;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Status icon colors matching action button colors */
+.status-icon-good {
+  color: #4caf50 !important; /* Green - matches mark-as-good-button */
+}
+
+.status-icon-context {
+  color: #ffc107 !important; /* Yellow/Amber - matches mark-as-context-specific-button */
+}
+
+.status-icon-accepted {
+  color: #2196f3 !important; /* Blue - matches mark-as-accepted-button */
+}
+
+.status-icon-banned {
+  color: #f44336 !important; /* Red - matches mark-as-banned-button */
+}
+
+.status-icon-rejected {
+  color: #ff5722 !important; /* Red-Orange - matches mark-as-rejected-button */
+}
+
+.status-icon-unreviewed {
+  color: #ff9800 !important; /* Orange - for unreviewed status */
+}
+
+.word-info {
+  display: flex;
+  align-items: center;
   flex: 1;
+  margin-right: 12px;
+}
+
+.word-text {
   font-weight: 500;
+  margin-right: 8px;
+}
+
+.good-word {
+  color: #4caf50;
+}
+
+.unreviewed-word {
+  color: #ff9800;
 }
 
 .banned-word {
   color: #f44336;
+  font-weight: bold;
 }
 
 .rejected-word {
   color: #ff9800;
 }
 
-mat-list-item {
-  height: auto !important;
-  padding: 8px 0;
-}
-
-.rejected-word-item {
-  padding: 15px 0 !important;
-}
-
-.rejected-word-content {
-  width: 100%;
-}
-
-.rejected-word-header {
+.suggestions {
+  margin-top: 8px;
+  margin-left: 32px;
   display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.suggestions-container {
-  margin-left: 26px;
-}
-
-.suggestions-label {
-  font-size: 0.9em;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.suggestions-list {
-  display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
+  flex-basis: 100%;
+  order: 10;
 }
 
-.suggestions-list button {
-  margin: 0;
+.suggestion-label {
+  font-size: 0.85em;
+  color: #666;
+  font-weight: 500;
 }
 
-.suggestions-list button.selected {
-  background-color: #2196F3;
-  color: white;
+mat-chip-list {
+  display: inline-block;
+}
+
+mat-chip {
+  cursor: pointer;
+}
+
+mat-chip.selected {
+  background-color: #2196F3 !important;
+  color: white !important;
 }
 
 .no-suggestions {
   color: #999;
   font-style: italic;
+  margin-left: 32px;
+  margin-top: 8px;
+  flex-basis: 100%;
+  order: 10;
+}
+
+.word-actions {
+  margin-left: auto;
+}
+
+.action-buttons-container {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: fit-content;
+  gap: 0;
+}
+
+.button-group {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.button-group-negative {
+  margin-right: 12px;
+}
+
+.button-group-positive {
+  margin-left: 0;
 }
 
 .publish-warning {
@@ -150,4 +223,27 @@ mat-list-item {
 mat-dialog-actions {
   padding: 16px 24px;
   justify-content: flex-end;
+}
+
+.rejected-suggestion-selector {
+  margin-top: 8px;
+  margin-left: 16px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.rejected-suggestion-selector mat-chip {
+  cursor: pointer;
+}
+
+.rejected-suggestion-selector mat-chip.selected {
+  background-color: #2196F3 !important;
+  color: white !important;
+}
+
+.rejected-suggestion-selector mat-chip.disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none;
 }

@@ -37,7 +37,20 @@ export class EditSongComponent implements OnInit {
   verses: SongVerseUI[];
   verseControls: FormControl[];
   languages = [];
-  selectedLanguage: Language;
+  private _selectedLanguage: Language;
+  set selectedLanguage(value: Language) {
+    this._selectedLanguage = value;
+    if (value) {
+      this.selectedLanguageCopy = new Language();
+      Object.assign(this.selectedLanguageCopy, value);
+    } else {
+      this.selectedLanguageCopy = null;
+    }
+  }
+  get selectedLanguage(): Language {
+    return this._selectedLanguage;
+  }
+  selectedLanguageCopy: Language;
   originalLanguage: Language;
   @Input()
   song: Song;
@@ -267,7 +280,7 @@ export class EditSongComponent implements OnInit {
     this.form.valueChanges.subscribe(() => this.onValueChanged());
     this.onValueChanged();
     this.initialFormValue = JSON.stringify(this.form.value);
-    this.currentSongForWordList = this.song;
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.song);
     this.trackFormChanges();
   }
 
@@ -329,7 +342,7 @@ export class EditSongComponent implements OnInit {
   }
 
   onWordListRefresh() {
-    this.currentSongForWordList = this.getCurrentSongFromForm();
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.getCurrentSongFromForm());
     this.initialFormValue = JSON.stringify(this.form.value);
     this.formHasChanges = false;
   }

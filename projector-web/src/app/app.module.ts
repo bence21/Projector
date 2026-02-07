@@ -113,6 +113,7 @@ import { WordReviewDialogComponent } from './ui/word-review-dialog/word-review-d
 import { WordContextDialogComponent } from './ui/word-context-dialog/word-context-dialog.component';
 import { SongWordValidationDialogComponent } from './ui/song-word-validation-dialog/song-word-validation-dialog.component';
 import { SongWordListPanelComponent } from './ui/song-word-list-panel/song-word-list-panel.component';
+import { WordListComponent } from './ui/word-list/word-list.component';
 import { MarkAsBannedButtonComponent } from './ui/mark-as-banned-button/mark-as-banned-button.component';
 import { MarkAsRejectedButtonComponent } from './ui/mark-as-rejected-button/mark-as-rejected-button.component';
 import { MarkAsGoodButtonComponent } from './ui/mark-as-good-button/mark-as-good-button.component';
@@ -217,6 +218,7 @@ export class PlunkerMaterialModule {
     WordContextDialogComponent,
     SongWordValidationDialogComponent,
     SongWordListPanelComponent,
+    WordListComponent,
     MarkAsBannedButtonComponent,
     MarkAsRejectedButtonComponent,
     MarkAsGoodButtonComponent,

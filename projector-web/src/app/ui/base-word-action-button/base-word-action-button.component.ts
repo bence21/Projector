@@ -6,6 +6,7 @@ import { ConfirmActionDialogComponent } from '../confirm-action-dialog/confirm-a
 
 export abstract class BaseWordActionButtonComponent {
   @Input() wordWithStatus?: WordWithStatus;
+  @Input() disabled: boolean = false;
 
   constructor(protected dialog: MatDialog) {}
 
@@ -27,6 +28,9 @@ export abstract class BaseWordActionButtonComponent {
   protected abstract emitAction(): void;
 
   onClick(): void {
+    if (this.disabled) {
+      return;
+    }
     if (this.isReviewed) {
       const word = (this.wordWithStatus && this.wordWithStatus.word) ? this.wordWithStatus.word : 'this word';
       const statusName = this.getStatusName();

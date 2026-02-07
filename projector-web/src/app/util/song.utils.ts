@@ -90,7 +90,7 @@ export function validateWordsAndSave(config: WordValidationConfig): void {
         // Always show validation dialog when there are issues
         const dialogRef = dialog.open(SongWordValidationDialogComponent, {
           width: '700px',
-          data: { validationResult: validationResult, language: language, publish: publish }
+          data: { validationResult: validationResult, language: language, publish: publish, song: song, validationService: validationService }
         });
 
         dialogRef.afterClosed().subscribe(result => {

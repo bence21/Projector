@@ -341,7 +341,6 @@ export class WordsSpellCheckerComponent implements OnInit {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REVIEWED_GOOD, {
       language: this.selectedLanguage,
       word: row.word,
-      successMessage: 'Word marked as good',
       onSuccess: () => this.onFilterChange()
     });
   }
@@ -355,7 +354,6 @@ export class WordsSpellCheckerComponent implements OnInit {
     this.wordReviewHelper.markAsAccepted({
       language: this.selectedLanguage,
       word: row.word,
-      successMessage: 'Word marked as accepted',
       onSuccess: () => this.onFilterChange()
     });
   }
@@ -369,7 +367,6 @@ export class WordsSpellCheckerComponent implements OnInit {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.BANNED, {
       language: this.selectedLanguage,
       word: row.word,
-      successMessage: 'Word marked as banned',
       onSuccess: () => this.onFilterChange()
     });
   }
@@ -383,7 +380,6 @@ export class WordsSpellCheckerComponent implements OnInit {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REJECTED, {
       language: this.selectedLanguage,
       word: row.word,
-      successMessage: 'Word marked as rejected',
       onSuccess: () => this.onFilterChange()
     });
   }
@@ -397,7 +393,6 @@ export class WordsSpellCheckerComponent implements OnInit {
     this.wordReviewHelper.markAsContextSpecific({
       language: this.selectedLanguage,
       word: row.word,
-      successMessage: 'Word marked as context-specific',
       onSuccess: () => this.onFilterChange()
     });
   }

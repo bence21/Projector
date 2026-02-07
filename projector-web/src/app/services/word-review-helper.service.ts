@@ -12,7 +12,7 @@ import { generalError } from '../util/error-util';
 export interface WordReviewOptions {
   language: Language;
   word: string;
-  successMessage: string;
+  successMessage?: string;
   onSuccess?: () => void;
   onError?: (err: any) => void;
 }
@@ -26,6 +26,36 @@ export class WordReviewHelperService {
   ) {}
 
   /**
+   * Generates a success message for marking a word with a specific status.
+   * @param word The word being marked
+   * @param statusName The status name (e.g., "banned", "rejected", "good", "accepted", "context-specific")
+   * @returns Formatted message: "Word '{word}' marked as {statusName}"
+   */
+  static getSuccessMessage(word: string, statusName: string): string {
+    return `Word "${word}" marked as ${statusName}`;
+  }
+
+  /**
+   * Gets the status name for a given ReviewedWordStatus.
+   */
+  private getStatusName(status: ReviewedWordStatus): string {
+    switch (status) {
+      case ReviewedWordStatus.BANNED:
+        return 'banned';
+      case ReviewedWordStatus.REJECTED:
+        return 'rejected';
+      case ReviewedWordStatus.REVIEWED_GOOD:
+        return 'good';
+      case ReviewedWordStatus.ACCEPTED:
+        return 'accepted';
+      case ReviewedWordStatus.CONTEXT_SPECIFIC:
+        return 'context-specific';
+      default:
+        return 'reviewed';
+    }
+  }
+
+  /**
    * Marks a word with a simple status (no dialog required).
    */
   markWordWithStatus(
@@ -36,9 +66,12 @@ export class WordReviewHelperService {
     reviewedWord.word = options.word;
     reviewedWord.status = status;
 
+    const successMessage = options.successMessage || 
+      WordReviewHelperService.getSuccessMessage(options.word, this.getStatusName(status));
+
     this.reviewedWordDataService.createOrUpdate(options.language, reviewedWord).subscribe(
       () => {
-        this.snackBar.open(options.successMessage, 'Close', { duration: 3000 });
+        this.snackBar.open(successMessage, 'Close', { duration: 3000 });
         if (options.onSuccess) {
           options.onSuccess();
         }
@@ -76,9 +109,12 @@ export class WordReviewHelperService {
           reviewedWord.foreignLanguageType = result.foreignLanguageType;
         }
 
+        const successMessage = options.successMessage || 
+          WordReviewHelperService.getSuccessMessage(options.word, 'accepted');
+
         this.reviewedWordDataService.createOrUpdate(options.language, reviewedWord).subscribe(
           () => {
-            this.snackBar.open(options.successMessage, 'Close', { duration: 3000 });
+            this.snackBar.open(successMessage, 'Close', { duration: 3000 });
             if (options.onSuccess) {
               options.onSuccess();
             }
@@ -113,9 +149,12 @@ export class WordReviewHelperService {
         reviewedWord.contextDescription = result.contextDescription;
         reviewedWord.notes = result.notes;
 
+        const successMessage = options.successMessage || 
+          WordReviewHelperService.getSuccessMessage(options.word, 'context-specific');
+
         this.reviewedWordDataService.createOrUpdate(options.language, reviewedWord).subscribe(
           () => {
-            this.snackBar.open(options.successMessage, 'Close', { duration: 3000 });
+            this.snackBar.open(successMessage, 'Close', { duration: 3000 });
             if (options.onSuccess) {
               options.onSuccess();
             }

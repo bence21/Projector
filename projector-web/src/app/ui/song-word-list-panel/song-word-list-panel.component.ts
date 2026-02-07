@@ -17,7 +17,18 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./song-word-list-panel.component.css']
 })
 export class SongWordListPanelComponent implements OnInit, OnChanges {
-  @Input() song: Song;
+  private _song: Song;
+  @Input() set song(value: Song) {
+    if (value) {
+      this._song = new Song();
+      Object.assign(this._song, value);
+    } else {
+      this._song = value;
+    }
+  }
+  get song(): Song {
+    return this._song;
+  }
   @Input() language: Language;
   @Input() hasChanges: boolean = false;
   @Output() refreshRequested = new EventEmitter<void>();
@@ -81,7 +92,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
   }
 
   loadWords() {
-    if (!this.song || !this.language) {
+    if (!this.song) {
       return;
     }
 
@@ -175,7 +186,6 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.BANNED, {
       language: this.language,
       word: word,
-      successMessage: 'Word marked as banned',
       onSuccess: () => this.loadWords()
     });
   }
@@ -184,7 +194,6 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REJECTED, {
       language: this.language,
       word: word,
-      successMessage: 'Word marked as rejected',
       onSuccess: () => this.loadWords()
     });
   }
@@ -193,7 +202,6 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REVIEWED_GOOD, {
       language: this.language,
       word: word,
-      successMessage: 'Word marked as good',
       onSuccess: () => this.loadWords()
     });
   }
@@ -202,7 +210,6 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     this.wordReviewHelper.markAsAccepted({
       language: this.language,
       word: word,
-      successMessage: 'Word marked as accepted',
       onSuccess: () => this.loadWords()
     });
   }
@@ -211,7 +218,6 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     this.wordReviewHelper.markAsContextSpecific({
       language: this.language,
       word: word,
-      successMessage: 'Word marked as context-specific',
       onSuccess: () => this.loadWords()
     });
   }

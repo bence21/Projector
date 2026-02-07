@@ -2,6 +2,7 @@
         *ngIf="visible"
         (click)="onClick()"
         [class.reviewed]="isReviewed"
+        [disabled]="disabled"
         [matTooltip]="isReviewed ? 'Word is already reviewed - click to change status' : 'Mark as Good'">
   <mat-icon>check_circle</mat-icon>
 </button>
