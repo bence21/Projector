@@ -215,3 +215,10 @@ mat-list-item {
   align-items: flex-start;
   flex-wrap: wrap;
 }
+
+/* Make tooltips respect line breaks */
+::ng-deep .mat-tooltip {
+  white-space: pre-line !important;
+  max-width: 300px;
+  text-align: left;
+}

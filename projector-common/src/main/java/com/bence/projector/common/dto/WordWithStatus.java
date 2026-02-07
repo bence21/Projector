@@ -9,6 +9,10 @@ public class WordWithStatus {
     private List<String> suggestions;
     private Integer countInSong;
     private Integer countInAllSongs;
+    private String category;
+    private String notes;
+    private String contextCategory;
+    private String contextDescription;
 
     public WordWithStatus() {
     }
@@ -25,6 +29,28 @@ public class WordWithStatus {
         this.suggestions = suggestions;
         this.countInSong = countInSong;
         this.countInAllSongs = countInAllSongs;
+    }
+
+    public WordWithStatus(String word, ReviewedWordStatusDTO status, List<String> suggestions, Integer countInSong, Integer countInAllSongs, String category, String notes) {
+        this.word = word;
+        this.status = status;
+        this.suggestions = suggestions;
+        this.countInSong = countInSong;
+        this.countInAllSongs = countInAllSongs;
+        this.category = category;
+        this.notes = notes;
+    }
+
+    public WordWithStatus(String word, ReviewedWordStatusDTO status, List<String> suggestions, Integer countInSong, Integer countInAllSongs, String category, String notes, String contextCategory, String contextDescription) {
+        this.word = word;
+        this.status = status;
+        this.suggestions = suggestions;
+        this.countInSong = countInSong;
+        this.countInAllSongs = countInAllSongs;
+        this.category = category;
+        this.notes = notes;
+        this.contextCategory = contextCategory;
+        this.contextDescription = contextDescription;
     }
 
     public String getWord() {
@@ -65,6 +91,38 @@ public class WordWithStatus {
 
     public void setCountInAllSongs(Integer countInAllSongs) {
         this.countInAllSongs = countInAllSongs;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public String getContextCategory() {
+        return contextCategory;
+    }
+
+    public void setContextCategory(String contextCategory) {
+        this.contextCategory = contextCategory;
+    }
+
+    public String getContextDescription() {
+        return contextDescription;
+    }
+
+    public void setContextDescription(String contextDescription) {
+        this.contextDescription = contextDescription;
     }
 
     private String statusSymbol() {

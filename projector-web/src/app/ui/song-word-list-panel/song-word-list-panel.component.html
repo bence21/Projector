@@ -65,7 +65,7 @@
         <mat-list-item *ngFor="let wordWithStatus of getFilteredWords()" class="word-item">
           <mat-icon [ngClass]="getStatusColorClass(wordWithStatus.status)" 
                     class="status-icon"
-                    [matTooltip]="getStatusTooltip(wordWithStatus.status)">
+                    [matTooltip]="getStatusTooltip(wordWithStatus)">
             {{getStatusIcon(wordWithStatus.status)}}
           </mat-icon>
           <div class="word-info">

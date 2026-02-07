@@ -6,4 +6,8 @@ export interface WordWithStatus {
   suggestions?: string[];
   countInSong?: number;
   countInAllSongs?: number;
+  category?: string;
+  notes?: string;
+  contextCategory?: string;
+  contextDescription?: string;
 }

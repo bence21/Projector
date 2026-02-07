@@ -162,7 +162,21 @@ public class SongWordValidationService {
                 }
                 categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs));
             } else {
-                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.fromValue(status.name()), null, countInSong, countInAllSongs));
+                // For accepted words, include category and notes
+                // For context-specific words, include contextCategory, contextDescription, and notes
+                String category = null;
+                String notes = null;
+                String contextCategory = null;
+                String contextDescription = null;
+                if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.ACCEPTED) {
+                    category = reviewedWord.getCategory();
+                    notes = reviewedWord.getNotes();
+                } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.CONTEXT_SPECIFIC) {
+                    contextCategory = reviewedWord.getContextCategory();
+                    contextDescription = reviewedWord.getContextDescription();
+                    notes = reviewedWord.getNotes();
+                }
+                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.fromValue(status.name()), null, countInSong, countInAllSongs, category, notes, contextCategory, contextDescription));
             }
         }
     }

@@ -261,25 +261,62 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     }
   }
 
-  getStatusTooltip(status: ReviewedWordStatus): string {
+  getStatusTooltip(wordWithStatus: WordWithStatus): string {
+    const status = wordWithStatus.status;
+    let tooltip = '';
+    
     switch (status) {
       case ReviewedWordStatus.REVIEWED_GOOD:
-        return 'Reviewed Good';
+        tooltip = 'Reviewed Good';
+        break;
       case ReviewedWordStatus.CONTEXT_SPECIFIC:
-        return 'Context-Specific';
+        tooltip = 'Context-Specific';
+        // Add context category, context description, and notes for context-specific words
+        if (wordWithStatus.contextCategory || wordWithStatus.contextDescription || wordWithStatus.notes) {
+          const parts: string[] = [tooltip];
+          if (wordWithStatus.contextCategory) {
+            parts.push(`\nCategory: ${wordWithStatus.contextCategory}`);
+          }
+          if (wordWithStatus.contextDescription) {
+            parts.push(`\nDescription: ${wordWithStatus.contextDescription}`);
+          }
+          if (wordWithStatus.notes) {
+            parts.push(`\nNotes: ${wordWithStatus.notes}`);
+          }
+          tooltip = parts.join('');
+        }
+        break;
       case ReviewedWordStatus.ACCEPTED:
-        return 'Accepted';
+        tooltip = 'Accepted';
+        // Add category and notes for accepted words
+        if (wordWithStatus.category || wordWithStatus.notes) {
+          const parts: string[] = [tooltip];
+          if (wordWithStatus.category) {
+            parts.push(`\nCategory: ${wordWithStatus.category}`);
+          }
+          if (wordWithStatus.notes) {
+            parts.push(`\nNotes: ${wordWithStatus.notes}`);
+          }
+          tooltip = parts.join('');
+        }
+        break;
       case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
-        return 'Auto Accepted From Public';
+        tooltip = 'Auto Accepted From Public';
+        break;
       case ReviewedWordStatus.BANNED:
-        return 'Banned';
+        tooltip = 'Banned';
+        break;
       case ReviewedWordStatus.REJECTED:
-        return 'Rejected';
+        tooltip = 'Rejected';
+        break;
       case ReviewedWordStatus.UNREVIEWED:
-        return 'Unreviewed';
+        tooltip = 'Unreviewed';
+        break;
       default:
-        return 'Unknown Status';
+        tooltip = 'Unknown Status';
     }
+    
+    return tooltip;
   }
 
   private isCommonWord(count: number | null | undefined): boolean | null {
