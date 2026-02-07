@@ -4,9 +4,9 @@ import com.bence.projector.server.backend.service.ReviewedWordService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.utils.WordCanonicalizationUtil;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-
-@Component // uncomment this to run the generator
+// import org.springframework.stereotype.Component;
+//
+// @Component // uncomment this to run the generator
 @SuppressWarnings({"unused"})
 public class WordCanonicalizationGenerator implements CommandLineRunner {
 
