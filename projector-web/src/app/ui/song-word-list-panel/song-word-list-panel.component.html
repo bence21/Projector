@@ -41,20 +41,20 @@
       <button mat-button [class.active]="filterStatus === 'all'" (click)="filterStatus = 'all'">
         All ({{counts.total}})
       </button>
-      <button *ngIf="counts.good > 0" mat-button [class.active]="filterStatus === STATUS_GOOD" (click)="filterStatus = STATUS_GOOD">
-        <mat-icon style="color: green;">check_circle</mat-icon>
+      <button *ngIf="counts.good > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.REVIEWED_GOOD" (click)="filterStatus = ReviewedWordStatus.REVIEWED_GOOD">
+        <mat-icon class="filter-icon-good">check_circle</mat-icon>
         Good ({{counts.good}})
       </button>
-      <button *ngIf="counts.unreviewed > 0" mat-button [class.active]="filterStatus === STATUS_UNREVIEWED" (click)="filterStatus = STATUS_UNREVIEWED">
-        <mat-icon style="color: orange;">info</mat-icon>
+      <button *ngIf="counts.unreviewed > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.UNREVIEWED" (click)="filterStatus = ReviewedWordStatus.UNREVIEWED">
+        <mat-icon class="filter-icon-unreviewed">info</mat-icon>
         Unreviewed ({{counts.unreviewed}})
       </button>
-      <button *ngIf="counts.banned > 0" mat-button [class.active]="filterStatus === STATUS_BANNED" (click)="filterStatus = STATUS_BANNED">
-        <mat-icon style="color: red;">error</mat-icon>
+      <button *ngIf="counts.banned > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.BANNED" (click)="filterStatus = ReviewedWordStatus.BANNED">
+        <mat-icon class="filter-icon-banned">error</mat-icon>
         Banned ({{counts.banned}})
       </button>
-      <button *ngIf="counts.rejected > 0" mat-button [class.active]="filterStatus === STATUS_REJECTED" (click)="filterStatus = STATUS_REJECTED">
-        <mat-icon style="color: #ff9800;">warning</mat-icon>
+      <button *ngIf="counts.rejected > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.REJECTED" (click)="filterStatus = ReviewedWordStatus.REJECTED">
+        <mat-icon class="filter-icon-rejected">warning</mat-icon>
         Rejected ({{counts.rejected}})
       </button>
     </div>
@@ -63,27 +63,30 @@
     <div class="word-list-container">
       <mat-list>
         <mat-list-item *ngFor="let wordWithStatus of getFilteredWords()" class="word-item">
-          <mat-icon [color]="getStatusColor(wordWithStatus.status)" class="status-icon">
+          <mat-icon [ngClass]="getStatusColorClass(wordWithStatus.status)" 
+                    class="status-icon"
+                    [matTooltip]="getStatusTooltip(wordWithStatus.status)">
             {{getStatusIcon(wordWithStatus.status)}}
           </mat-icon>
-          <span class="word-text" [class.banned-word]="wordWithStatus.status === STATUS_BANNED"
-                [class.rejected-word]="wordWithStatus.status === STATUS_REJECTED"
-                [class.unreviewed-word]="wordWithStatus.status === STATUS_UNREVIEWED"
-                [class.good-word]="wordWithStatus.status === STATUS_GOOD">
-            {{wordWithStatus.word}}
-          </span>
-          <span *ngIf="wordWithStatus.countInSong != null && wordWithStatus.countInSong > 0" class="word-count" title="In this song">
-            ×{{wordWithStatus.countInSong}}
-          </span>
-          <span *ngIf="wordWithStatus.countInAllSongs != null" 
-                class="word-count-total" 
-                [ngClass]="getCommonnessColorClass(wordWithStatus.countInAllSongs)"
-                [title]="getCommonnessTooltip(wordWithStatus.countInAllSongs)">
-            ({{getCommonnessCategory(wordWithStatus.countInAllSongs)}})
-          </span>
+          <div class="word-info">
+            <span class="word-text" [class.banned-word]="wordWithStatus.status === ReviewedWordStatus.BANNED"
+                  [class.rejected-word]="wordWithStatus.status === ReviewedWordStatus.REJECTED"
+                  [class.unreviewed-word]="wordWithStatus.status === ReviewedWordStatus.UNREVIEWED"
+                  [class.good-word]="isGoodStatus(wordWithStatus.status)">
+              {{wordWithStatus.word}}
+            </span>
+            <span *ngIf="wordWithStatus.countInSong != null && wordWithStatus.countInSong > 0" class="word-count" title="In this song">
+              ×{{wordWithStatus.countInSong}}
+            </span>
+            <span *ngIf="wordWithStatus.countInAllSongs != null" 
+                  class="word-count-total" 
+                  [title]="getCommonnessTooltip(wordWithStatus.countInAllSongs)">
+              <span class="commonness-badge" [ngClass]="getCommonnessColorClass(wordWithStatus.countInAllSongs)"></span>
+            </span>
+          </div>
           
           <!-- Suggestions for rejected words -->
-          <div *ngIf="wordWithStatus.status === STATUS_REJECTED && wordWithStatus.suggestions && wordWithStatus.suggestions.length > 0" 
+          <div *ngIf="wordWithStatus.status === ReviewedWordStatus.REJECTED && wordWithStatus.suggestions && wordWithStatus.suggestions.length > 0" 
                class="suggestions">
             <span class="suggestion-label">Suggestions:</span>
             <mat-chip-list>
@@ -93,15 +96,36 @@
             </mat-chip-list>
           </div>
 
-          <!-- Action buttons -->
+          <!-- Action buttons (match words-spell-checker style) -->
           <div class="word-actions">
-            <button *ngIf="wordWithStatus.status === STATUS_UNREVIEWED" 
-                    mat-icon-button 
-                    color="primary" 
-                    (click)="onReviewWord(wordWithStatus.word)"
-                    matTooltip="Review word">
-              <mat-icon>rate_review</mat-icon>
-            </button>
+            <div class="action-buttons-container">
+              <!-- Group 2: Positive actions (good, context-specific, accepted) -->
+              <div class="button-group button-group-positive">
+                <app-mark-as-good-button
+                        [wordWithStatus]="wordWithStatus"
+                        (goodClick)="markAsGood(wordWithStatus.word)">
+                </app-mark-as-good-button>
+                <app-mark-as-context-specific-button
+                        [wordWithStatus]="wordWithStatus"
+                        (contextSpecificClick)="markAsContextSpecific(wordWithStatus.word)">
+                </app-mark-as-context-specific-button>
+                <app-mark-as-accepted-button
+                        [wordWithStatus]="wordWithStatus"
+                        (acceptedClick)="markAsAccepted(wordWithStatus.word)">
+                </app-mark-as-accepted-button>
+              </div>
+              <!-- Group 1: Negative actions (banned, rejected) - only if reviewer -->
+              <div class="button-group button-group-negative" *ngIf="hasReviewerRole">
+                <app-mark-as-banned-button
+                        [wordWithStatus]="wordWithStatus"
+                        (bannedClick)="markAsBanned(wordWithStatus.word)">
+                </app-mark-as-banned-button>
+                <app-mark-as-rejected-button
+                        [wordWithStatus]="wordWithStatus"
+                        (rejectedClick)="markAsRejected(wordWithStatus.word)">
+                </app-mark-as-rejected-button>
+              </div>
+            </div>
           </div>
         </mat-list-item>
       </mat-list>

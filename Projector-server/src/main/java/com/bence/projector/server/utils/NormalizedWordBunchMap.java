@@ -1,8 +1,5 @@
 package com.bence.projector.server.utils;
 
-import com.bence.projector.server.backend.model.Language;
-import com.bence.projector.server.backend.model.Song;
-import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.utils.models.NormalizedWordBunch;
 import com.bence.projector.server.utils.models.WordBunch;
 
@@ -10,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.bence.projector.server.utils.SetLanguages.getNormalizedWordBunches;
 import static com.bence.projector.server.utils.StringUtils.normalizeAccents;
 
 /**
@@ -41,19 +37,17 @@ public class NormalizedWordBunchMap {
     }
 
     /**
-     * Populates this map from the given language songs using the language service.
-     * Clears existing entries and rebuilds from {@link SetLanguages#getNormalizedWordBunches}.
+     * Populates this map from a list of normalized word bunches.
+     * Clears existing entries and rebuilds from the provided word bunches.
+     * This method is useful when you already have computed word bunches (e.g., from cache).
+     *
+     * @param normalizedWordBunches the list of normalized word bunches to populate from
      */
-    public void populate(List<Song> languageSongs, Language language, LanguageService languageService) {
+    public void populateFromWordBunches(List<NormalizedWordBunch> normalizedWordBunches) {
         map.clear();
-        if (languageSongs == null || language == null || languageService == null) {
+        if (normalizedWordBunches == null) {
             return;
         }
-        List<NormalizedWordBunch> normalizedWordBunches = getNormalizedWordBunches(
-                languageSongs,
-                languageService.findAll(),
-                language
-        );
         for (NormalizedWordBunch nwb : normalizedWordBunches) {
             for (WordBunch wb : nwb.getWordBunches()) {
                 String normalizedWord = wb.getNormalizedWord();

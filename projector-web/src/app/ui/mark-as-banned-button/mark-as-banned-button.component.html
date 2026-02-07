@@ -1,0 +1,7 @@
+<button mat-icon-button 
+        *ngIf="visible"
+        (click)="onClick()"
+        [class.reviewed]="isReviewed"
+        [matTooltip]="isReviewed ? 'Word is already reviewed - click to change status' : 'Mark as Banned'">
+  <mat-icon>block</mat-icon>
+</button>

@@ -5,7 +5,7 @@ import java.util.List;
 public class WordWithStatus {
 
     private String word;
-    private WordStatus status;
+    private ReviewedWordStatusDTO status;
     private List<String> suggestions;
     private Integer countInSong;
     private Integer countInAllSongs;
@@ -13,13 +13,13 @@ public class WordWithStatus {
     public WordWithStatus() {
     }
 
-    public WordWithStatus(String word, WordStatus status, List<String> suggestions) {
+    public WordWithStatus(String word, ReviewedWordStatusDTO status, List<String> suggestions) {
         this.word = word;
         this.status = status;
         this.suggestions = suggestions;
     }
 
-    public WordWithStatus(String word, WordStatus status, List<String> suggestions, Integer countInSong, Integer countInAllSongs) {
+    public WordWithStatus(String word, ReviewedWordStatusDTO status, List<String> suggestions, Integer countInSong, Integer countInAllSongs) {
         this.word = word;
         this.status = status;
         this.suggestions = suggestions;
@@ -35,11 +35,11 @@ public class WordWithStatus {
         this.word = word;
     }
 
-    public WordStatus getStatus() {
+    public ReviewedWordStatusDTO getStatus() {
         return status;
     }
 
-    public void setStatus(WordStatus status) {
+    public void setStatus(ReviewedWordStatusDTO status) {
         this.status = status;
     }
 
@@ -70,7 +70,10 @@ public class WordWithStatus {
     private String statusSymbol() {
         if (status == null) return "?";
         switch (status) {
-            case GOOD:
+            case REVIEWED_GOOD:
+            case CONTEXT_SPECIFIC:
+            case ACCEPTED:
+            case AUTO_ACCEPTED_FROM_PUBLIC:
                 return "✓";
             case UNREVIEWED:
                 return "?";

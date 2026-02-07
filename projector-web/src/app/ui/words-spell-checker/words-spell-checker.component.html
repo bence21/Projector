@@ -98,19 +98,15 @@
         <ng-container matColumnDef="actionsLeft">
           <mat-header-cell *matHeaderCellDef class="example-header-cell"></mat-header-cell>
           <mat-cell *matCellDef="let row" class="example-cell">
-            <div class="action-buttons-container">
-              <button mat-icon-button 
-                      *ngIf="shouldShowStatusOption(row, 'BANNED')" 
-                      (click)="markAsBanned(row)"
-                      matTooltip="Mark as Banned">
-                <mat-icon>block</mat-icon>
-              </button>
-              <button mat-icon-button 
-                      *ngIf="shouldShowStatusOption(row, 'REJECTED')" 
-                      (click)="markAsRejected(row)"
-                      matTooltip="Mark as Rejected">
-                <mat-icon>cancel</mat-icon>
-              </button>
+            <div class="action-buttons-container button-group-negative">
+              <app-mark-as-banned-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (bannedClick)="markAsBanned(row)">
+              </app-mark-as-banned-button>
+              <app-mark-as-rejected-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (rejectedClick)="markAsRejected(row)">
+              </app-mark-as-rejected-button>
             </div>
           </mat-cell>
         </ng-container>
@@ -118,25 +114,19 @@
         <ng-container matColumnDef="actionsRight">
           <mat-header-cell *matHeaderCellDef class="example-header-cell"></mat-header-cell>
           <mat-cell *matCellDef="let row" class="example-cell">
-            <div class="action-buttons-container">
-              <button mat-icon-button 
-                      *ngIf="shouldShowStatusOption(row, 'REVIEWED_GOOD')" 
-                      (click)="markAsGood(row)"
-                      matTooltip="Mark as Good">
-                <mat-icon>check_circle</mat-icon>
-              </button>
-              <button mat-icon-button 
-                      *ngIf="shouldShowStatusOption(row, 'CONTEXT_SPECIFIC')" 
-                      (click)="markAsContextSpecific(row)"
-                      matTooltip="Mark as Context-Specific">
-                <mat-icon>label</mat-icon>
-              </button>
-              <button mat-icon-button 
-                      *ngIf="shouldShowStatusOption(row, 'ACCEPTED')" 
-                      (click)="markAsAccepted(row)"
-                      matTooltip="Mark as Accepted">
-                <mat-icon>check</mat-icon>
-              </button>
+            <div class="action-buttons-container button-group-positive">
+              <app-mark-as-good-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (goodClick)="markAsGood(row)">
+              </app-mark-as-good-button>
+              <app-mark-as-context-specific-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (contextSpecificClick)="markAsContextSpecific(row)">
+              </app-mark-as-context-specific-button>
+              <app-mark-as-accepted-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (acceptedClick)="markAsAccepted(row)">
+              </app-mark-as-accepted-button>
             </div>
           </mat-cell>
         </ng-container>

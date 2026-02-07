@@ -1,8 +1,8 @@
 package com.bence.projector.server.backend.service;
 
 import com.bence.projector.common.dto.RejectedWordSuggestion;
+import com.bence.projector.common.dto.ReviewedWordStatusDTO;
 import com.bence.projector.common.dto.SongWordValidationResult;
-import com.bence.projector.common.dto.WordStatus;
 import com.bence.projector.common.dto.WordWithStatus;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.ReviewedWord;
@@ -32,13 +32,13 @@ public class SongWordValidationService {
     private static final int MAX_ALTERNATIVE_SUGGESTIONS = 5;
 
     private final ReviewedWordService reviewedWordService;
-    private final LanguageService languageService;
+    private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
 
     @Autowired
     public SongWordValidationService(ReviewedWordService reviewedWordService,
-                                     LanguageService languageService) {
+                                     NormalizedWordBunchCacheService normalizedWordBunchCacheService) {
         this.reviewedWordService = reviewedWordService;
-        this.languageService = languageService;
+        this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
     }
 
     public SongWordValidationResult validateWords(Song song) {
@@ -49,10 +49,9 @@ public class SongWordValidationService {
         Language language = song.getLanguage();
         Collection<String> songWords = getSongWords(song);
         List<ReviewedWord> allReviewedWords = reviewedWordService.findAllByLanguage(language);
-        List<Song> languageSongs = language.getSongs();
 
         Map<String, ReviewedWord> reviewedWordMap = buildReviewedWordMap(allReviewedWords);
-        NormalizedWordBunchMap normalizedWordBunchMap = buildNormalizedWordBunchMap(languageSongs, language);
+        NormalizedWordBunchMap normalizedWordBunchMap = buildNormalizedWordBunchMap(language);
 
         WordCategories categories = categorizeWords(songWords, reviewedWordMap, normalizedWordBunchMap, allReviewedWords);
 
@@ -76,17 +75,18 @@ public class SongWordValidationService {
     private Map<String, ReviewedWord> buildReviewedWordMap(List<ReviewedWord> allReviewedWords) {
         Map<String, ReviewedWord> map = new HashMap<>();
         for (ReviewedWord reviewedWord : allReviewedWords) {
-            String normalizedWord = reviewedWord.getNormalizedWord();
-            if (normalizedWord != null) {
-                map.putIfAbsent(normalizedWord, reviewedWord);
+            String word = reviewedWord.getWord();
+            if (word != null) {
+                map.putIfAbsent(word, reviewedWord);
             }
         }
         return map;
     }
 
-    private NormalizedWordBunchMap buildNormalizedWordBunchMap(List<Song> languageSongs, Language language) {
+    private NormalizedWordBunchMap buildNormalizedWordBunchMap(Language language) {
         NormalizedWordBunchMap map = new NormalizedWordBunchMap();
-        map.populate(languageSongs, language, languageService);
+        // Use cached word bunches instead of recomputing
+        map.populateFromWordBunches(normalizedWordBunchCacheService.getAllWordBunchesForLanguage(language));
         return map;
     }
 
@@ -138,19 +138,19 @@ public class SongWordValidationService {
                                 List<ReviewedWord> allReviewedWords,
                                 WordCategories categories) {
         // ReviewedWord map is keyed by lowercase normalized word
-        ReviewedWord reviewedWord = reviewedWordMap.get(word.toLowerCase());
+        ReviewedWord reviewedWord = reviewedWordMap.get(word);
         Integer countInSong = countInSongMap.get(word);
         int countInAllSongs = getCountInAllSongs(normalizedWordBunchMap, word);
 
         if (reviewedWord == null) {
             categories.unreviewedWords.add(word);
-            categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.UNREVIEWED, null, countInSong, countInAllSongs));
+            categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.UNREVIEWED, null, countInSong, countInAllSongs));
         } else {
-            ReviewedWordStatus status = reviewedWord.getStatus();
-            if (status == ReviewedWordStatus.BANNED) {
+            com.bence.projector.server.backend.model.ReviewedWordStatus status = reviewedWord.getStatus();
+            if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.BANNED) {
                 categories.bannedWords.add(word);
-                categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.BANNED, null, countInSong, countInAllSongs));
-            } else if (status == ReviewedWordStatus.REJECTED) {
+                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.BANNED, null, countInSong, countInAllSongs));
+            } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.REJECTED) {
                 RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
                 categories.rejectedWords.add(suggestion);
                 List<String> suggestions = new ArrayList<>();
@@ -160,9 +160,9 @@ public class SongWordValidationService {
                 if (suggestion.getAlternativeSuggestions() != null) {
                     suggestions.addAll(suggestion.getAlternativeSuggestions());
                 }
-                categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.REJECTED, suggestions, countInSong, countInAllSongs));
+                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs));
             } else {
-                categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.GOOD, null, countInSong, countInAllSongs));
+                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.fromValue(status.name()), null, countInSong, countInAllSongs));
             }
         }
     }

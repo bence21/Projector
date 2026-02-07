@@ -17,9 +17,9 @@ import { SELECTED_LANGUGAGE, WORDS_SPELL_CHECKER_FILTER_TYPE } from '../../util/
 import { Song } from '../../services/song-service.service';
 import { ChangeWord } from '../../models/changeWord';
 import { ReviewedWordDataService } from '../../services/reviewed-word-data.service';
+import { WordReviewHelperService } from '../../services/word-review-helper.service';
 import { ReviewedWord, ReviewedWordStatus } from '../../models/reviewedWord';
-import { WordReviewDialogComponent } from '../word-review-dialog/word-review-dialog.component';
-import { WordContextDialogComponent } from '../word-context-dialog/word-context-dialog.component';
+import { WordWithStatus } from '../../models/wordWithStatus';
 
 class NormalizedWordBunchRow {
   nr: number = 0;
@@ -48,6 +48,18 @@ class NormalizedWordBunchRow {
   getSongTitle(): string {
     return this.song.title;
   }
+
+  getWordWithStatus(): WordWithStatus {
+    return {
+      word: this.word,
+      status: (this.wordBunch.reviewedWord && this.wordBunch.reviewedWord.status) ? this.wordBunch.reviewedWord.status : ReviewedWordStatus.UNREVIEWED,
+      countInSong: this.count
+    };
+  }
+
+  get wordWithStatus(): WordWithStatus {
+    return this.getWordWithStatus();
+  }
 }
 
 export class NormalizedWordBunchDatabase {
@@ -57,6 +69,10 @@ export class NormalizedWordBunchDatabase {
     if (normalizedWordBunchRows !== null) {
       const copiedData = this.data;
       for (const normalizedWordBunchRow of normalizedWordBunchRows) {
+        // Ensure the row maintains its class prototype
+        if (!(normalizedWordBunchRow instanceof NormalizedWordBunchRow)) {
+          Object.setPrototypeOf(normalizedWordBunchRow, NormalizedWordBunchRow.prototype);
+        }
         copiedData.push(normalizedWordBunchRow);
         this.dataChange.next(copiedData);
       }
@@ -106,6 +122,7 @@ export class WordsSpellCheckerComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private reviewedWordDataService: ReviewedWordDataService,
+    private wordReviewHelper: WordReviewHelperService,
   ) { }
 
   ngOnInit() {
@@ -268,20 +285,35 @@ export class WordsSpellCheckerComponent implements OnInit {
     }
     // Convert status to string (handles both string and enum values)
     const statusString = String(status);
-    // Return CSS class based on status for color coding
+    // Return CSS class based on status for color coding - matching button colors
     const statusLower = statusString.toLowerCase();
-    if (statusLower.includes('good') || statusLower.includes('accepted')) {
+    if (statusLower.includes('good')) {
       return 'status-chip-good';
-    } else if (statusLower.includes('banned') || statusLower.includes('rejected')) {
-      return 'status-chip-bad';
+    } else if (statusLower.includes('accepted')) {
+      return 'status-chip-accepted';
+    } else if (statusLower.includes('banned')) {
+      return 'status-chip-banned';
+    } else if (statusLower.includes('rejected')) {
+      return 'status-chip-rejected';
     } else if (statusLower.includes('context')) {
       return 'status-chip-context';
     }
     return 'status-chip-default';
   }
 
-  shouldShowStatusOption(row: NormalizedWordBunchRow, status: string): boolean {
-    return !row.wordBunch.reviewedWord || row.wordBunch.reviewedWord.status !== status;
+  getWordWithStatusForRow(row: NormalizedWordBunchRow): WordWithStatus {
+    // Fallback method in case row loses its prototype methods
+    if (row && typeof row.getWordWithStatus === 'function') {
+      return row.getWordWithStatus();
+    }
+    // Fallback: create WordWithStatus directly
+    return {
+      word: row.word,
+      status: (row.wordBunch && row.wordBunch.reviewedWord && row.wordBunch.reviewedWord.status) 
+        ? row.wordBunch.reviewedWord.status 
+        : ReviewedWordStatus.UNREVIEWED,
+      countInSong: row.count
+    };
   }
 
   changeAll(normalizedWordBunchRow: NormalizedWordBunchRow) {
@@ -306,19 +338,12 @@ export class WordsSpellCheckerComponent implements OnInit {
    * to show the updated status chip and reflect any filter changes.
    */
   markAsGood(row: NormalizedWordBunchRow) {
-    const reviewedWord = new ReviewedWord();
-    reviewedWord.word = row.word;
-    reviewedWord.status = ReviewedWordStatus.REVIEWED_GOOD;
-    this.reviewedWordDataService.createOrUpdate(this.selectedLanguage, reviewedWord).subscribe(
-      () => {
-        this.snackBar.open('Word marked as good', 'Close', { duration: 3000 });
-        // Refresh data to show updated status and respect current filter
-        this.onFilterChange();
-      },
-      (err) => {
-        generalError(null, this, err, this.dialog, this.snackBar);
-      }
-    );
+    this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REVIEWED_GOOD, {
+      language: this.selectedLanguage,
+      word: row.word,
+      successMessage: 'Word marked as good',
+      onSuccess: () => this.onFilterChange()
+    });
   }
 
   /**
@@ -327,29 +352,11 @@ export class WordsSpellCheckerComponent implements OnInit {
    * to show the updated status chip and reflect any filter changes.
    */
   markAsAccepted(row: NormalizedWordBunchRow) {
-    const dialogRef = this.dialog.open(WordReviewDialogComponent, {
-      width: '500px',
-      data: { word: row.word, language: this.selectedLanguage }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        const reviewedWord = new ReviewedWord();
-        reviewedWord.word = row.word;
-        reviewedWord.status = ReviewedWordStatus.ACCEPTED;
-        reviewedWord.category = result.category;
-        reviewedWord.notes = result.notes;
-        this.reviewedWordDataService.createOrUpdate(this.selectedLanguage, reviewedWord).subscribe(
-          () => {
-            this.snackBar.open('Word marked as accepted', 'Close', { duration: 3000 });
-            // Refresh data to show updated status and respect current filter
-            this.onFilterChange();
-          },
-          (err) => {
-            generalError(null, this, err, this.dialog, this.snackBar);
-          }
-        );
-      }
+    this.wordReviewHelper.markAsAccepted({
+      language: this.selectedLanguage,
+      word: row.word,
+      successMessage: 'Word marked as accepted',
+      onSuccess: () => this.onFilterChange()
     });
   }
 
@@ -359,19 +366,12 @@ export class WordsSpellCheckerComponent implements OnInit {
    * to show the updated status chip and reflect any filter changes.
    */
   markAsBanned(row: NormalizedWordBunchRow) {
-    const reviewedWord = new ReviewedWord();
-    reviewedWord.word = row.word;
-    reviewedWord.status = ReviewedWordStatus.BANNED;
-    this.reviewedWordDataService.createOrUpdate(this.selectedLanguage, reviewedWord).subscribe(
-      () => {
-        this.snackBar.open('Word marked as banned', 'Close', { duration: 3000 });
-        // Refresh data to show updated status and respect current filter
-        this.onFilterChange();
-      },
-      (err) => {
-        generalError(null, this, err, this.dialog, this.snackBar);
-      }
-    );
+    this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.BANNED, {
+      language: this.selectedLanguage,
+      word: row.word,
+      successMessage: 'Word marked as banned',
+      onSuccess: () => this.onFilterChange()
+    });
   }
 
   /**
@@ -380,19 +380,12 @@ export class WordsSpellCheckerComponent implements OnInit {
    * to show the updated status chip and reflect any filter changes.
    */
   markAsRejected(row: NormalizedWordBunchRow) {
-    const reviewedWord = new ReviewedWord();
-    reviewedWord.word = row.word;
-    reviewedWord.status = ReviewedWordStatus.REJECTED;
-    this.reviewedWordDataService.createOrUpdate(this.selectedLanguage, reviewedWord).subscribe(
-      () => {
-        this.snackBar.open('Word marked as rejected', 'Close', { duration: 3000 });
-        // Refresh data to show updated status and respect current filter
-        this.onFilterChange();
-      },
-      (err) => {
-        generalError(null, this, err, this.dialog, this.snackBar);
-      }
-    );
+    this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REJECTED, {
+      language: this.selectedLanguage,
+      word: row.word,
+      successMessage: 'Word marked as rejected',
+      onSuccess: () => this.onFilterChange()
+    });
   }
 
   /**
@@ -401,30 +394,11 @@ export class WordsSpellCheckerComponent implements OnInit {
    * to show the updated status chip and reflect any filter changes.
    */
   markAsContextSpecific(row: NormalizedWordBunchRow) {
-    const dialogRef = this.dialog.open(WordContextDialogComponent, {
-      width: '500px',
-      data: { word: row.word, language: this.selectedLanguage }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        const reviewedWord = new ReviewedWord();
-        reviewedWord.word = row.word;
-        reviewedWord.status = ReviewedWordStatus.CONTEXT_SPECIFIC;
-        reviewedWord.contextCategory = result.contextCategory;
-        reviewedWord.contextDescription = result.contextDescription;
-        reviewedWord.notes = result.notes;
-        this.reviewedWordDataService.createOrUpdate(this.selectedLanguage, reviewedWord).subscribe(
-          () => {
-            this.snackBar.open('Word marked as context-specific', 'Close', { duration: 3000 });
-            // Refresh data to show updated status and respect current filter
-            this.onFilterChange();
-          },
-          (err) => {
-            generalError(null, this, err, this.dialog, this.snackBar);
-          }
-        );
-      }
+    this.wordReviewHelper.markAsContextSpecific({
+      language: this.selectedLanguage,
+      word: row.word,
+      successMessage: 'Word marked as context-specific',
+      onSuccess: () => this.onFilterChange()
     });
   }
 

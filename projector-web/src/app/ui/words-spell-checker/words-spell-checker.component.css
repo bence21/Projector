@@ -53,6 +53,14 @@
   width: fit-content;
 }
 
+.button-group-negative {
+  margin-right: 12px;
+}
+
+.button-group-positive {
+  margin-left: 0;
+}
+
 /* Subtle greenish background for action buttons container in actionsRight column */
 .mat-table>.mat-row>.mat-cell.mat-column-actionsRight {
   padding: 0 !important;
@@ -360,17 +368,27 @@ button.mat-raised-button:hover {
 }
 
 .status-chip-good {
-  background-color: #4caf50 !important;
+  background-color: #4caf50 !important; /* Green - matches mark-as-good-button */
   color: white !important;
 }
 
-.status-chip-bad {
-  background-color: #f44336 !important;
+.status-chip-accepted {
+  background-color: #2196f3 !important; /* Blue - matches mark-as-accepted-button */
+  color: white !important;
+}
+
+.status-chip-banned {
+  background-color: #f44336 !important; /* Red - matches mark-as-banned-button */
+  color: white !important;
+}
+
+.status-chip-rejected {
+  background-color: #ff5722 !important; /* Red-Orange - matches mark-as-rejected-button */
   color: white !important;
 }
 
 .status-chip-context {
-  background-color: #ff9800 !important;
+  background-color: #ffc107 !important; /* Yellow/Amber - matches mark-as-context-specific-button */
   color: white !important;
 }
 

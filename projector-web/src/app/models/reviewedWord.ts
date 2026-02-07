@@ -2,6 +2,7 @@ import { BaseModel } from "./base-model";
 import { Language } from "./language";
 
 export enum ReviewedWordStatus {
+  UNREVIEWED = 'UNREVIEWED',
   REVIEWED_GOOD = 'REVIEWED_GOOD',
   CONTEXT_SPECIFIC = 'CONTEXT_SPECIFIC',
   ACCEPTED = 'ACCEPTED',

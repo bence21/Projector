@@ -1,0 +1,42 @@
+/* Banned button - Red color */
+button {
+  color: #f44336 !important;
+}
+
+button mat-icon {
+  color: #f44336 !important;
+}
+
+button:hover {
+  background-color: rgba(244, 67, 54, 0.1) !important;
+}
+
+button:hover mat-icon {
+  color: #f44336 !important;
+}
+
+button:active {
+  background-color: rgba(244, 67, 54, 0.2) !important;
+}
+
+button:active mat-icon {
+  color: #f44336 !important;
+}
+
+/* Grayed out style for reviewed words */
+button.reviewed {
+  opacity: 0.5;
+  color: #9e9e9e !important;
+}
+
+button.reviewed mat-icon {
+  color: #9e9e9e !important;
+}
+
+button.reviewed:hover {
+  background-color: rgba(158, 158, 158, 0.1) !important;
+}
+
+button.reviewed:hover mat-icon {
+  color: #9e9e9e !important;
+}

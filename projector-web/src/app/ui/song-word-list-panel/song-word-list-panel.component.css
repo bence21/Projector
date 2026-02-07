@@ -50,6 +50,23 @@ mat-panel-description {
   color: #1976d2;
 }
 
+/* Filter button icon colors matching status icon colors */
+.filter-icon-good {
+  color: #4caf50 !important; /* Green - matches status-icon-good */
+}
+
+.filter-icon-unreviewed {
+  color: #ff9800 !important; /* Orange - matches status-icon-unreviewed */
+}
+
+.filter-icon-banned {
+  color: #f44336 !important; /* Red - matches status-icon-banned */
+}
+
+.filter-icon-rejected {
+  color: #ff5722 !important; /* Red-Orange - matches status-icon-rejected */
+}
+
 .word-item {
   height: auto !important;
   padding: 8px 0 !important;
@@ -67,10 +84,41 @@ mat-panel-description {
   height: 20px;
 }
 
-.word-text {
+/* Status icon colors matching action button colors */
+.status-icon-good {
+  color: #4caf50 !important; /* Green - matches mark-as-good-button */
+}
+
+.status-icon-context {
+  color: #ffc107 !important; /* Yellow/Amber - matches mark-as-context-specific-button */
+}
+
+.status-icon-accepted {
+  color: #2196f3 !important; /* Blue - matches mark-as-accepted-button */
+}
+
+.status-icon-banned {
+  color: #f44336 !important; /* Red - matches mark-as-banned-button */
+}
+
+.status-icon-rejected {
+  color: #ff5722 !important; /* Red-Orange - matches mark-as-rejected-button */
+}
+
+.status-icon-unreviewed {
+  color: #ff9800 !important; /* Orange - for unreviewed status */
+}
+
+.word-info {
+  display: flex;
+  align-items: center;
   flex: 1;
-  font-weight: 500;
   margin-right: 12px;
+}
+
+.word-text {
+  font-weight: 500;
+  margin-right: 8px;
 }
 
 .word-count,
@@ -78,16 +126,26 @@ mat-panel-description {
   font-size: 0.85em;
   color: #666;
   margin-right: 8px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
 }
 
-.word-count-total.common-word {
-  color: #4caf50;
-  font-weight: 500;
+.commonness-badge {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-left: 4px;
+  flex-shrink: 0;
 }
 
-.word-count-total.rare-word {
-  color: #ff9800;
-  font-weight: 500;
+.commonness-badge.common-word {
+  background-color: #4caf50;
+}
+
+.commonness-badge.rare-word {
+  background-color: #ff9800;
 }
 
 .good-word {
@@ -127,6 +185,29 @@ mat-chip-list {
 
 .word-actions {
   margin-left: auto;
+}
+
+.action-buttons-container {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: fit-content;
+  gap: 0;
+}
+
+.button-group {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.button-group-negative {
+  margin-right: 12px;
+}
+
+.button-group-positive {
+  margin-left: 0;
 }
 
 mat-list-item {
