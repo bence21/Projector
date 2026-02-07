@@ -1,0 +1,153 @@
+mat-dialog-content {
+  min-width: 600px;
+  max-width: 800px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.no-issues {
+  color: green;
+  font-weight: bold;
+  text-align: center;
+  padding: 20px;
+}
+
+.intro-text {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.issue-section {
+  margin-bottom: 30px;
+  padding: 15px;
+  border-left: 4px solid #ddd;
+  background-color: #f9f9f9;
+}
+
+.banned-section {
+  border-left-color: #f44336;
+  background-color: #ffebee;
+}
+
+.issue-section h3 {
+  display: flex;
+  align-items: center;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.warning-icon {
+  color: #ff9800;
+  margin-right: 8px;
+}
+
+.error-icon {
+  color: #f44336;
+  margin-right: 8px;
+}
+
+.error-icon-small {
+  color: #f44336;
+  font-size: 18px;
+  margin-right: 8px;
+}
+
+.warning-icon-small {
+  color: #ff9800;
+  font-size: 18px;
+  margin-right: 8px;
+}
+
+.section-description {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 15px;
+}
+
+.word-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+.banned-word {
+  color: #f44336;
+}
+
+.rejected-word {
+  color: #ff9800;
+}
+
+mat-list-item {
+  height: auto !important;
+  padding: 8px 0;
+}
+
+.rejected-word-item {
+  padding: 15px 0 !important;
+}
+
+.rejected-word-content {
+  width: 100%;
+}
+
+.rejected-word-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.suggestions-container {
+  margin-left: 26px;
+}
+
+.suggestions-label {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestions-list button {
+  margin: 0;
+}
+
+.suggestions-list button.selected {
+  background-color: #2196F3;
+  color: white;
+}
+
+.no-suggestions {
+  color: #999;
+  font-style: italic;
+}
+
+.publish-warning {
+  display: flex;
+  align-items: flex-start;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+.publish-warning .error-icon {
+  color: #f44336;
+  margin-right: 12px;
+  margin-top: 2px;
+}
+
+.publish-warning .warning-text {
+  margin: 0;
+  color: #856404;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  justify-content: flex-end;
+}

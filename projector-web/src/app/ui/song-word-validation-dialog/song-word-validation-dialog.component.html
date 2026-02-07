@@ -1,0 +1,101 @@
+<h2 mat-dialog-title>Word Validation Issues</h2>
+<mat-dialog-content>
+  <p *ngIf="!validationResult.hasIssues" class="no-issues">
+    No word issues found. The song is ready to be saved.
+  </p>
+
+  <div *ngIf="validationResult.hasIssues">
+    <div *ngIf="publish" class="publish-warning">
+      <mat-icon class="error-icon">error</mat-icon>
+      <p class="warning-text">
+        <strong>You cannot publish this song until all word issues are resolved.</strong> Please review and fix all issues below.
+      </p>
+    </div>
+    <p class="intro-text">
+      The following word issues were found in your song. Please review and fix them before publishing.
+    </p>
+
+    <!-- Unreviewed Words Section -->
+    <div *ngIf="getUnreviewedCount() > 0" class="issue-section">
+      <h3>
+        <mat-icon class="warning-icon">info</mat-icon>
+        Unreviewed Words ({{getUnreviewedCount()}})
+      </h3>
+      <p class="section-description">These words have not been reviewed yet. Please review them to ensure they are correct.</p>
+      <mat-list>
+        <mat-list-item *ngFor="let word of validationResult.unreviewedWords">
+          <span class="word-text">{{word}}</span>
+          <button mat-button color="primary" (click)="onReviewWord(word)">Review</button>
+        </mat-list-item>
+      </mat-list>
+    </div>
+
+    <!-- Banned Words Section -->
+    <div *ngIf="getBannedCount() > 0" class="issue-section banned-section">
+      <h3>
+        <mat-icon class="error-icon">error</mat-icon>
+        Banned Words ({{getBannedCount()}})
+      </h3>
+      <p class="section-description">These words are banned and should be removed or replaced. Please edit the song to fix them.</p>
+      <mat-list>
+        <mat-list-item *ngFor="let word of validationResult.bannedWords">
+          <mat-icon class="error-icon-small">error</mat-icon>
+          <span class="word-text banned-word">{{word}}</span>
+        </mat-list-item>
+      </mat-list>
+    </div>
+
+    <!-- Rejected Words Section -->
+    <div *ngIf="getRejectedCount() > 0" class="issue-section">
+      <h3>
+        <mat-icon class="warning-icon">warning</mat-icon>
+        Rejected Words ({{getRejectedCount()}})
+      </h3>
+      <p class="section-description">These words are rejected. Please select a suggested replacement or edit the song manually.</p>
+      <mat-list>
+        <mat-list-item *ngFor="let rejected of validationResult.rejectedWords" class="rejected-word-item">
+          <div class="rejected-word-content">
+            <div class="rejected-word-header">
+              <mat-icon class="warning-icon-small">warning</mat-icon>
+              <span class="word-text rejected-word">{{rejected.word}}</span>
+            </div>
+            <div class="suggestions-container">
+              <p class="suggestions-label">Suggestions:</p>
+              <div class="suggestions-list">
+                <button 
+                  *ngIf="rejected.primarySuggestion"
+                  mat-button 
+                  [class.selected]="selectedRejections.get(rejected.word) === rejected.primarySuggestion"
+                  (click)="onSelectSuggestion(rejected, rejected.primarySuggestion)">
+                  {{rejected.primarySuggestion}}
+                </button>
+                <button 
+                  *ngFor="let alt of rejected.alternativeSuggestions"
+                  mat-button 
+                  [class.selected]="selectedRejections.get(rejected.word) === alt"
+                  (click)="onSelectSuggestion(rejected, alt)">
+                  {{alt}}
+                </button>
+                <span *ngIf="!rejected.primarySuggestion && (!rejected.alternativeSuggestions || rejected.alternativeSuggestions.length === 0)" 
+                      class="no-suggestions">
+                  No suggestions available. Please edit manually.
+                </span>
+              </div>
+            </div>
+          </div>
+        </mat-list-item>
+      </mat-list>
+    </div>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button 
+    mat-button 
+    color="primary" 
+    (click)="onProceedAnyway()"
+    [disabled]="publish && validationResult.hasIssues"
+    *ngIf="validationResult.hasIssues">
+    {{ publish ? 'Save as Draft' : 'Proceed Anyway' }}
+  </button>
+</mat-dialog-actions>

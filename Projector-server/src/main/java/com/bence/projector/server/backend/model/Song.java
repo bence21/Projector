@@ -60,6 +60,7 @@ public class Song extends AbstractModel {
     private Song backUp;
     private Boolean isBackUp;
     private Boolean reviewerErased;
+    private Boolean hasUnsolvedWords;
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     @Transient
     private String beforeId;
@@ -418,6 +419,18 @@ public class Song extends AbstractModel {
         this.reviewerErased = reviewerErased;
     }
 
+    public boolean hasUnsolvedWords() {
+        return hasUnsolvedWords != null && hasUnsolvedWords;
+    }
+
+    public Boolean getHasUnsolvedWords() {
+        return hasUnsolvedWords;
+    }
+
+    public void setHasUnsolvedWords(Boolean hasUnsolvedWords) {
+        this.hasUnsolvedWords = hasUnsolvedWords;
+    }
+
     @SuppressWarnings("unused") // it's used by queue.html
     public String getBeforeId() {
         return beforeId;
@@ -428,7 +441,7 @@ public class Song extends AbstractModel {
     }
 
     public boolean isPublic() {
-        return !isReviewerErased() && !isDeleted() && !isBackUp();
+        return !isReviewerErased() && !isDeleted() && !isBackUp() && !hasUnsolvedWords();
     }
 
     private String idOrVersionGroup() {

@@ -1,0 +1,312 @@
+package com.bence.projector.server.backend.service;
+
+import com.bence.projector.common.dto.RejectedWordSuggestion;
+import com.bence.projector.common.dto.SongWordValidationResult;
+import com.bence.projector.common.dto.WordStatus;
+import com.bence.projector.common.dto.WordWithStatus;
+import com.bence.projector.server.backend.model.Language;
+import com.bence.projector.server.backend.model.ReviewedWord;
+import com.bence.projector.server.backend.model.ReviewedWordStatus;
+import com.bence.projector.server.backend.model.Song;
+import com.bence.projector.server.utils.NormalizedWordBunchMap;
+import com.bence.projector.server.utils.UnicodeTextNormalizer;
+import com.bence.projector.server.utils.models.NormalizedWordBunch;
+import com.bence.projector.server.utils.models.WordBunch;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static com.bence.projector.server.utils.SetLanguages.getSongWords;
+import static com.bence.projector.server.utils.UnicodeTextNormalizer.normalizeForComparison;
+
+@Service
+public class SongWordValidationService {
+
+    private static final int MAX_ALTERNATIVE_SUGGESTIONS = 5;
+
+    private final ReviewedWordService reviewedWordService;
+    private final LanguageService languageService;
+
+    @Autowired
+    public SongWordValidationService(ReviewedWordService reviewedWordService,
+                                     LanguageService languageService) {
+        this.reviewedWordService = reviewedWordService;
+        this.languageService = languageService;
+    }
+
+    public SongWordValidationResult validateWords(Song song) {
+        if (!isValidSong(song)) {
+            return createEmptyValidationResult();
+        }
+
+        Language language = song.getLanguage();
+        Collection<String> songWords = getSongWords(song);
+        List<ReviewedWord> allReviewedWords = reviewedWordService.findAllByLanguage(language);
+        List<Song> languageSongs = language.getSongs();
+
+        Map<String, ReviewedWord> reviewedWordMap = buildReviewedWordMap(allReviewedWords);
+        NormalizedWordBunchMap normalizedWordBunchMap = buildNormalizedWordBunchMap(languageSongs, language);
+
+        WordCategories categories = categorizeWords(songWords, reviewedWordMap, normalizedWordBunchMap, allReviewedWords);
+
+        return new SongWordValidationResult(
+                categories.unreviewedWords,
+                categories.bannedWords,
+                categories.rejectedWords,
+                categories.hasIssues(),
+                categories.wordsWithStatus
+        );
+    }
+
+    private boolean isValidSong(Song song) {
+        return song != null && song.getLanguage() != null;
+    }
+
+    private SongWordValidationResult createEmptyValidationResult() {
+        return new SongWordValidationResult(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), false, new ArrayList<>());
+    }
+
+    private Map<String, ReviewedWord> buildReviewedWordMap(List<ReviewedWord> allReviewedWords) {
+        Map<String, ReviewedWord> map = new HashMap<>();
+        for (ReviewedWord reviewedWord : allReviewedWords) {
+            String normalizedWord = reviewedWord.getNormalizedWord();
+            if (normalizedWord != null) {
+                map.putIfAbsent(normalizedWord, reviewedWord);
+            }
+        }
+        return map;
+    }
+
+    private NormalizedWordBunchMap buildNormalizedWordBunchMap(List<Song> languageSongs, Language language) {
+        NormalizedWordBunchMap map = new NormalizedWordBunchMap();
+        map.populate(languageSongs, language, languageService);
+        return map;
+    }
+
+    private Map<String, Integer> buildCountInSongMap(Collection<String> songWords) {
+        Map<String, Integer> countInSong = new HashMap<>();
+        for (String word : songWords) {
+            countInSong.merge(word, 1, Integer::sum);
+        }
+        return countInSong;
+    }
+
+    private WordCategories categorizeWords(Collection<String> songWords,
+                                           Map<String, ReviewedWord> reviewedWordMap,
+                                           NormalizedWordBunchMap normalizedWordBunchMap,
+                                           List<ReviewedWord> allReviewedWords) {
+        WordCategories categories = new WordCategories();
+        Set<String> processedWords = new HashSet<>();
+        Map<String, Integer> countInSongMap = buildCountInSongMap(songWords);
+
+        for (String word : songWords) {
+            if (!processedWords.contains(word)) {
+                processedWords.add(word);
+                categorizeWord(word, reviewedWordMap, normalizedWordBunchMap,
+                        countInSongMap, allReviewedWords, categories);
+            }
+        }
+
+        return categories;
+    }
+
+    /**
+     * Returns the total count of the given word across all songs in the bunches.
+     */
+    private int getCountInAllSongs(NormalizedWordBunchMap normalizedWordBunchMap, String word) {
+        NormalizedWordBunch nwb = normalizedWordBunchMap.get(word);
+        if (nwb == null) {
+            return 0;
+        }
+        return nwb.getWordBunches().stream()
+                .filter(wb -> word.equals(wb.getWord()))
+                .mapToInt(WordBunch::getCount)
+                .sum();
+    }
+
+    private void categorizeWord(String word,
+                                Map<String, ReviewedWord> reviewedWordMap,
+                                NormalizedWordBunchMap normalizedWordBunchMap,
+                                Map<String, Integer> countInSongMap,
+                                List<ReviewedWord> allReviewedWords,
+                                WordCategories categories) {
+        // ReviewedWord map is keyed by lowercase normalized word
+        ReviewedWord reviewedWord = reviewedWordMap.get(word.toLowerCase());
+        Integer countInSong = countInSongMap.get(word);
+        int countInAllSongs = getCountInAllSongs(normalizedWordBunchMap, word);
+
+        if (reviewedWord == null) {
+            categories.unreviewedWords.add(word);
+            categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.UNREVIEWED, null, countInSong, countInAllSongs));
+        } else {
+            ReviewedWordStatus status = reviewedWord.getStatus();
+            if (status == ReviewedWordStatus.BANNED) {
+                categories.bannedWords.add(word);
+                categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.BANNED, null, countInSong, countInAllSongs));
+            } else if (status == ReviewedWordStatus.REJECTED) {
+                RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
+                categories.rejectedWords.add(suggestion);
+                List<String> suggestions = new ArrayList<>();
+                if (suggestion.getPrimarySuggestion() != null) {
+                    suggestions.add(suggestion.getPrimarySuggestion());
+                }
+                if (suggestion.getAlternativeSuggestions() != null) {
+                    suggestions.addAll(suggestion.getAlternativeSuggestions());
+                }
+                categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.REJECTED, suggestions, countInSong, countInAllSongs));
+            } else {
+                categories.wordsWithStatus.add(new WordWithStatus(word, WordStatus.GOOD, null, countInSong, countInAllSongs));
+            }
+        }
+    }
+
+    private static class WordCategories {
+        final List<String> unreviewedWords = new ArrayList<>();
+        final List<String> bannedWords = new ArrayList<>();
+        final List<RejectedWordSuggestion> rejectedWords = new ArrayList<>();
+        final List<WordWithStatus> wordsWithStatus = new ArrayList<>();
+
+        boolean hasIssues() {
+            return !unreviewedWords.isEmpty() || !bannedWords.isEmpty() || !rejectedWords.isEmpty();
+        }
+    }
+
+    private RejectedWordSuggestion findSuggestionsForRejectedWord(
+            String word,
+            NormalizedWordBunchMap normalizedWordBunchMap,
+            List<ReviewedWord> allReviewedWords) {
+
+        NormalizedWordResult normalizedResult = normalizeWordAndPrimarySuggestion(word, normalizedWordBunchMap);
+        String normalizedOriginalWord = normalizedResult.normalizedWord;
+        String primarySuggestion = normalizedResult.primarySuggestion;
+
+        SuggestionResult suggestionResult = findSimilarGoodWords(
+                normalizedOriginalWord, word, primarySuggestion, allReviewedWords);
+
+        primarySuggestion = normalizeSuggestionResult(suggestionResult, primarySuggestion);
+
+        limitSuggestions(suggestionResult.alternativeSuggestions);
+
+        return new RejectedWordSuggestion(word, primarySuggestion, suggestionResult.alternativeSuggestions);
+    }
+
+    private NormalizedWordResult normalizeWordAndPrimarySuggestion(String word, NormalizedWordBunchMap normalizedWordBunchMap) {
+        // Normalize the original word for consistent handling
+        String normalizedOriginalWord = normalizeForComparison(word);
+
+        String primarySuggestion = normalizedWordBunchMap.getBestWord(word);
+        if (primarySuggestion != null) {
+            primarySuggestion = normalizeForComparison(primarySuggestion);
+        }
+
+        return new NormalizedWordResult(normalizedOriginalWord, primarySuggestion);
+    }
+
+    private String normalizeSuggestionResult(SuggestionResult suggestionResult, String primarySuggestion) {
+        if (suggestionResult.primarySuggestion != null) {
+            primarySuggestion = normalizeForComparison(suggestionResult.primarySuggestion);
+        }
+
+        // Normalize all alternative suggestions
+        suggestionResult.alternativeSuggestions.replaceAll(UnicodeTextNormalizer::normalizeForComparison);
+
+        return primarySuggestion;
+    }
+
+    private record NormalizedWordResult(String normalizedWord, String primarySuggestion) {
+    }
+
+    private SuggestionResult findSimilarGoodWords(String originalWord, String normalizedWord,
+                                                  String existingPrimarySuggestion,
+                                                  List<ReviewedWord> allReviewedWords) {
+        SuggestionResult result = new SuggestionResult();
+        Set<ReviewedWordStatus> goodStatuses = getGoodStatuses();
+
+        for (ReviewedWord reviewedWord : allReviewedWords) {
+            if (isGoodStatusWord(reviewedWord, goodStatuses) &&
+                    isSimilarNormalizedWord(normalizedWord, reviewedWord)) {
+                String reviewedWordText = reviewedWord.getWord();
+                if (isValidSuggestion(originalWord, reviewedWordText, existingPrimarySuggestion, result)) {
+                    if (existingPrimarySuggestion == null && result.primarySuggestion == null) {
+                        result.primarySuggestion = reviewedWordText;
+                    } else {
+                        result.alternativeSuggestions.add(reviewedWordText);
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static class SuggestionResult {
+        String primarySuggestion;
+        final List<String> alternativeSuggestions = new ArrayList<>();
+    }
+
+    private Set<ReviewedWordStatus> getGoodStatuses() {
+        return Set.of(
+                ReviewedWordStatus.REVIEWED_GOOD,
+                ReviewedWordStatus.ACCEPTED,
+                ReviewedWordStatus.CONTEXT_SPECIFIC,
+                ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC
+        );
+    }
+
+    private boolean isGoodStatusWord(ReviewedWord reviewedWord, Set<ReviewedWordStatus> goodStatuses) {
+        return goodStatuses.contains(reviewedWord.getStatus());
+    }
+
+    private boolean isSimilarNormalizedWord(String normalizedWord, ReviewedWord reviewedWord) {
+        String reviewedNormalized = reviewedWord.getNormalizedWord();
+        return reviewedNormalized != null && isSimilar(normalizedWord, reviewedNormalized);
+    }
+
+    private boolean isValidSuggestion(String originalWord, String suggestion,
+                                      String primarySuggestion, SuggestionResult result) {
+        return suggestion != null &&
+                !suggestion.equals(originalWord) &&
+                !suggestion.equals(primarySuggestion) &&
+                !suggestion.equals(result.primarySuggestion) &&
+                !result.alternativeSuggestions.contains(suggestion);
+    }
+
+    private void limitSuggestions(List<String> suggestions) {
+        if (suggestions.size() > MAX_ALTERNATIVE_SUGGESTIONS) {
+            suggestions.subList(MAX_ALTERNATIVE_SUGGESTIONS, suggestions.size()).clear();
+        }
+    }
+
+    private boolean isSimilar(String word1, String word2) {
+        if (word1 == null || word2 == null) {
+            return false;
+        }
+
+        // Simple similarity: same length or length difference <= 2, and at least 70% character match
+        int len1 = word1.length();
+        int len2 = word2.length();
+
+        if (Math.abs(len1 - len2) > 2) {
+            return false;
+        }
+
+        // Calculate character similarity
+        int matches = 0;
+        int minLen = Math.min(len1, len2);
+        for (int i = 0; i < minLen; i++) {
+            if (word1.charAt(i) == word2.charAt(i)) {
+                matches++;
+            }
+        }
+
+        double similarity = (double) matches / Math.max(len1, len2);
+        return similarity >= 0.7;
+    }
+}

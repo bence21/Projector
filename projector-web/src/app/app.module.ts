@@ -107,8 +107,11 @@ import { SongGuidelineCheckerComponent } from './ui/song-guideline-checker/song-
 import { WordsSpellCheckerComponent } from './ui/words-spell-checker/words-spell-checker.component';
 import { NormalizedWordBunchDataService } from './services/normalized-word-bunch-data.service';
 import { ReviewedWordDataService } from './services/reviewed-word-data.service';
+import { SongWordValidationService } from './services/song-word-validation.service';
 import { WordReviewDialogComponent } from './ui/word-review-dialog/word-review-dialog.component';
 import { WordContextDialogComponent } from './ui/word-context-dialog/word-context-dialog.component';
+import { SongWordValidationDialogComponent } from './ui/song-word-validation-dialog/song-word-validation-dialog.component';
+import { SongWordListPanelComponent } from './ui/song-word-list-panel/song-word-list-panel.component';
 
 @NgModule({
   exports: [
@@ -205,6 +208,8 @@ export class PlunkerMaterialModule {
     WordsSpellCheckerComponent,
     WordReviewDialogComponent,
     WordContextDialogComponent,
+    SongWordValidationDialogComponent,
+    SongWordListPanelComponent,
   ],
   imports: [
     BrowserModule,
@@ -228,6 +233,7 @@ export class PlunkerMaterialModule {
     SongCollectionElementComponent,
     WordReviewDialogComponent,
     WordContextDialogComponent,
+    SongWordValidationDialogComponent,
   ],
   providers: [
     ApiService,
@@ -245,6 +251,7 @@ export class PlunkerMaterialModule {
     GuidelineDataService,
     NormalizedWordBunchDataService,
     ReviewedWordDataService,
+    SongWordValidationService,
   ],
   bootstrap: [AppComponent]
 })

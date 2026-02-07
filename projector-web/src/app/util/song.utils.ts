@@ -1,5 +1,9 @@
 import { FormControl, FormGroup } from "@angular/forms";
 import { SectionType, Song, SongVerseUI } from "../services/song-service.service";
+import { SongWordValidationService } from "../services/song-word-validation.service";
+import { MatDialog, MatSnackBar } from "@angular/material";
+import { Language } from "../models/language";
+import { SongWordValidationDialogComponent } from "../ui/song-word-validation-dialog/song-word-validation-dialog.component";
 
 export function calculateOrder_(customSectionOrder: boolean, song: Song, usedSectionTypes: { name: string; type: SectionType; text: string; verse: SongVerseUI; index: number; }[]) {
   let sectionOrder = [];
@@ -52,4 +56,53 @@ export function addNewVerse_(verses: SongVerseUI[], verseControls: FormControl[]
   }
   song.verseOrderList.push(index);
   return control;
+}
+
+export interface WordValidationConfig {
+  song: Song;
+  validationService: SongWordValidationService;
+  dialog: MatDialog;
+  snackBar: MatSnackBar;
+  language: Language;
+  publish: boolean;
+  onSave: () => void;
+}
+
+export function validateWordsAndSave(config: WordValidationConfig): void {
+  const { song, validationService, dialog, snackBar, language, publish, onSave } = config;
+
+  validationService.validateWords(song).subscribe(
+    (validationResult) => {
+      if (validationResult.hasIssues) {
+        // Show informative message when trying to publish
+        if (publish) {
+          snackBar.open('Please review and resolve word issues before publishing. Opening validation dialog...', 'Close', {
+            duration: 4000
+          });
+        }
+        // Always show validation dialog when there are issues
+        const dialogRef = dialog.open(SongWordValidationDialogComponent, {
+          width: '700px',
+          data: { validationResult: validationResult, language: language, publish: publish }
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+          if (result && result.proceed) {
+            // User wants to proceed with issues - save as non-public
+            song.uploaded = false;
+            onSave();
+          }
+          // If user cancelled, do nothing
+        });
+      } else {
+        // No issues, proceed with save
+        onSave();
+      }
+    },
+    (err) => {
+      console.error('Error validating words:', err);
+      // On error, proceed with save anyway
+      onSave();
+    }
+  );
 }

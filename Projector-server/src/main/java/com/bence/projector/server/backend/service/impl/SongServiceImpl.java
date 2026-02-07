@@ -15,7 +15,10 @@ import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongVerseOrderListItemService;
 import com.bence.projector.server.backend.service.SongVerseService;
+import com.bence.projector.server.backend.service.SongWordValidationService;
+import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.server.utils.StringUtils;
+import com.bence.projector.server.utils.UnicodeTextNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -58,6 +61,8 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     private SongVerseOrderListItemService songVerseOrderListItemService;
     @Autowired
     private FavouriteSongService favouriteSongService;
+    @Autowired
+    private SongWordValidationService songWordValidationService;
 
     private static boolean containsFavourite(List<FavouriteSong> favouriteSongs) {
         for (FavouriteSong favouriteSong : favouriteSongs) {
@@ -788,6 +793,21 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return song;
     }
 
+    private void normalizeSongTextForPersistence(Song song, List<SongVerse> songVerses) {
+        // Normalize song title and verse text before persistence
+        song.setTitle(UnicodeTextNormalizer.normalizeForPersistence(song.getTitle()));
+        if (song.getAuthor() != null) {
+            song.setAuthor(UnicodeTextNormalizer.normalizeForPersistence(song.getAuthor()));
+        }
+        
+        // Normalize verse text
+        for (SongVerse verse : songVerses) {
+            if (verse.getText() != null) {
+                verse.setText(UnicodeTextNormalizer.normalizeForPersistence(verse.getText()));
+            }
+        }
+    }
+
     @Override
     public Song save(Song song) {
         if (song.getTitle() == null || song.getTitle().trim().isEmpty()) {
@@ -797,12 +817,21 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (songVerses == null || songVerses.isEmpty()) {
             throw new ServiceException("songVerses isEmpty!", HttpStatus.PRECONDITION_FAILED);
         }
+        
+        normalizeSongTextForPersistence(song, songVerses);
+        
         if (song.isDeleted() && song.getLanguage() == null) {
             return songRepository.save(song);
         }
         if (song.getLanguage() == null) {
             throw new ServiceException("No language", HttpStatus.PRECONDITION_FAILED);
         }
+        
+        // Validate words and set hasUnsolvedWords flag
+        // Songs with unsolved words will be filtered out from being public via isPublic() method
+        SongWordValidationResult validationResult = songWordValidationService.validateWords(song);
+        song.setHasUnsolvedWords(validationResult.isHasIssues());
+        
         try {
             List<SongVerse> verses = new ArrayList<>(songVerses);
             List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
