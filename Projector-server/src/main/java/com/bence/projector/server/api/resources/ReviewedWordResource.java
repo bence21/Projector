@@ -1,6 +1,8 @@
 package com.bence.projector.server.api.resources;
 
+import com.bence.projector.common.dto.LanguageDTO;
 import com.bence.projector.common.dto.ReviewedWordDTO;
+import com.bence.projector.server.api.assembler.LanguageAssembler;
 import com.bence.projector.server.api.assembler.ReviewedWordAssembler;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.ReviewedWord;
@@ -33,6 +35,7 @@ public class ReviewedWordResource {
     private final ReviewedWordService reviewedWordService;
     private final ReviewedWordAssembler reviewedWordAssembler;
     private final LanguageService languageService;
+    private final LanguageAssembler languageAssembler;
     private final UserService userService;
     private final SongService songService;
 
@@ -41,12 +44,14 @@ public class ReviewedWordResource {
             ReviewedWordService reviewedWordService,
             ReviewedWordAssembler reviewedWordAssembler,
             LanguageService languageService,
+            LanguageAssembler languageAssembler,
             UserService userService,
             SongService songService
     ) {
         this.reviewedWordService = reviewedWordService;
         this.reviewedWordAssembler = reviewedWordAssembler;
         this.languageService = languageService;
+        this.languageAssembler = languageAssembler;
         this.userService = userService;
         this.songService = songService;
     }
@@ -163,6 +168,25 @@ public class ReviewedWordResource {
         }
 
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(savedWords), HttpStatus.ACCEPTED);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/reviewedWord/detect-language")
+    public ResponseEntity<Object> detectSourceLanguages(
+            Principal principal,
+            @RequestParam("word") String word,
+            @RequestParam("languageId") String languageId
+    ) {
+        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        if (validationError != null) {
+            return validationError;
+        }
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
+        }
+        List<Language> detected = reviewedWordService.detectSourceLanguages(word, language);
+        List<LanguageDTO> dtos = languageAssembler.createDtoList(detected);
+        return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
     @RequestMapping(method = {RequestMethod.GET}, value = "/admin/api/reviewedWord/{languageId}/autoAcceptFromPublicSongs")

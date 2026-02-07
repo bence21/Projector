@@ -23,6 +23,8 @@ export class ReviewedWord extends BaseModel {
   reviewedByName: string;
   reviewedDate: Date;
   notes: string;
+  sourceLanguage: Language;
+  foreignLanguageType: number; /* 0 = BORROWED, 1 = FOREIGN */
 
   constructor(values: Object = {}) {
     super(values);
@@ -32,6 +34,9 @@ export class ReviewedWord extends BaseModel {
     }
     if (this.reviewedDate) {
       this.reviewedDate = new Date(this.reviewedDate);
+    }
+    if (this.sourceLanguage) {
+      this.sourceLanguage = new Language(this.sourceLanguage);
     }
   }
 }

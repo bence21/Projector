@@ -17,7 +17,13 @@ public interface ReviewedWordService extends BaseService<ReviewedWord> {
 
     ReviewedWord saveOrUpdate(ReviewedWord reviewedWord, User reviewedBy);
 
-    List<ReviewedWord> saveBulkNewWords(List<String> words, Language language, User reviewedBy);
+    void saveBulkNewWords(List<String> words, Language language, User reviewedBy);
 
     void deleteReview(String uuid);
+
+    /**
+     * Detect potential source languages for a word based on where the same (normalized) word
+     * exists as reviewed/accepted in other languages.
+     */
+    List<Language> detectSourceLanguages(String word, Language songLanguage);
 }

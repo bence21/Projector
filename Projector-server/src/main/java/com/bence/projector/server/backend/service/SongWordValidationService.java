@@ -1,9 +1,11 @@
 package com.bence.projector.server.backend.service;
 
+import com.bence.projector.common.dto.LanguageDTO;
 import com.bence.projector.common.dto.RejectedWordSuggestion;
 import com.bence.projector.common.dto.ReviewedWordStatusDTO;
 import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.common.dto.WordWithStatus;
+import com.bence.projector.server.api.assembler.LanguageAssembler;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.ReviewedWord;
 import com.bence.projector.server.backend.model.ReviewedWordStatus;
@@ -33,12 +35,15 @@ public class SongWordValidationService {
 
     private final ReviewedWordService reviewedWordService;
     private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
+    private final LanguageAssembler languageAssembler;
 
     @Autowired
     public SongWordValidationService(ReviewedWordService reviewedWordService,
-                                     NormalizedWordBunchCacheService normalizedWordBunchCacheService) {
+                                     NormalizedWordBunchCacheService normalizedWordBunchCacheService,
+                                     LanguageAssembler languageAssembler) {
         this.reviewedWordService = reviewedWordService;
         this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
+        this.languageAssembler = languageAssembler;
     }
 
     public SongWordValidationResult validateWords(Song song) {
@@ -162,21 +167,29 @@ public class SongWordValidationService {
                 }
                 categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs));
             } else {
-                // For accepted words, include category and notes
+                // For accepted words, include category and notes; for "Foreign Language" include sourceLanguage and foreignLanguageType
                 // For context-specific words, include contextCategory, contextDescription, and notes
                 String category = null;
                 String notes = null;
                 String contextCategory = null;
                 String contextDescription = null;
+                LanguageDTO sourceLanguageDto = null;
+                Integer foreignLanguageTypeOrdinal = null;
                 if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.ACCEPTED) {
                     category = reviewedWord.getCategory();
                     notes = reviewedWord.getNotes();
+                    if (reviewedWord.getSourceLanguage() != null) {
+                        sourceLanguageDto = languageAssembler.createDto(reviewedWord.getSourceLanguage());
+                    }
+                    if (reviewedWord.getForeignLanguageType() != null) {
+                        foreignLanguageTypeOrdinal = reviewedWord.getForeignLanguageType().ordinal();
+                    }
                 } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.CONTEXT_SPECIFIC) {
                     contextCategory = reviewedWord.getContextCategory();
                     contextDescription = reviewedWord.getContextDescription();
                     notes = reviewedWord.getNotes();
                 }
-                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.fromValue(status.name()), null, countInSong, countInAllSongs, category, notes, contextCategory, contextDescription));
+                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.fromValue(status.name()), null, countInSong, countInAllSongs, category, notes, contextCategory, contextDescription, sourceLanguageDto, foreignLanguageTypeOrdinal));
             }
         }
     }

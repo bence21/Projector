@@ -15,6 +15,8 @@ public class ReviewedWordDTO extends BaseDTO {
     private String reviewedByName;
     private Date reviewedDate;
     private String notes;
+    private LanguageDTO sourceLanguage;
+    private Integer foreignLanguageType;
 
     public String getWord() {
         return word;
@@ -102,5 +104,21 @@ public class ReviewedWordDTO extends BaseDTO {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public LanguageDTO getSourceLanguage() {
+        return sourceLanguage;
+    }
+
+    public void setSourceLanguage(LanguageDTO sourceLanguage) {
+        this.sourceLanguage = sourceLanguage;
+    }
+
+    public Integer getForeignLanguageType() {
+        return foreignLanguageType;
+    }
+
+    public void setForeignLanguageType(Integer foreignLanguageType) {
+        this.foreignLanguageType = foreignLanguageType;
     }
 }

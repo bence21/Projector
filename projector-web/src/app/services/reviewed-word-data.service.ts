@@ -10,6 +10,11 @@ export class ReviewedWordDataService {
   constructor(private api: ApiService) {
   }
 
+  detectSourceLanguages(word: string, language: Language): Observable<Language[]> {
+    const params = `word=${encodeURIComponent(word)}&languageId=${encodeURIComponent(language.uuid)}`;
+    return this.api.getAll(Language, `admin/api/reviewedWord/detect-language?${params}`);
+  }
+
   getAll(language: Language): Observable<ReviewedWord[]> {
     return this.api.getAll(ReviewedWord, 'admin/api/reviewedWord/' + language.uuid);
   }

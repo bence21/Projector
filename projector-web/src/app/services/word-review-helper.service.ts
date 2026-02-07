@@ -69,6 +69,12 @@ export class WordReviewHelperService {
         reviewedWord.status = ReviewedWordStatus.ACCEPTED;
         reviewedWord.category = result.category;
         reviewedWord.notes = result.notes;
+        if (result.sourceLanguage) {
+          reviewedWord.sourceLanguage = result.sourceLanguage;
+        }
+        if (result.foreignLanguageType) {
+          reviewedWord.foreignLanguageType = result.foreignLanguageType;
+        }
 
         this.reviewedWordDataService.createOrUpdate(options.language, reviewedWord).subscribe(
           () => {

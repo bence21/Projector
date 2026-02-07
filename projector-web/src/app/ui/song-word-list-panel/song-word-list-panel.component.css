@@ -148,6 +148,16 @@ mat-panel-description {
   background-color: #ff9800;
 }
 
+.source-language-badge {
+  display: inline-block;
+  font-size: 0.75em;
+  padding: 2px 6px;
+  margin-left: 6px;
+  border-radius: 4px;
+  background-color: #e8eaf6;
+  color: #3f51b5;
+}
+
 .good-word {
   color: #4caf50;
 }

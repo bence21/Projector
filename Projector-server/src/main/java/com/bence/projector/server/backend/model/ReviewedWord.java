@@ -1,6 +1,16 @@
 package com.bence.projector.server.backend.model;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.Index;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import java.util.Date;
 
 import static com.bence.projector.server.utils.StringUtils.normalizeAccents;
@@ -55,6 +65,14 @@ public class ReviewedWord extends AbstractModel {
 
     @Column(length = 1000)
     private String notes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_language_id")
+    private Language sourceLanguage;
+
+    @Enumerated(EnumType.ORDINAL)
+    @Column(name = "foreign_language_type")
+    private ForeignLanguageType foreignLanguageType;
 
     public ReviewedWord() {
     }
@@ -140,5 +158,21 @@ public class ReviewedWord extends AbstractModel {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Language getSourceLanguage() {
+        return sourceLanguage;
+    }
+
+    public void setSourceLanguage(Language sourceLanguage) {
+        this.sourceLanguage = sourceLanguage;
+    }
+
+    public ForeignLanguageType getForeignLanguageType() {
+        return foreignLanguageType;
+    }
+
+    public void setForeignLanguageType(ForeignLanguageType foreignLanguageType) {
+        this.foreignLanguageType = foreignLanguageType;
     }
 }

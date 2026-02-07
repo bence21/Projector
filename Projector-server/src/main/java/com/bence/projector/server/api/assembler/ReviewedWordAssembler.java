@@ -1,8 +1,10 @@
 package com.bence.projector.server.api.assembler;
 
 import com.bence.projector.common.dto.ReviewedWordDTO;
+import com.bence.projector.server.backend.model.ForeignLanguageType;
 import com.bence.projector.server.backend.model.ReviewedWord;
 import com.bence.projector.server.backend.model.ReviewedWordStatus;
+import com.bence.projector.server.backend.service.LanguageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -10,10 +12,12 @@ import org.springframework.stereotype.Component;
 public class ReviewedWordAssembler implements GeneralAssembler<ReviewedWord, ReviewedWordDTO> {
 
     private final LanguageAssembler languageAssembler;
+    private final LanguageService languageService;
 
     @Autowired
-    public ReviewedWordAssembler(LanguageAssembler languageAssembler) {
+    public ReviewedWordAssembler(LanguageAssembler languageAssembler, LanguageService languageService) {
         this.languageAssembler = languageAssembler;
+        this.languageService = languageService;
     }
 
     @Override
@@ -35,13 +39,19 @@ public class ReviewedWordAssembler implements GeneralAssembler<ReviewedWord, Rev
             String firstName = reviewedWord.getReviewedBy().getFirstName();
             String surname = reviewedWord.getReviewedBy().getSurname();
             if (firstName != null || surname != null) {
-                dto.setReviewedByName((firstName != null ? firstName : "") + 
-                    (firstName != null && surname != null ? " " : "") + 
-                    (surname != null ? surname : ""));
+                dto.setReviewedByName((firstName != null ? firstName : "") +
+                        (firstName != null && surname != null ? " " : "") +
+                        (surname != null ? surname : ""));
             }
         }
         dto.setReviewedDate(reviewedWord.getReviewedDate());
         dto.setNotes(reviewedWord.getNotes());
+        if (reviewedWord.getSourceLanguage() != null) {
+            dto.setSourceLanguage(languageAssembler.createDto(reviewedWord.getSourceLanguage()));
+        }
+        if (reviewedWord.getForeignLanguageType() != null) {
+            dto.setForeignLanguageType(reviewedWord.getForeignLanguageType().ordinal());
+        }
         return dto;
     }
 
@@ -71,6 +81,22 @@ public class ReviewedWordAssembler implements GeneralAssembler<ReviewedWord, Rev
         reviewedWord.setContextCategory(dto.getContextCategory());
         reviewedWord.setContextDescription(dto.getContextDescription());
         reviewedWord.setNotes(dto.getNotes());
+        if (dto.getSourceLanguage() != null && dto.getSourceLanguage().getUuid() != null) {
+            reviewedWord.setSourceLanguage(languageService.findOneByUuid(dto.getSourceLanguage().getUuid()));
+        } else {
+            reviewedWord.setSourceLanguage(null);
+        }
+        if (dto.getForeignLanguageType() != null) {
+            int ordinal = dto.getForeignLanguageType();
+            ForeignLanguageType[] values = ForeignLanguageType.values();
+            if (ordinal >= 0 && ordinal < values.length) {
+                reviewedWord.setForeignLanguageType(values[ordinal]);
+            } else {
+                reviewedWord.setForeignLanguageType(null);
+            }
+        } else {
+            reviewedWord.setForeignLanguageType(null);
+        }
         return reviewedWord;
     }
 }

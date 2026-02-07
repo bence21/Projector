@@ -83,6 +83,11 @@
                   [title]="getCommonnessTooltip(wordWithStatus.countInAllSongs)">
               <span class="commonness-badge" [ngClass]="getCommonnessColorClass(wordWithStatus.countInAllSongs)"></span>
             </span>
+            <span *ngIf="wordWithStatus.sourceLanguage" 
+                  class="source-language-badge"
+                  [matTooltip]="'Source: ' + getSourceLanguageLabel(wordWithStatus.sourceLanguage)">
+              {{ getSourceLanguageLabel(wordWithStatus.sourceLanguage) }}
+            </span>
           </div>
           
           <!-- Suggestions for rejected words -->

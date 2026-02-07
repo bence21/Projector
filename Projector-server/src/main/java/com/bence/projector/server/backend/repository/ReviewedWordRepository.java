@@ -15,5 +15,7 @@ public interface ReviewedWordRepository extends CrudRepository<ReviewedWord, Lon
 
     List<ReviewedWord> findAllByLanguage(Language language);
 
+    List<ReviewedWord> findByNormalizedWordAndLanguageNot(String normalizedWord, Language language);
+
     ReviewedWord findOneByUuid(String uuid);
 }

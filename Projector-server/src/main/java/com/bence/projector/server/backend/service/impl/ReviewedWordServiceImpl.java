@@ -12,7 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.bence.projector.server.utils.StringUtils.normalizeAccents;
 
@@ -49,17 +51,19 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
             // First, check for exact word match
             existing = reviewedWordRepository.findByLanguageAndWord(reviewedWord.getLanguage(), word);
         }
-        
+
         ReviewedWord targetWord = existing != null ? existing : reviewedWord;
         targetWord.setReviewedBy(reviewedBy);
         targetWord.setReviewedDate(new Date());
-        
+
         if (existing != null) {
             existing.setStatus(reviewedWord.getStatus());
             existing.setCategory(reviewedWord.getCategory());
             existing.setContextCategory(reviewedWord.getContextCategory());
             existing.setContextDescription(reviewedWord.getContextDescription());
             existing.setNotes(reviewedWord.getNotes());
+            existing.setSourceLanguage(reviewedWord.getSourceLanguage());
+            existing.setForeignLanguageType(reviewedWord.getForeignLanguageType());
         } else {
             if (reviewedWord.getNormalizedWord() == null && word != null) {
                 reviewedWord.setNormalizedWord(normalizeAccents(word.toLowerCase()));
@@ -70,9 +74,9 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
 
     @Override
     @Transactional
-    public List<ReviewedWord> saveBulkNewWords(List<String> words, Language language, User reviewedBy) {
+    public void saveBulkNewWords(List<String> words, Language language, User reviewedBy) {
         if (words == null || words.isEmpty() || language == null) {
-            return new ArrayList<>();
+            return;
         }
 
         List<ReviewedWord> reviewedWords = new ArrayList<>();
@@ -93,10 +97,10 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
         }
 
         if (reviewedWords.isEmpty()) {
-            return new ArrayList<>();
+            return;
         }
 
-        return (List<ReviewedWord>) reviewedWordRepository.saveAll(reviewedWords);
+        reviewedWordRepository.saveAll(reviewedWords);
     }
 
     @Override
@@ -105,5 +109,28 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
         if (reviewedWord != null) {
             reviewedWordRepository.delete(reviewedWord);
         }
+    }
+
+    private static final Set<ReviewedWordStatus> GOOD_STATUSES = Set.of(
+            ReviewedWordStatus.REVIEWED_GOOD,
+            ReviewedWordStatus.ACCEPTED,
+            ReviewedWordStatus.CONTEXT_SPECIFIC,
+            ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC
+    );
+
+    @Override
+    public List<Language> detectSourceLanguages(String word, Language songLanguage) {
+        if (word == null || word.isEmpty() || songLanguage == null) {
+            return new ArrayList<>();
+        }
+        String normalizedWord = normalizeAccents(word.toLowerCase());
+        List<ReviewedWord> inOtherLanguages = reviewedWordRepository.findByNormalizedWordAndLanguageNot(normalizedWord, songLanguage);
+        Set<Language> languages = new LinkedHashSet<>();
+        for (ReviewedWord rw : inOtherLanguages) {
+            if (GOOD_STATUSES.contains(rw.getStatus()) && rw.getLanguage() != null) {
+                languages.add(rw.getLanguage());
+            }
+        }
+        return new ArrayList<>(languages);
     }
 }

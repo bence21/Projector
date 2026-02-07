@@ -13,6 +13,8 @@ public class WordWithStatus {
     private String notes;
     private String contextCategory;
     private String contextDescription;
+    private LanguageDTO sourceLanguage;
+    private Integer foreignLanguageType;
 
     public WordWithStatus() {
     }
@@ -51,6 +53,20 @@ public class WordWithStatus {
         this.notes = notes;
         this.contextCategory = contextCategory;
         this.contextDescription = contextDescription;
+    }
+
+    public WordWithStatus(String word, ReviewedWordStatusDTO status, List<String> suggestions, Integer countInSong, Integer countInAllSongs, String category, String notes, String contextCategory, String contextDescription, LanguageDTO sourceLanguage, Integer foreignLanguageType) {
+        this.word = word;
+        this.status = status;
+        this.suggestions = suggestions;
+        this.countInSong = countInSong;
+        this.countInAllSongs = countInAllSongs;
+        this.category = category;
+        this.notes = notes;
+        this.contextCategory = contextCategory;
+        this.contextDescription = contextDescription;
+        this.sourceLanguage = sourceLanguage;
+        this.foreignLanguageType = foreignLanguageType;
     }
 
     public String getWord() {
@@ -123,6 +139,22 @@ public class WordWithStatus {
 
     public void setContextDescription(String contextDescription) {
         this.contextDescription = contextDescription;
+    }
+
+    public LanguageDTO getSourceLanguage() {
+        return sourceLanguage;
+    }
+
+    public void setSourceLanguage(LanguageDTO sourceLanguage) {
+        this.sourceLanguage = sourceLanguage;
+    }
+
+    public Integer getForeignLanguageType() {
+        return foreignLanguageType;
+    }
+
+    public void setForeignLanguageType(Integer foreignLanguageType) {
+        this.foreignLanguageType = foreignLanguageType;
     }
 
     private String statusSymbol() {

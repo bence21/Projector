@@ -23,6 +23,29 @@
       </mat-error>
     </mat-form-field>
 
+    <div *ngIf="isForeignLanguage" class="foreign-language-section">
+      <p class="foreign-language-hint" style="color: #888; font-size: 0.9em;">Select the language this word comes from. Detected languages are listed first.</p>
+      <mat-form-field style="width: 100%;">
+        <mat-label>Source Language</mat-label>
+        <mat-select formControlName="sourceLanguage" [compareWith]="compareLanguages">
+          <mat-option *ngFor="let lang of languageOptions" [value]="lang">
+            {{ getLanguageOptionLabel(lang) }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('sourceLanguage').hasError('required')">
+          Source language is required
+        </mat-error>
+      </mat-form-field>
+      <mat-radio-group formControlName="foreignLanguageType" class="foreign-type-radio">
+        <mat-radio-button *ngFor="let opt of foreignLanguageTypes" [value]="opt.value">
+          {{ opt.label }}
+        </mat-radio-button>
+      </mat-radio-group>
+      <mat-error *ngIf="form.get('foreignLanguageType').invalid && form.get('foreignLanguageType').touched">
+        Please select how this word is used
+      </mat-error>
+    </div>
+
     <mat-form-field style="width: 100%;">
       <mat-label>Notes (optional)</mat-label>
       <textarea matInput formControlName="notes" rows="3" placeholder="Add any notes about this word"></textarea>

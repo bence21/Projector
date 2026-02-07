@@ -288,11 +288,21 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
         break;
       case ReviewedWordStatus.ACCEPTED:
         tooltip = 'Accepted';
-        // Add category and notes for accepted words
-        if (wordWithStatus.category || wordWithStatus.notes) {
+        // Add category, source language, foreign language type, and notes for accepted words
+        if (wordWithStatus.category || wordWithStatus.notes || wordWithStatus.sourceLanguage || wordWithStatus.foreignLanguageType) {
           const parts: string[] = [tooltip];
           if (wordWithStatus.category) {
             parts.push(`\nCategory: ${wordWithStatus.category}`);
+          }
+          if (wordWithStatus.sourceLanguage) {
+            const langLabel = this.getSourceLanguageLabel(wordWithStatus.sourceLanguage);
+            parts.push(`\nSource language: ${langLabel}`);
+          }
+          if (wordWithStatus.foreignLanguageType !== undefined && wordWithStatus.foreignLanguageType !== null) {
+            const typeLabel = wordWithStatus.foreignLanguageType === 0 || wordWithStatus.foreignLanguageType === 'BORROWED'
+              ? 'Borrowed (written in song language style)'
+              : 'Foreign (OK in source language, not in song language)';
+            parts.push(`\nType: ${typeLabel}`);
           }
           if (wordWithStatus.notes) {
             parts.push(`\nNotes: ${wordWithStatus.notes}`);
@@ -317,6 +327,19 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     }
     
     return tooltip;
+  }
+
+  getSourceLanguageLabel(sourceLanguage: { englishName?: string; nativeName?: string; printLanguage?: () => string }): string {
+    if (!sourceLanguage) {
+      return '';
+    }
+    if (typeof sourceLanguage.printLanguage === 'function') {
+      return sourceLanguage.printLanguage();
+    }
+    if (sourceLanguage.englishName && sourceLanguage.nativeName && sourceLanguage.englishName !== sourceLanguage.nativeName) {
+      return `${sourceLanguage.englishName} | ${sourceLanguage.nativeName}`;
+    }
+    return sourceLanguage.englishName || sourceLanguage.nativeName || '';
   }
 
   private isCommonWord(count: number | null | undefined): boolean | null {
