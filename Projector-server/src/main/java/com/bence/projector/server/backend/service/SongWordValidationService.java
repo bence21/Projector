@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.bence.projector.server.utils.SetLanguages.getSongWords;
-import static com.bence.projector.server.utils.UnicodeTextNormalizer.normalizeForComparison;
+import static com.bence.projector.server.utils.UnicodeTextNormalizer.canonicalizeUnicode;
 
 @Service
 public class SongWordValidationService {
@@ -183,44 +183,44 @@ public class SongWordValidationService {
             NormalizedWordBunchMap normalizedWordBunchMap,
             List<ReviewedWord> allReviewedWords) {
 
-        NormalizedWordResult normalizedResult = normalizeWordAndPrimarySuggestion(word, normalizedWordBunchMap);
-        String normalizedOriginalWord = normalizedResult.normalizedWord;
-        String primarySuggestion = normalizedResult.primarySuggestion;
+        CanonicalizedWordResult canonicalizedResult = canonicalizeWordAndPrimarySuggestion(word, normalizedWordBunchMap);
+        String canonicalizedOriginalWord = canonicalizedResult.canonicalizedWord;
+        String primarySuggestion = canonicalizedResult.primarySuggestion;
 
         SuggestionResult suggestionResult = findSimilarGoodWords(
-                normalizedOriginalWord, word, primarySuggestion, allReviewedWords);
+                canonicalizedOriginalWord, word, primarySuggestion, allReviewedWords);
 
-        primarySuggestion = normalizeSuggestionResult(suggestionResult, primarySuggestion);
+        primarySuggestion = canonicalizeSuggestionResult(suggestionResult, primarySuggestion);
 
         limitSuggestions(suggestionResult.alternativeSuggestions);
 
         return new RejectedWordSuggestion(word, primarySuggestion, suggestionResult.alternativeSuggestions);
     }
 
-    private NormalizedWordResult normalizeWordAndPrimarySuggestion(String word, NormalizedWordBunchMap normalizedWordBunchMap) {
-        // Normalize the original word for consistent handling
-        String normalizedOriginalWord = normalizeForComparison(word);
+    private CanonicalizedWordResult canonicalizeWordAndPrimarySuggestion(String word, NormalizedWordBunchMap normalizedWordBunchMap) {
+        // Canonicalize Unicode for the original word for consistent handling
+        String canonicalizedOriginalWord = canonicalizeUnicode(word);
 
         String primarySuggestion = normalizedWordBunchMap.getBestWord(word);
         if (primarySuggestion != null) {
-            primarySuggestion = normalizeForComparison(primarySuggestion);
+            primarySuggestion = canonicalizeUnicode(primarySuggestion);
         }
 
-        return new NormalizedWordResult(normalizedOriginalWord, primarySuggestion);
+        return new CanonicalizedWordResult(canonicalizedOriginalWord, primarySuggestion);
     }
 
-    private String normalizeSuggestionResult(SuggestionResult suggestionResult, String primarySuggestion) {
+    private String canonicalizeSuggestionResult(SuggestionResult suggestionResult, String primarySuggestion) {
         if (suggestionResult.primarySuggestion != null) {
-            primarySuggestion = normalizeForComparison(suggestionResult.primarySuggestion);
+            primarySuggestion = canonicalizeUnicode(suggestionResult.primarySuggestion);
         }
 
-        // Normalize all alternative suggestions
-        suggestionResult.alternativeSuggestions.replaceAll(UnicodeTextNormalizer::normalizeForComparison);
+        // Canonicalize Unicode for all alternative suggestions
+        suggestionResult.alternativeSuggestions.replaceAll(UnicodeTextNormalizer::canonicalizeUnicode);
 
         return primarySuggestion;
     }
 
-    private record NormalizedWordResult(String normalizedWord, String primarySuggestion) {
+    private record CanonicalizedWordResult(String canonicalizedWord, String primarySuggestion) {
     }
 
     private SuggestionResult findSimilarGoodWords(String originalWord, String normalizedWord,

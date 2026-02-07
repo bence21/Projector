@@ -20,6 +20,11 @@ public class ReviewedWord extends AbstractModel {
     @Column(nullable = false, length = 500)
     private String word;
 
+    /**
+     * Accent-normalized version of the word.
+     * This field stores the word after applying accent normalization (lowercase + accent stripping via {@link com.bence.projector.server.utils.StringUtils#normalizeAccents(String)}).
+     * Used for matching and comparison purposes where accent-insensitive matching is needed.
+     */
     @Column(name = "normalized_word", nullable = false, length = 500)
     private String normalizedWord;
 

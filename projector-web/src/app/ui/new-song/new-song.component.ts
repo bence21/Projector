@@ -369,7 +369,8 @@ export class NewSongComponent implements OnInit {
       snackBar: this.snackBar,
       language: this.selectedLanguage,
       publish: this.publish,
-      onSave: () => this.createSong()
+      onSave: () => this.createSong(),
+      isAdmin: !!this.isAdmin()
     });
   }
 

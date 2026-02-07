@@ -40,18 +40,18 @@ public class UnicodeTextNormalizer {
         if (text == null) {
             return null;
         }
-        return normalizeForComparison(text);
+        return canonicalizeUnicode(text);
     }
 
     /**
-     * Normalizes text for comparison purposes.
-     * Applies NFC normalization and removes zero-width characters.
+     * Canonicalizes Unicode text by applying NFC normalization and removing zero-width characters.
      * This ensures that variants like "Angyalkórus" and "Angyal‍‍kórus" are treated as equivalent.
+     * Preserves accents and case - only normalizes Unicode representation.
      *
-     * @param text The text to normalize, may be null
-     * @return Normalized text, or null if input was null
+     * @param text The text to canonicalize, may be null
+     * @return Canonicalized text, or null if input was null
      */
-    public static String normalizeForComparison(String text) {
+    public static String canonicalizeUnicode(String text) {
         if (text == null) {
             return null;
         }
@@ -60,17 +60,17 @@ public class UnicodeTextNormalizer {
     }
 
     /**
-     * Normalizes text before persistence to database.
+     * Canonicalizes Unicode text before persistence to database.
      * Applies NFC normalization and removes zero-width characters.
      *
-     * @param text The text to normalize, may be null
-     * @return Normalized text, or null if input was null
+     * @param text The text to canonicalize, may be null
+     * @return Canonicalized text, or null if input was null
      */
-    public static String normalizeForPersistence(String text) {
+    public static String canonicalizeForPersistence(String text) {
         if (text == null) {
             return null;
         }
-        return normalizeForComparison(text);
+        return canonicalizeUnicode(text);
     }
 
     /**

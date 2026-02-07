@@ -66,10 +66,17 @@ export interface WordValidationConfig {
   language: Language;
   publish: boolean;
   onSave: () => void;
+  isAdmin?: boolean;
 }
 
 export function validateWordsAndSave(config: WordValidationConfig): void {
-  const { song, validationService, dialog, snackBar, language, publish, onSave } = config;
+  const { song, validationService, dialog, snackBar, language, publish, onSave, isAdmin } = config;
+
+  // Skip validation if user is not an admin
+  if (!isAdmin) {
+    onSave();
+    return;
+  }
 
   validationService.validateWords(song).subscribe(
     (validationResult) => {

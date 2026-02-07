@@ -127,7 +127,7 @@
   </mat-card>
   
   <!-- Word List Panel -->
-  <mat-card *ngIf="song && selectedLanguage">
+  <mat-card *ngIf="song && selectedLanguage && auth.getUser()?.isAdmin()">
     <mat-card-content>
       <app-song-word-list-panel 
         [song]="currentSongForWordList" 

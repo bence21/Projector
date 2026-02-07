@@ -62,8 +62,8 @@ public class StringUtils {
         if (s == null) {
             return null;
         }
-        // Normalize to NFC and strip zero-width characters before accent normalization
-        s = UnicodeTextNormalizer.normalizeForComparison(s);
+        // Canonicalize Unicode (NFC + strip zero-width characters) before accent normalization
+        s = UnicodeTextNormalizer.canonicalizeUnicode(s);
         s = s.toLowerCase();
         s = s.replaceAll("í", "i");
         s = s.replaceAll("ó", "o");
@@ -197,8 +197,8 @@ public class StringUtils {
         if (s == null) {
             return null;
         }
-        // Normalize to NFC and strip zero-width characters before formatting
-        s = UnicodeTextNormalizer.normalizeForComparison(s);
+        // Canonicalize Unicode (NFC + strip zero-width characters) before formatting
+        s = UnicodeTextNormalizer.canonicalizeUnicode(s);
         String newValue = s.trim();
         newValue = fixQuotationMarks(newValue);
         newValue = newValue.replaceAll("([ \\t])([.?!,:])", "$2");
