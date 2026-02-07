@@ -33,8 +33,9 @@ export class WordListComponent {
       case ReviewedWordStatus.REVIEWED_GOOD:
       case ReviewedWordStatus.CONTEXT_SPECIFIC:
       case ReviewedWordStatus.ACCEPTED:
-      case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
         return 'check_circle';
+      case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
+        return 'verified';
       case ReviewedWordStatus.UNREVIEWED: return 'info';
       case ReviewedWordStatus.BANNED: return 'error';
       case ReviewedWordStatus.REJECTED: return 'warning';
@@ -55,7 +56,7 @@ export class WordListComponent {
       case ReviewedWordStatus.ACCEPTED:
         return 'status-icon-accepted';
       case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
-        return 'status-icon-good'; // Same as reviewed good
+        return 'status-icon-auto-accepted';
       case ReviewedWordStatus.BANNED:
         return 'status-icon-banned';
       case ReviewedWordStatus.REJECTED:

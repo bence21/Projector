@@ -32,6 +32,20 @@ export abstract class BaseWordActionButtonComponent {
       return;
     }
     if (this.isReviewed) {
+      // Skip confirmation for AUTO_ACCEPTED_FROM_PUBLIC when changing to reviewed good, accept, or context accept
+      const currentStatus = this.wordWithStatus && this.wordWithStatus.status;
+      const targetStatus = this.getTargetStatus();
+      const isAutoAcceptedFromPublic = currentStatus === ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC;
+      const isChangingToGoodStatus = targetStatus === ReviewedWordStatus.REVIEWED_GOOD ||
+                                      targetStatus === ReviewedWordStatus.ACCEPTED ||
+                                      targetStatus === ReviewedWordStatus.CONTEXT_SPECIFIC;
+      
+      if (isAutoAcceptedFromPublic && isChangingToGoodStatus) {
+        // No confirmation needed - directly emit the action
+        this.emitAction();
+        return;
+      }
+      
       const word = (this.wordWithStatus && this.wordWithStatus.word) ? this.wordWithStatus.word : 'this word';
       const statusName = this.getStatusName();
       

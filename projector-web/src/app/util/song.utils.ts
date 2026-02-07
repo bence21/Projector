@@ -4,6 +4,7 @@ import { SongWordValidationService } from "../services/song-word-validation.serv
 import { MatDialog, MatSnackBar } from "@angular/material";
 import { Language } from "../models/language";
 import { SongWordValidationDialogComponent } from "../ui/song-word-validation-dialog/song-word-validation-dialog.component";
+import { ConfirmActionDialogComponent } from "../ui/confirm-action-dialog/confirm-action-dialog.component";
 
 export function calculateOrder_(customSectionOrder: boolean, song: Song, usedSectionTypes: { name: string; type: SectionType; text: string; verse: SongVerseUI; index: number; }[]) {
   let sectionOrder = [];
@@ -69,6 +70,15 @@ export interface WordValidationConfig {
   isAdmin?: boolean;
 }
 
+/**
+ * Checks if a song is public using the same logic as the server-side isPublic() method:
+ * !isReviewerErased() && !isDeleted() && !isBackUp() && !hasUnsolvedWords()
+ */
+function isSongPublic(song: Song): boolean {
+  const isBackUp = song.backUpSongId != null && song.backUpSongId !== '';
+  return !song.reviewerErased && !song.deleted && !isBackUp && !song.hasUnsolvedWords;
+}
+
 export function validateWordsAndSave(config: WordValidationConfig): void {
   const { song, validationService, dialog, snackBar, language, publish, onSave, isAdmin } = config;
 
@@ -78,9 +88,34 @@ export function validateWordsAndSave(config: WordValidationConfig): void {
     return;
   }
 
+  // Check if song is currently public (before validation)
+  const wasPublic = isSongPublic(song);
+
   validationService.validateWords(song).subscribe(
     (validationResult) => {
       if (validationResult.hasIssues) {
+        // If song is already public and user is trying to publish, just ask for confirmation
+        if (publish && wasPublic) {
+          const confirmDialogRef = dialog.open(ConfirmActionDialogComponent, {
+            width: '500px',
+            data: {
+              title: 'Confirm Publish',
+              message: 'There are unreviewed words, but you can still publish the changes. Do you want to proceed?',
+              confirmText: 'Yes, Publish',
+              cancelText: 'Cancel'
+            }
+          });
+
+          confirmDialogRef.afterClosed().subscribe(confirmed => {
+            if (confirmed) {
+              // User confirmed - proceed with save (keeping it public)
+              onSave();
+            }
+            // If user cancelled, do nothing
+          });
+          return;
+        }
+
         // Show informative message when trying to publish
         if (publish) {
           snackBar.open('Please review and resolve word issues before publishing. Opening validation dialog...', 'Close', {

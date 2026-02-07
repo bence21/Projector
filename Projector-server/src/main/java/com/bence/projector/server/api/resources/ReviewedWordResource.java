@@ -193,7 +193,8 @@ public class ReviewedWordResource {
     public ResponseEntity<Object> autoAcceptWordsFromPublicSongs(
             Principal principal,
             @PathVariable final String languageId,
-            @RequestParam(value = "minScore", required = false, defaultValue = "50") final long minScore
+            @RequestParam(value = "minScore", required = false, defaultValue = "50") final long minScore,
+            @RequestParam(value = "minOccurrences", required = false, defaultValue = "10") final int minOccurrences
     ) {
         ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
         if (validationError != null) {
@@ -207,12 +208,14 @@ public class ReviewedWordResource {
                             reviewedWordService,
                             songService,
                             languageId,
-                            minScore
+                            minScore,
+                            minOccurrences
                     );
 
             java.util.Map<String, Object> response = new java.util.HashMap<>();
             response.put("songsProcessed", result.songsProcessed());
             response.put("minScore", minScore);
+            response.put("minOccurrences", minOccurrences);
 
             return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
         } catch (IllegalArgumentException e) {

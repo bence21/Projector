@@ -97,6 +97,10 @@ mat-panel-description {
   color: #2196f3 !important; /* Blue - matches mark-as-accepted-button */
 }
 
+.status-icon-auto-accepted {
+  color: #00bcd4 !important; /* Cyan/Teal - different from reviewed good to distinguish auto-accepted */
+}
+
 .status-icon-banned {
   color: #f44336 !important; /* Red - matches mark-as-banned-button */
 }
