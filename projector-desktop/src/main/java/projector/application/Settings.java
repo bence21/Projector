@@ -85,7 +85,7 @@ public class Settings {
     private int customCanvasWidth = 400;
     private int customCanvasHeight = 300;
     private boolean shareOnLocalNetworkAutomatically = false;
-    private boolean connectToSharedAutomatically = false;
+    private final SimpleBooleanProperty connectToSharedAutomatically = new SimpleBooleanProperty(false);
     private BibleController bibleController;
     private boolean showSongSecondText = false;
     private Color songSecondTextColor = new Color(0.46, 1.0, 1.0, 1.0);
@@ -109,6 +109,7 @@ public class Settings {
     private double bottomMargin = 0;
     private double leftMargin = 0;
     private boolean asPadding = true;
+    private final SimpleBooleanProperty showStatusBar = new SimpleBooleanProperty(true);
 
     protected Settings() {
         load();
@@ -324,7 +325,7 @@ public class Settings {
             bw.write("shareOnLocalNetworkAutomatically" + System.lineSeparator());
             bw.write(shareOnLocalNetworkAutomatically + System.lineSeparator());
             bw.write("connectToSharedAutomatically" + System.lineSeparator());
-            bw.write(connectToSharedAutomatically + System.lineSeparator());
+            bw.write(connectToSharedAutomatically.get() + System.lineSeparator());
             bw.write("showSongSecondText" + System.lineSeparator());
             bw.write(showSongSecondText + System.lineSeparator());
             writeColorToFileWithText(bw, "songSecondTextColor", songSecondTextColor);
@@ -345,6 +346,7 @@ public class Settings {
             writeDoubleToFile(bw, "bottomMargin", bottomMargin);
             writeDoubleToFile(bw, "leftMargin", leftMargin);
             writeBooleanToFile(bw, asPadding, "asPadding");
+            writeBooleanToFile(bw, showStatusBar.get(), "showStatusBar");
             bw.close();
         } catch (IOException e) {
             LOG.warn("There is some error on settings save!", e);
@@ -500,7 +502,7 @@ public class Settings {
             br.readLine();
             shareOnLocalNetworkAutomatically = parseBoolean(br.readLine());
             br.readLine();
-            connectToSharedAutomatically = parseBoolean(br.readLine());
+            connectToSharedAutomatically.set(parseBoolean(br.readLine()));
             br.readLine();
             showSongSecondText = parseBoolean(br.readLine());
             songSecondTextColor = getColorFromFile(br, songSecondTextColor);
@@ -523,6 +525,7 @@ public class Settings {
             bottomMargin = getDoubleFromFile(br, bottomMargin);
             leftMargin = getDoubleFromFile(br, leftMargin);
             asPadding = getABoolean(br, asPadding);
+            showStatusBar.set(getABoolean(br, true));
             br.close();
         } catch (IOException | NullPointerException | IllegalArgumentException e) {
             try {
@@ -920,11 +923,27 @@ public class Settings {
     }
 
     public boolean isConnectToSharedAutomatically() {
-        return connectToSharedAutomatically;
+        return connectToSharedAutomatically.get();
     }
 
     public void setConnectToSharedAutomatically(boolean connectToSharedAutomatically) {
-        this.connectToSharedAutomatically = connectToSharedAutomatically;
+        this.connectToSharedAutomatically.set(connectToSharedAutomatically);
+    }
+
+    public SimpleBooleanProperty connectToSharedAutomaticallyProperty() {
+        return connectToSharedAutomatically;
+    }
+
+    public boolean isShowStatusBar() {
+        return showStatusBar.get();
+    }
+
+    public void setShowStatusBar(boolean showStatusBar) {
+        this.showStatusBar.set(showStatusBar);
+    }
+
+    public SimpleBooleanProperty showStatusBarProperty() {
+        return showStatusBar;
     }
 
     public BibleController getBibleController() {

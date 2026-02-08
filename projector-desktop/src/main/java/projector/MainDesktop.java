@@ -11,6 +11,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -52,6 +53,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.ListIterator;
 import java.util.Properties;
+import java.util.ResourceBundle;
 
 import static java.lang.Thread.sleep;
 import static projector.utils.HandleUnexpectedError.setDefaultUncaughtExceptionHandler;
@@ -375,11 +377,26 @@ public class MainDesktop extends Application {
     }
 
     private void addSettingsMenu(WindowController windowController) {
-        Menu settingsMenu = getSettingsMenu();
         if (windowController != null) {
-            windowController.getMenuBar().getMenus().add(settingsMenu);
+            ObservableList<Menu> menus = windowController.getMenuBar().getMenus();
+            menus.add(getViewMenu());
+            Menu settingsMenu = getSettingsMenu();
+            menus.add(settingsMenu);
+            myController.initializeSettingsController(settingsMenu);
         }
-        myController.initializeSettingsController(settingsMenu);
+    }
+
+    private Menu getViewMenu() {
+        Menu viewMenu = new Menu();
+        viewMenu.setMnemonicParsing(false);
+        ResourceBundle resourceBundle = settings.getResourceBundle();
+        viewMenu.setText(resourceBundle.getString("View"));
+        CheckMenuItem statusBarItem = new CheckMenuItem(resourceBundle.getString("Status Bar"));
+        statusBarItem.setSelected(settings.isShowStatusBar());
+        statusBarItem.selectedProperty().addListener((observable, oldValue, newValue) -> settings.setShowStatusBar(newValue));
+        settings.showStatusBarProperty().addListener((observable, oldValue, newValue) -> statusBarItem.setSelected(newValue));
+        viewMenu.getItems().add(statusBarItem);
+        return viewMenu;
     }
 
     private Menu getSettingsMenu() {

@@ -4,6 +4,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.application.Platform;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -13,9 +14,12 @@ import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.jnativehook.GlobalScreen;
 import org.slf4j.Logger;
@@ -98,6 +102,12 @@ public class MyController {
     private Tab galleryTab;
     @FXML
     private Tab projectionScreensTab;
+    @FXML
+    private HBox statusBar;
+    @FXML
+    private Label connectionStatusLabel;
+    @FXML
+    private StackPane connectionIndicator;
     private MainDesktop mainDesktop;
     private Stage settingsStage;
     private final Map<String, Tab> openPdfTabs = new HashMap<>();
@@ -217,6 +227,82 @@ public class MyController {
             }
         });
         tabPane.setFocusTraversable(false);
+
+        // Setup connection status indicator
+        setupConnectionStatusIndicator();
+        // Setup status bar visibility (show/hide and auto-hide when nothing relevant)
+        setupStatusBarVisibility();
+    }
+
+    private void setupConnectionStatusIndicator() {
+        if (connectionStatusLabel == null || connectionIndicator == null) {
+            return;
+        }
+
+        // Update connection status based on property changes
+        settings.connectedToSharedProperty().addListener(
+                (observable, oldValue, newValue) -> Platform.runLater(
+                        () -> updateConnectionStatus(newValue)
+                )
+        );
+
+        // Set initial state
+        updateConnectionStatus(settings.isConnectedToShared());
+    }
+
+    private void setupStatusBarVisibility() {
+        if (statusBar == null) {
+            return;
+        }
+        Runnable updateVisibility = () -> {
+            if (statusBar == null) {
+                return;
+            }
+            boolean hasRelevantContent = hasRelevantContent();
+            boolean visible = settings.isShowStatusBar() && hasRelevantContent;
+            statusBar.setVisible(visible);
+            statusBar.setManaged(visible);
+            if (connectionStatusLabel != null) {
+                boolean connectionRelevant = isConnectionRelevant();
+                connectionStatusLabel.setVisible(connectionRelevant);
+                connectionStatusLabel.setManaged(connectionRelevant);
+            }
+        };
+        settings.showStatusBarProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(updateVisibility));
+        settings.connectedToSharedProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(updateVisibility));
+        settings.connectToSharedAutomaticallyProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(updateVisibility));
+        updateVisibility.run();
+    }
+
+    private boolean hasRelevantContent() {
+        return isConnectionRelevant();
+    }
+
+    private boolean isConnectionRelevant() {
+        return settings.isConnectedToShared() || settings.isConnectToSharedAutomatically();
+    }
+
+    private void updateConnectionStatus(boolean connected) {
+        if (connectionStatusLabel == null || connectionIndicator == null) {
+            return;
+        }
+
+        ResourceBundle bundle = settings.getResourceBundle();
+        String labelText;
+        String indicatorColor;
+        String tooltipText;
+        if (connected) {
+            labelText = bundle.getString("Connected to Shared");
+            indicatorColor = "#4caf50";
+            tooltipText = bundle.getString("Connected to shared network");
+        } else {
+            labelText = bundle.getString("Not Connected");
+            indicatorColor = "#9e9e9e";
+            tooltipText = bundle.getString("Not connected to shared network");
+        }
+        connectionStatusLabel.setText(labelText);
+        connectionIndicator.setStyle("-fx-background-color: " + indicatorColor + "; -fx-background-radius: 4px;");
+        connectionStatusLabel.setTooltip(new Tooltip(tooltipText));
     }
 
     public void initialTabSelect() {
@@ -288,6 +374,7 @@ public class MyController {
         }
     }
 
+    @FXML
     public void previewButtonOnAction() {
         projectionScreenController.createPreview();
     }
@@ -298,6 +385,7 @@ public class MyController {
         songController.onBlankButtonSelected(blankButton.isSelected());
     }
 
+    @FXML
     public void lockButtonOnAction() {
         projectionScreensUtil.setLock(lockButton.isSelected());
         final ResourceBundle resourceBundle = settings.getResourceBundle();
@@ -386,6 +474,7 @@ public class MyController {
         songController.onKeyPressed(event);
     }
 
+    @FXML
     public void showHideProjectionScreen() {
         if (showProjectionScreenToggleButton.isSelected()) {
             mainDesktop.setProjectionScreenStage(true);
@@ -460,6 +549,7 @@ public class MyController {
         setBlank(projectorState.isBlank());
     }
 
+    @FXML
     public void clearButtonOnAction() {
         projectionScreensUtil.clearAll();
     }

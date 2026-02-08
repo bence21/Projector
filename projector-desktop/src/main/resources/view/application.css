@@ -346,3 +346,19 @@
     -fx-border-color: #ffffff;
     -fx-border-width: 1;
 }
+
+.status-bar {
+    -fx-background-color: -titleBarBackgroundColor;
+    -fx-border-color: #d0d0d0;
+    -fx-border-width: 1px 0px 0px 0px;
+    -fx-padding: 0px;
+}
+
+.status-item {
+    -fx-text-fill: -textColor;
+    -fx-font-size: 11px;
+}
+
+.connection-indicator {
+    -fx-background-radius: 4px;
+}
