@@ -14,6 +14,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Border;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import projector.MainDesktop;
 import projector.api.LoginApiBean;
 import projector.api.UserApiBean;
+import projector.application.ApplicationVersion;
 import projector.application.Settings;
 import projector.controller.AccountPopupController;
 import projector.controller.LoginController;
@@ -145,6 +147,9 @@ public class WindowController {
         borderlessScene.setMoveControl(topLabel);
         topLabel.setText(stage.getTitle());
         stage.titleProperty().addListener((observable, oldValue, newValue) -> topLabel.setText(newValue));
+        int version = ApplicationVersion.getInstance().getVersion();
+        String versionLabel = Settings.getInstance().getResourceBundle().getString("Projector version");
+        topLabel.setTooltip(new Tooltip(versionLabel + ": " + version));
         String titleFocused = "windowTitleFocused";
         stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
             ObservableList<String> styleClass = topLabel.getStyleClass();

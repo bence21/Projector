@@ -305,6 +305,11 @@ public class MyController {
         connectionStatusLabel.setTooltip(new Tooltip(tooltipText));
     }
 
+    @FXML
+    private void closeStatusBar() {
+        settings.setShowStatusBar(false);
+    }
+
     public void initialTabSelect() {
         tabPane.getSelectionModel().select(songsTab);
     }

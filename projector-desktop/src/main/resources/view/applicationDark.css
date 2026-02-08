@@ -390,3 +390,22 @@
 .connection-indicator {
     -fx-background-radius: 4px;
 }
+
+.status-bar-close-button {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-text-fill: #b0b0b0;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 4 0 4;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+    -fx-opacity: 0.45;
+}
+
+.status-bar-close-button:hover {
+    -fx-opacity: 1;
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-text-fill: #e0e0e0;
+}
