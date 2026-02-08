@@ -149,7 +149,10 @@ public class SongWordValidationService {
 
         if (reviewedWord == null) {
             categories.unreviewedWords.add(word);
-            categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.UNREVIEWED, null, countInSong, countInAllSongs));
+            // Generate suggestions for unreviewed words (similar to rejected words)
+            RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
+            List<String> suggestions = extractSuggestions(suggestion);
+            categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.UNREVIEWED, suggestions, countInSong, countInAllSongs));
         } else {
             com.bence.projector.server.backend.model.ReviewedWordStatus status = reviewedWord.getStatus();
             if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.BANNED) {
@@ -158,13 +161,7 @@ public class SongWordValidationService {
             } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.REJECTED) {
                 RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
                 categories.rejectedWords.add(suggestion);
-                List<String> suggestions = new ArrayList<>();
-                if (suggestion.getPrimarySuggestion() != null) {
-                    suggestions.add(suggestion.getPrimarySuggestion());
-                }
-                if (suggestion.getAlternativeSuggestions() != null) {
-                    suggestions.addAll(suggestion.getAlternativeSuggestions());
-                }
+                List<String> suggestions = extractSuggestions(suggestion);
                 categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs));
             } else {
                 // For accepted words, include category and notes; for "Foreign Language" include sourceLanguage and foreignLanguageType
@@ -203,6 +200,21 @@ public class SongWordValidationService {
         boolean hasIssues() {
             return !unreviewedWords.isEmpty() || !bannedWords.isEmpty() || !rejectedWords.isEmpty();
         }
+    }
+
+    /**
+     * Extracts suggestions from a RejectedWordSuggestion object into a list of strings.
+     * Includes both primary and alternative suggestions.
+     */
+    private List<String> extractSuggestions(RejectedWordSuggestion suggestion) {
+        List<String> suggestions = new ArrayList<>();
+        if (suggestion.getPrimarySuggestion() != null) {
+            suggestions.add(suggestion.getPrimarySuggestion());
+        }
+        if (suggestion.getAlternativeSuggestions() != null) {
+            suggestions.addAll(suggestion.getAlternativeSuggestions());
+        }
+        return suggestions;
     }
 
     private RejectedWordSuggestion findSuggestionsForRejectedWord(

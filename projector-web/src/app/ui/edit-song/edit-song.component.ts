@@ -345,6 +345,8 @@ export class EditSongComponent implements OnInit {
     this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.getCurrentSongFromForm());
     this.initialFormValue = JSON.stringify(this.form.value);
     this.formHasChanges = false;
+    // Trigger change detection to ensure child component receives the updated song
+    this._changeDetectionRef.detectChanges();
   }
 
   addNewVerse() {

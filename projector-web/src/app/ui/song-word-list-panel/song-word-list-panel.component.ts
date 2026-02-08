@@ -87,7 +87,8 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
   }
 
   onRefreshClick() {
-    this.loadWords();
+    // Emit event first - parent will update currentSongForWordList
+    // ngOnChanges will detect the song change and call loadWords() with the updated song
     this.refreshRequested.emit();
   }
 

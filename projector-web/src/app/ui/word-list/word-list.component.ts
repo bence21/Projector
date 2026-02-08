@@ -200,4 +200,39 @@ export class WordListComponent {
       this.rejectedClick.emit(word);
     }
   }
+
+  /**
+   * Filters suggestions to only include those that are different from the current word.
+   * Returns an empty array if no good suggestions exist (all suggestions are the same as the word).
+   */
+  getFilteredSuggestions(wordWithStatus: WordWithStatus): string[] {
+    if (!wordWithStatus.suggestions || wordWithStatus.suggestions.length === 0) {
+      return [];
+    }
+
+    const currentWord = wordWithStatus.word;
+    const filtered = wordWithStatus.suggestions.filter(suggestion => {
+      if (!suggestion) {
+        return false;
+      }
+      // Only include suggestions that are different from the current word (case-sensitive)
+      return suggestion !== currentWord;
+    });
+
+    // Return empty array if no good suggestions (all were the same as current word)
+    return filtered.length > 0 ? filtered : [];
+  }
+
+  /**
+   * Checks if suggestions should be shown for a word.
+   * Shows suggestions for REJECTED and UNREVIEWED words, but only if there are filtered suggestions.
+   */
+  shouldShowSuggestions(wordWithStatus: WordWithStatus): boolean {
+    const status = wordWithStatus.status;
+    if (status !== ReviewedWordStatus.REJECTED && status !== ReviewedWordStatus.UNREVIEWED) {
+      return false;
+    }
+    const filteredSuggestions = this.getFilteredSuggestions(wordWithStatus);
+    return filteredSuggestions.length > 0;
+  }
 }

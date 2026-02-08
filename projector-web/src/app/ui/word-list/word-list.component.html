@@ -28,12 +28,12 @@
         </span>
       </div>
       
-      <!-- Suggestions for rejected words -->
-      <div *ngIf="wordWithStatus.status === ReviewedWordStatus.REJECTED && wordWithStatus.suggestions && wordWithStatus.suggestions.length > 0" 
+      <!-- Suggestions for rejected and unreviewed words -->
+      <div *ngIf="shouldShowSuggestions(wordWithStatus)" 
            class="suggestions">
         <span class="suggestion-label">Suggestions:</span>
         <mat-chip-list>
-          <mat-chip *ngFor="let suggestion of wordWithStatus.suggestions">
+          <mat-chip *ngFor="let suggestion of getFilteredSuggestions(wordWithStatus)">
             {{suggestion}}
           </mat-chip>
         </mat-chip-list>
