@@ -118,7 +118,7 @@ public class ImportSongs {
             }
             Collection<Song> languageSongs = getLanguageSongs(language, songService, hashMap);
             List<Song> allSimilar = songService.findAllSimilar(song, false, languageSongs);
-            if (allSimilar != null && allSimilar.size() > 0) {
+            if (allSimilar != null && !allSimilar.isEmpty()) {
                 song.setDeleted(true);
             }
         }
@@ -243,11 +243,9 @@ public class ImportSongs {
         return line.startsWith((songsCount + 1) + " - ");
     }
 
-    public static List<Song> importJsonSongs(LanguageService languageService, SongService songService) {
-        List<Song> songs = new ArrayList<>();
-        FileInputStream inputStream;
+    private static String getFileContent(String file) {
         try {
-            inputStream = new FileInputStream("full_song_book.json");
+            FileInputStream inputStream = new FileInputStream(file);
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             StringBuilder s = new StringBuilder();
             String readLine = br.readLine();
@@ -255,16 +253,43 @@ public class ImportSongs {
                 s.append(readLine);
                 readLine = br.readLine();
             }
-            Gson gson = new GsonBuilder().serializeNulls().create();
-            ArrayList<ISong> songArrayList;
-            Type listType = new TypeToken<ArrayList<ISong>>() {
-            }.getType();
-            songArrayList = gson.fromJson(s.toString(), listType);
-            Language englishLanguage = findEnglishLanguage(languageService);
-            prepareSongs(songs, songArrayList, englishLanguage);
-            songService.save(songs);
+            return s.toString();
         } catch (IOException ignored) {
         }
+        return "";
+    }
+
+    public static List<Song> importJsonSongs(LanguageService languageService, SongService songService) {
+        String s = getFileContent("full_song_book.json");
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        ArrayList<ISong> songArrayList;
+        Type listType = new TypeToken<ArrayList<ISong>>() {
+        }.getType();
+        songArrayList = gson.fromJson(s, listType);
+        Language englishLanguage = findEnglishLanguage(languageService);
+        List<Song> songs = new ArrayList<>();
+        prepareSongs(songs, songArrayList, englishLanguage);
+        songService.save(songs);
+        return songs;
+    }
+
+    public static List<Song> importMRE_jsonSongs(LanguageService languageService, SongService songService, SongCollectionService songCollectionService) {
+        String s = getFileContent("enekeskonyv_isti_99.json");
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        ArrayList<MRESong> songArrayList;
+        Type listType = new TypeToken<ArrayList<MRESong>>() {
+        }.getType();
+        songArrayList = gson.fromJson(s, listType);
+        Language hungarianLanguage = findHungarianLanguage(languageService);
+        List<Song> songs = new ArrayList<>();
+        SongCollection mRESongCollection = songCollectionService.findOneByUuid("5ad074dc1fb8d537c8fbaec1");
+        prepareMRESongs(songs, songArrayList, hungarianLanguage, mRESongCollection);
+        System.out.println(songs.size());
+        prepareSongs2(songs);
+        checkForSimilar(songs, songService);
+        songService.save(songs);
+        mRESongCollection.setModifiedDate(new Date());
+        songCollectionService.save(mRESongCollection);
         return songs;
     }
 
@@ -280,7 +305,7 @@ public class ImportSongs {
                 }
                 Collection<Song> languageSongs = getLanguageSongs(language, songService, hashMap);
                 List<Song> allSimilar = songService.findAllSimilar(song, false, languageSongs);
-                if (allSimilar != null && allSimilar.size() > 0) {
+                if (allSimilar != null && !allSimilar.isEmpty()) {
                     song.setDeleted(true);
                     song.setModifiedDate(new Date());
                     deletedSongs.add(song);
@@ -309,6 +334,11 @@ public class ImportSongs {
     }
 
     private static void prepareSongs(List<Song> songs, ArrayList<ISong> songArrayList, Language swahiliLanguage) {
+        prepareISongs(songs, songArrayList, swahiliLanguage);
+        afterSongsPrepared_format(songs);
+    }
+
+    private static void prepareISongs(List<Song> songs, ArrayList<ISong> songArrayList, Language language) {
         for (ISong iSong : songArrayList) {
             Song song = new Song();
             song.setCreatedByEmail("cfmstreaming@gmail.com");
@@ -341,9 +371,46 @@ public class ImportSongs {
             }
             song.setVerseOrderList(verseOrderList);
             song.setVerses(verses);
-            song.setLanguage(swahiliLanguage);
+            song.setLanguage(language);
             songs.add(song);
         }
+    }
+
+    private static void prepareMRESongs(List<Song> songs, ArrayList<MRESong> songArrayList, Language language, SongCollection songCollection) {
+        for (MRESong mreSong : songArrayList) {
+            Song song = new Song();
+            song.setCreatedDate(new Date());
+            song.setUploaded(true);
+            song.setModifiedDate(song.getCreatedDate());
+            song.setTitle(mreSong.title);
+            ArrayList<SongVerse> verses = new ArrayList<>();
+            ArrayList<Short> verseOrderList = new ArrayList<>();
+            Short index = -1;
+            for (String verse : mreSong.verses) {
+                if (verse.isEmpty()) {
+                    continue;
+                }
+                ++index;
+                SongVerse songVerse = new SongVerse();
+                songVerse.setText(verse.replaceAll("///", "\n"));
+                verses.add(songVerse);
+                verseOrderList.add(index);
+                songVerse.setSectionType(SectionType.VERSE);
+            }
+            song.setVerseOrderList(verseOrderList);
+            song.setVerses(verses);
+            song.setLanguage(language);
+            songs.add(song);
+
+            SongCollectionElement songCollectionElement = new SongCollectionElement();
+            songCollectionElement.setSong(song);
+            songCollectionElement.setSongCollection(songCollection);
+            songCollectionElement.setOrdinalNumber(mreSong.number);
+            songCollection.getSongCollectionElements().add(songCollectionElement);
+        }
+    }
+
+    private static void afterSongsPrepared_format(List<Song> songs) {
         formatSongs(songs);
         corrigateTitles(songs);
         System.out.println(songs.size());
@@ -475,5 +542,11 @@ public class ImportSongs {
     public static class ISong {
         String title;
         List<IVerse> verses;
+    }
+
+    public static class MRESong {
+        String number;
+        String title;
+        List<String> verses;
     }
 }

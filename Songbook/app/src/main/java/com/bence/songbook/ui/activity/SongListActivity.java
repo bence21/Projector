@@ -10,7 +10,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.projector.common.dto.SongListDTO;
@@ -34,7 +33,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-public class SongListActivity extends AppCompatActivity {
+public class SongListActivity extends BaseActivity {
     public static final String TAG = SongListActivity.class.getSimpleName();
     private static final int NEW_SONG_LIST_REQUEST_CODE = 1;
     private final Memory memory = Memory.getInstance();
@@ -75,12 +74,14 @@ public class SongListActivity extends AppCompatActivity {
                 SongListElement temp = songListElements.get(indexOne);
                 SongListElement secondTmp = songListElements.get(indexTwo);
                 int queueNumber = temp.getNumber();
-                temp.setNumber(secondTmp.getNumber());
+                int secondTmpOriginalNumber = secondTmp.getNumber();
+                // In-memory swap for UI
+                temp.setNumber(secondTmpOriginalNumber);
                 secondTmp.setNumber(queueNumber);
                 songListElements.set(indexOne, secondTmp);
                 songListElements.set(indexTwo, temp);
-                songListElementRepository.save(temp);
-                songListElementRepository.save(secondTmp);
+                // Persist in a single transaction (placeholder avoids unique constraint)
+                songListElementRepository.saveSwap(temp, secondTmp, queueNumber, secondTmpOriginalNumber);
                 songList.setModifiedDate(new Date());
                 songListRepository.save(songList);
             }

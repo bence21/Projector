@@ -1,0 +1,80 @@
+<div class="word-list-container">
+  <mat-list>
+    <mat-list-item *ngFor="let wordWithStatus of words" class="word-item">
+      <mat-icon [ngClass]="getStatusColorClass(wordWithStatus.status)" 
+                class="status-icon"
+                [matTooltip]="getStatusTooltip(wordWithStatus)">
+        {{getStatusIcon(wordWithStatus.status)}}
+      </mat-icon>
+      <div class="word-info">
+        <span class="word-text" [class.banned-word]="wordWithStatus.status === ReviewedWordStatus.BANNED"
+              [class.rejected-word]="wordWithStatus.status === ReviewedWordStatus.REJECTED"
+              [class.unreviewed-word]="wordWithStatus.status === ReviewedWordStatus.UNREVIEWED"
+              [class.good-word]="isGoodStatus(wordWithStatus.status)">
+          {{wordWithStatus.word}}
+        </span>
+        <span *ngIf="wordWithStatus.countInSong != null && wordWithStatus.countInSong > 0" class="word-count" title="In this song">
+          ×{{wordWithStatus.countInSong}}
+        </span>
+        <span *ngIf="wordWithStatus.countInAllSongs != null" 
+              class="word-count-total" 
+              [title]="getCommonnessTooltip(wordWithStatus.countInAllSongs)">
+          <span class="commonness-badge" [ngClass]="getCommonnessColorClass(wordWithStatus.countInAllSongs)"></span>
+        </span>
+        <span *ngIf="wordWithStatus.sourceLanguage" 
+              class="source-language-badge"
+              [matTooltip]="'Source: ' + getSourceLanguageLabel(wordWithStatus.sourceLanguage)">
+          {{ getSourceLanguageLabel(wordWithStatus.sourceLanguage) }}
+        </span>
+      </div>
+      
+      <!-- Suggestions for rejected and unreviewed words -->
+      <div *ngIf="shouldShowSuggestions(wordWithStatus)" 
+           class="suggestions">
+        <span class="suggestion-label">Suggestions:</span>
+        <mat-chip-list>
+          <mat-chip *ngFor="let suggestion of getFilteredSuggestions(wordWithStatus)">
+            {{suggestion}}
+          </mat-chip>
+        </mat-chip-list>
+      </div>
+
+      <!-- Action buttons (match words-spell-checker style) -->
+      <div class="word-actions">
+        <div class="action-buttons-container">
+          <!-- Group 2: Positive actions (good, context-specific, accepted) -->
+          <div class="button-group button-group-positive">
+            <app-mark-as-good-button
+                    [wordWithStatus]="wordWithStatus"
+                    [disabled]="disabled"
+                    (goodClick)="onGoodClick(wordWithStatus.word)">
+            </app-mark-as-good-button>
+            <app-mark-as-context-specific-button
+                    [wordWithStatus]="wordWithStatus"
+                    [disabled]="disabled"
+                    (contextSpecificClick)="onContextSpecificClick(wordWithStatus.word)">
+            </app-mark-as-context-specific-button>
+            <app-mark-as-accepted-button
+                    [wordWithStatus]="wordWithStatus"
+                    [disabled]="disabled"
+                    (acceptedClick)="onAcceptedClick(wordWithStatus.word)">
+            </app-mark-as-accepted-button>
+          </div>
+          <!-- Group 1: Negative actions (banned, rejected) - only if reviewer -->
+          <div class="button-group button-group-negative" *ngIf="hasReviewerRole">
+            <app-mark-as-banned-button
+                    [wordWithStatus]="wordWithStatus"
+                    [disabled]="disabled"
+                    (bannedClick)="onBannedClick(wordWithStatus.word)">
+            </app-mark-as-banned-button>
+            <app-mark-as-rejected-button
+                    [wordWithStatus]="wordWithStatus"
+                    [disabled]="disabled"
+                    (rejectedClick)="onRejectedClick(wordWithStatus.word)">
+            </app-mark-as-rejected-button>
+          </div>
+        </div>
+      </div>
+    </mat-list-item>
+  </mat-list>
+</div>

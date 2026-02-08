@@ -272,7 +272,7 @@ public class TCPClient {
         return preferred;
     }
 
-    private static List<VerseIndex> getFromIntegers(List<Long> verseIndexIntegers) {
+    public static List<VerseIndex> getFromIntegers(List<Long> verseIndexIntegers) {
         int size = 0;
         if (verseIndexIntegers != null) {
             size = verseIndexIntegers.size();

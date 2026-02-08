@@ -8,8 +8,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
 import android.text.Html;
 import android.text.Layout;
 import android.util.Log;
@@ -19,13 +17,15 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import androidx.appcompat.app.ActionBar;
+
 import com.bence.songbook.R;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
  * status bar and navigation/system bar) with user interaction.
  */
-public abstract class AbstractFullscreenActivity extends AppCompatActivity {
+public abstract class AbstractFullscreenActivity extends BaseActivity {
 
     /**
      * Some older devices needs a small delay between UI widget updates
@@ -110,6 +110,11 @@ public abstract class AbstractFullscreenActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(AbstractFullscreenActivity.class.getSimpleName(), e.getMessage());
         }
+    }
+
+    @Override
+    protected void setupWindowInsets() {
+        // Fullscreen activities intentionally hide system UI, so skip window insets handling
     }
 
     @Override

@@ -129,9 +129,13 @@ public class SongControllerTest extends BaseTest {
         clickOn("#songListView");
         final double x = boundsInScene.getMinX() + 10;
         final double y = boundsInScene.getMinY() + 60;
-        clickOn(x, y).sleep(100).press(KeyCode.SHIFT).clickOn(x + 7, y + 40).release(KeyCode.SHIFT);
+        clickOn(x, y).sleep(100).press(KeyCode.SHIFT).clickOn(x + 7, y + 210).release(KeyCode.SHIFT);
         String activeText = MyController.getInstance().getProjectionScreenController().getActiveText();
-        Assert.assertTrue(activeText.length() > SONG_VERSE_TEXT.length() * 2);
+        int activeTextLength = activeText.length();
+        int songVerseTextLength2 = SONG_VERSE_TEXT.length() * 2;
+        // System.out.println(activeTextLength);
+        // System.out.println(songVerseTextLength2);
+        Assert.assertTrue(activeTextLength > songVerseTextLength2);
     }
 
     //	@Test
@@ -169,6 +173,6 @@ public class SongControllerTest extends BaseTest {
         rightClickOn(x, y).sleep(100).clickOn("#deleteMenuItem");
         sleep(100).clickOn("#confirmButton").sleep(50);
         doubleClickOn("#searchTextField").doubleClickOn("#searchTextField").write(test_songTitle);
-        Assert.assertEquals(searchedSongListView.getItems().size(), 0);
+        Assert.assertEquals(0, searchedSongListView.getItems().size());
     }
 }

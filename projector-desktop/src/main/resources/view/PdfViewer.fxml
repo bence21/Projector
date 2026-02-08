@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<BorderPane fx:id="borderPane" xmlns:fx="http://javafx.com/fxml/1" minHeight="300"
+            minWidth="400" xmlns="http://javafx.com/javafx/8.0.171"
+            fx:controller="projector.controller.PdfViewerController">
+    <top>
+        <HBox fx:id="navigationHBox" alignment="CENTER" spacing="10.0" style="-fx-padding: 10;">
+            <Button fx:id="previousButton" onAction="#onPreviousPage" text="%Previous"/>
+            <TextField fx:id="pageNumberTextField" prefHeight="25.0" prefWidth="50.0" maxWidth="80.0" promptText="%Page"
+                       alignment="CENTER"/>
+            <Label fx:id="pageCounterLabel" text="Page 1 of 1"/>
+            <Button fx:id="nextButton" onAction="#onNextPage" text="%Next"/>
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fx:id="scrollPane" fitToWidth="true" hbarPolicy="NEVER">
+            <FlowPane fx:id="flowPane" hgap="10.0" vgap="10.0" style="-fx-padding: 10;"/>
+        </ScrollPane>
+    </center>
+</BorderPane>
+

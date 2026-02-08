@@ -85,7 +85,7 @@ public class ColorUtil {
                 color.getRed(),
                 color.getGreen(),
                 color.getBlue(),
-                opacity
+                Math.max(0.0, Math.min(opacity, 1.0))
         );
     }
 }

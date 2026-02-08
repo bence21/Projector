@@ -1,20 +1,18 @@
 package projector.controller.util;
 
-import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class ImageContainer {
-    private final Label filenameLabel;
     private final Rectangle highlightRect;
     private final BorderPane container;
     private StackPane mainPane;
     private String fileImagePath;
+    private boolean isFolder = false;
 
-    public ImageContainer(Label filenameLabel, BorderPane container) {
-        this.filenameLabel = filenameLabel;
+    public ImageContainer(BorderPane container) {
         this.container = container;
         this.highlightRect = createHighlightRect();
         container.widthProperty().addListener((observable, oldValue, newValue) -> {
@@ -40,10 +38,6 @@ public class ImageContainer {
         return container;
     }
 
-    public Label getFilenameLabel() {
-        return filenameLabel;
-    }
-
     public Rectangle getHighlightRect() {
         return highlightRect;
     }
@@ -56,10 +50,6 @@ public class ImageContainer {
         this.mainPane = mainPane;
     }
 
-    // public void setImage(Image image) {
-    //     this.image = image;
-    // }
-
     public String getFileImagePath() {
         return fileImagePath;
     }
@@ -67,4 +57,13 @@ public class ImageContainer {
     public void setFileImagePath(String fileImagePath) {
         this.fileImagePath = fileImagePath;
     }
+
+    public boolean isFolder() {
+        return isFolder;
+    }
+
+    public void setFolder(boolean folder) {
+        isFolder = folder;
+    }
+
 }

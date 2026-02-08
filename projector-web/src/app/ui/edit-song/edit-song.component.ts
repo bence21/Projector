@@ -10,9 +10,11 @@ import { SubmitOrPublish, replace, valueRefactorable } from "../new-song/new-son
 import { AuthenticateComponent } from "../authenticate/authenticate.component";
 import { CdkDragDrop, moveItemInArray, copyArrayItem } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth.service';
-import { addNewVerse_, calculateOrder_ } from '../../util/song.utils';
+import { addNewVerse_, calculateOrder_, validateWordsAndSave } from '../../util/song.utils';
 import { Language } from '../../models/language';
 import { debounceTime } from 'rxjs/operators';
+import { SongWordValidationService } from '../../services/song-word-validation.service';
+import { normalizeForPersistence } from '../../util/unicode-text-normalizer';
 
 @Component({
   selector: 'app-edit-song',
@@ -35,7 +37,20 @@ export class EditSongComponent implements OnInit {
   verses: SongVerseUI[];
   verseControls: FormControl[];
   languages = [];
-  selectedLanguage: Language;
+  private _selectedLanguage: Language;
+  set selectedLanguage(value: Language) {
+    this._selectedLanguage = value;
+    if (value) {
+      this.selectedLanguageCopy = new Language();
+      Object.assign(this.selectedLanguageCopy, value);
+    } else {
+      this.selectedLanguageCopy = null;
+    }
+  }
+  get selectedLanguage(): Language {
+    return this._selectedLanguage;
+  }
+  selectedLanguageCopy: Language;
   originalLanguage: Language;
   @Input()
   song: Song;
@@ -63,6 +78,9 @@ export class EditSongComponent implements OnInit {
   }[];
   customSectionOrder = false;
   publish = false;
+  formHasChanges = false;
+  private initialFormValue: string;
+  currentSongForWordList: Song;
 
   constructor(private fb: FormBuilder,
     private songService: SongService,
@@ -73,7 +91,8 @@ export class EditSongComponent implements OnInit {
     iconRegistry: MatIconRegistry,
     public sanitizer: DomSanitizer,
     public auth: AuthService,
-    private _changeDetectionRef: ChangeDetectorRef) {
+    private _changeDetectionRef: ChangeDetectorRef,
+    private songWordValidationService: SongWordValidationService) {
     iconRegistry.addSvgIcon(
       'magic_tool',
       sanitizer.bypassSecurityTrustResourceUrl('assets/icons/magic_tool-icon.svg'));
@@ -260,6 +279,74 @@ export class EditSongComponent implements OnInit {
     this.form.addControl('songText', this.songTextFormControl);
     this.form.valueChanges.subscribe(() => this.onValueChanged());
     this.onValueChanged();
+    this.initialFormValue = JSON.stringify(this.form.value);
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.song);
+    this.trackFormChanges();
+  }
+
+  private trackFormChanges() {
+    this.form.valueChanges.pipe(debounceTime(500)).subscribe(() => {
+      const currentFormValue = JSON.stringify(this.form.value);
+      this.formHasChanges = currentFormValue !== this.initialFormValue;
+    });
+  }
+
+  getCurrentSongFromForm(): Song {
+    const formValue = this.form.value;
+    const currentSong = new Song(this.song);
+    currentSong.title = formValue.title;
+    currentSong.author = formValue.author;
+    currentSong.songVerseDTOS = [];
+    currentSong.languageDTO = this.selectedLanguage;
+    
+    if (this.editorType === 'raw') {
+      // Parse raw text into verses
+      const songText = formValue.songText || '';
+      if (songText) {
+        let verseMap = new Map<string, SongVerseUI>();
+        let verseCount = 0;
+        for (const verseI of songText.split("\n\n")) {
+          const songVerse = new SongVerseDTO();
+          songVerse.type = SectionType.Verse;
+          let verse = verseI;
+          for (const sectionType of this.sectionTypes) {
+            const sectionString = "[" + sectionType.name + "]\n";
+            if (verse.toLowerCase().startsWith(sectionString.toLowerCase())) {
+              songVerse.type = sectionType.type;
+              verse = verseI.substring(sectionString.length, verseI.length);
+            }
+          }
+          songVerse.text = verse;
+          currentSong.songVerseDTOS.push(songVerse);
+        }
+      }
+    } else {
+      // Use verse controls
+      let i = 0;
+      for (const key in formValue) {
+        if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
+          const value = formValue[key];
+          const songVerseDTO = new SongVerseDTO();
+          songVerseDTO.text = value;
+          if (i < this.verses.length) {
+            songVerseDTO.chorus = this.verses[i].chorus;
+            songVerseDTO.type = this.verses[i].type;
+          }
+          currentSong.songVerseDTOS.push(songVerseDTO);
+          i = i + 1;
+        }
+      }
+    }
+    
+    return currentSong;
+  }
+
+  onWordListRefresh() {
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.getCurrentSongFromForm());
+    this.initialFormValue = JSON.stringify(this.form.value);
+    this.formHasChanges = false;
+    // Trigger change detection to ensure child component receives the updated song
+    this._changeDetectionRef.detectChanges();
   }
 
   addNewVerse() {
@@ -335,9 +422,10 @@ export class EditSongComponent implements OnInit {
 
   onSubmit() {
     const formValue = this.form.value;
-    this.song.title = formValue.title;
+    // Normalize song title and author before saving
+    this.song.title = normalizeForPersistence(formValue.title) || formValue.title;
     this.song.verseOrder = null;
-    this.song.author = formValue.author;
+    this.song.author = normalizeForPersistence(formValue.author) || formValue.author;
     this.song.songVerseDTOS = [];
     this.song.languageDTO = this.selectedLanguage;
     let i = 0;
@@ -345,7 +433,8 @@ export class EditSongComponent implements OnInit {
       if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
         const value = formValue[key];
         const songVerseDTO = new SongVerseDTO();
-        songVerseDTO.text = value;
+        // Normalize verse text before saving
+        songVerseDTO.text = normalizeForPersistence(value) || value;
         songVerseDTO.chorus = this.verses[i].chorus;
         songVerseDTO.type = this.verses[i].type
         this.song.songVerseDTOS.push(songVerseDTO);
@@ -364,7 +453,28 @@ export class EditSongComponent implements OnInit {
       }
     }
     this.setVerseOrderListFromSectionOrder();
-    this.updateSong();
+    this.validateAndUpdateSong();
+  }
+
+  private isAdmin(): Boolean {
+    const user = this.auth.getUser();
+    if (user == null) {
+      return false;
+    }
+    return user.isAdmin();
+  }
+
+  private validateAndUpdateSong() {
+    validateWordsAndSave({
+      song: this.song,
+      validationService: this.songWordValidationService,
+      dialog: this.dialog,
+      snackBar: this.snackBar,
+      language: this.selectedLanguage,
+      publish: this.publish,
+      onSave: () => this.updateSong(),
+      isAdmin: !!this.isAdmin()
+    });
   }
 
   private setVerseOrderListFromSectionOrder() {

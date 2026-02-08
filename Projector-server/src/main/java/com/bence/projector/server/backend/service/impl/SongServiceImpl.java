@@ -6,6 +6,7 @@ import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.model.SongVerseOrderListItem;
+import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.repository.SongVerseOrderListItemRepository;
@@ -15,10 +16,16 @@ import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongVerseOrderListItemService;
 import com.bence.projector.server.backend.service.SongVerseService;
+import com.bence.projector.server.backend.service.SongWordValidationService;
+import com.bence.projector.server.backend.service.UserService;
+import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.server.utils.StringUtils;
+import com.bence.projector.server.utils.UnicodeTextNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.sql.ResultSet;
@@ -58,6 +65,10 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     private SongVerseOrderListItemService songVerseOrderListItemService;
     @Autowired
     private FavouriteSongService favouriteSongService;
+    @Autowired
+    private SongWordValidationService songWordValidationService;
+    @Autowired
+    private UserService userService;
 
     private static boolean containsFavourite(List<FavouriteSong> favouriteSongs) {
         for (FavouriteSong favouriteSong : favouriteSongs) {
@@ -788,6 +799,21 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return song;
     }
 
+    private void canonicalizeSongTextForPersistence(Song song, List<SongVerse> songVerses) {
+        // Canonicalize Unicode for song title and verse text before persistence
+        song.setTitle(UnicodeTextNormalizer.canonicalizeForPersistence(song.getTitle()));
+        if (song.getAuthor() != null) {
+            song.setAuthor(UnicodeTextNormalizer.canonicalizeForPersistence(song.getAuthor()));
+        }
+        
+        // Canonicalize Unicode for verse text
+        for (SongVerse verse : songVerses) {
+            if (verse.getText() != null) {
+                verse.setText(UnicodeTextNormalizer.canonicalizeForPersistence(verse.getText()));
+            }
+        }
+    }
+
     @Override
     public Song save(Song song) {
         if (song.getTitle() == null || song.getTitle().trim().isEmpty()) {
@@ -797,12 +823,23 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (songVerses == null || songVerses.isEmpty()) {
             throw new ServiceException("songVerses isEmpty!", HttpStatus.PRECONDITION_FAILED);
         }
+        
+        canonicalizeSongTextForPersistence(song, songVerses);
+        
         if (song.isDeleted() && song.getLanguage() == null) {
             return songRepository.save(song);
         }
         if (song.getLanguage() == null) {
             throw new ServiceException("No language", HttpStatus.PRECONDITION_FAILED);
         }
+        
+        // Validate words and set hasUnsolvedWords flag only for admins
+        // Songs with unsolved words will be filtered out from being public via isPublic() method
+        if (isCurrentUserAdmin()) {
+            SongWordValidationResult validationResult = songWordValidationService.validateWords(song);
+            song.setHasUnsolvedWords(validationResult.isHasIssues());
+        }
+        
         try {
             List<SongVerse> verses = new ArrayList<>(songVerses);
             List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
@@ -818,6 +855,21 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             throw e;
         }
         return song;
+    }
+
+    private boolean isCurrentUserAdmin() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getName() == null) {
+                return false;
+            }
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            return user != null && user.getRole() == Role.ROLE_ADMIN;
+        } catch (Exception e) {
+            // If there's any error getting the user, assume not admin
+            return false;
+        }
     }
 
     @Override

@@ -159,6 +159,7 @@ export class Song extends BaseModel {
   commonCharacterCount = 0;
   repeatChorus: boolean = true;
   reviewerErased: boolean = false;
+  hasUnsolvedWords: boolean = false;
 
   constructor(values: Object = {}) {
     super(values);

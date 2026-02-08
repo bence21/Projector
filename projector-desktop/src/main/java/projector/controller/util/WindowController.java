@@ -8,6 +8,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -255,6 +256,7 @@ public class WindowController {
                 if (!signInStage.isShowing() && loginController != null) {
                     loginController.clear();
                 }
+                alignSignInStage(signInStage);
                 signInStage.show();
                 signInStage.requestFocus();
                 loginController.focusOnLoginButton();
@@ -266,6 +268,7 @@ public class WindowController {
                 loginController = loader.getController();
                 Stage stage = getCustomStage3(getClass(), root);
                 stage.setTitle(Settings.getInstance().getResourceBundle().getString("Sign In"));
+                alignSignInStage(stage);
                 stage.show();
                 loginController.focusOnLoginButton();
                 loginController.addListener(loginDTO -> {
@@ -299,6 +302,12 @@ public class WindowController {
         });
     }
 
+    private void alignSignInStage(Stage signInStage) {
+        Bounds bounds = signInButton.localToScreen(signInButton.getBoundsInLocal());
+        signInStage.setX(bounds.getMinX());
+        signInStage.setY(bounds.getMinY() + signInButton.getHeight());
+    }
+
     private void createAccountPopup(LoggedInUser loggedInUser) {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/view/AccountPopup.fxml"));
@@ -318,7 +327,7 @@ public class WindowController {
             content.add(root);
             setSceneStyleFileForPane(getClass(), root);
             accountPopup.setAutoHide(true);
-            accountPopup.show(this.ownerStage, signInButton.getLayoutX(), signInButton.getLayoutY() + signInButton.getHeight());
+            accountPopup.show(this.ownerStage, ownerStage.getX() + signInButton.getLayoutX(), ownerStage.getY() + signInButton.getLayoutY() + signInButton.getHeight());
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }

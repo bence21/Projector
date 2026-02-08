@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static projector.controller.GalleryController.isMediaFile;
+import static projector.controller.util.PdfService.isPdfFile;
 
 public class ImageCacheService {
 
@@ -73,8 +74,41 @@ public class ImageCacheService {
         return CACHE_FOLDER + "/" + name + DIVIDER + width + DIVIDER + height + DIVIDER + file.lastModified() + s;
     }
 
+    private static boolean areDimensionsInValid(int width, int height) {
+        return width <= 0 || height <= 0;
+    }
+
+    private static boolean areDimensionsInValid(double width, double height) {
+        return width <= 0 || height <= 0 || Double.isNaN(width) || Double.isNaN(height)
+                || Double.isInfinite(width) || Double.isInfinite(height);
+    }
+
+    private static boolean logIfInvalid(boolean isInvalid, String context, Object width, Object height) {
+        if (isInvalid) {
+            LOG.warn("Invalid dimensions for {}: width={}, height={}", context, width, height);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean areDimensionsInValidWithLog(int width, int height, String context) {
+        return logIfInvalid(areDimensionsInValid(width, height), context, width, height);
+    }
+
+    private static boolean areDimensionsInValidWithLog(double width, double height) {
+        return logIfInvalid(areDimensionsInValid(width, height), "original image dimensions", width, height);
+    }
+
+    private static boolean areParametersValidWithLog(int width, int height, String filePath) {
+        if (areDimensionsInValid(width, height) || filePath == null) {
+            LOG.warn("Invalid parameters for {}: width={}, height={}, filePath={}", "checkForImage", width, height, filePath);
+            return false;
+        }
+        return true;
+    }
+
     public Image getImage(String filePath, int width, int height) {
-        if (width == 0 || height == 0 || filePath == null) {
+        if (areDimensionsInValid(width, height) || filePath == null) {
             return null;
         }
         File file = new File(filePath);
@@ -87,6 +121,8 @@ public class ImageCacheService {
             hashMap.remove(cacheImagePath);
             if (isMediaFile(filePath)) {
                 image = getVideoThumbnail(filePath, width, height);
+            } else if (isPdfFile(filePath)) {
+                image = getPdfThumbnail(filePath, width, height);
             } else {
                 image = getImageFromFile(filePath);
             }
@@ -190,7 +226,47 @@ public class ImageCacheService {
         mediaPlayer.dispose();
     }
 
+    private Image getPdfThumbnail(String filePath, int width, int height) {
+        if (!isPdfFile(filePath)) {
+            return null;
+        }
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return null;
+        }
+
+        if (areDimensionsInValidWithLog(width, height, "PDF thumbnail")) {
+            return null;
+        }
+
+        try {
+            // Render first page of PDF at appropriate DPI for thumbnail
+            float dpi = Math.max(width, height) * 72.0f / 200.0f; // Scale DPI based on thumbnail size
+            BufferedImage bufferedImage = PdfService.getInstance().renderPage(filePath, 0, dpi);
+            if (bufferedImage != null) {
+                Image fxImage = SwingFXUtils.toFXImage(bufferedImage, null);
+                if (fxImage.getWidth() > 0 && fxImage.getHeight() > 0) {
+                    // Resize to fit thumbnail dimensions using existing resizeImage method
+                    BufferedImage resizedBufferedImage = resizeImage(fxImage, width, height);
+                    if (resizedBufferedImage != null) {
+                        return SwingFXUtils.toFXImage(resizedBufferedImage, null);
+                    }
+                } else {
+                    LOG.warn("PDF rendered image has invalid dimensions: width={}, height={}",
+                            fxImage.getWidth(),
+                            fxImage.getHeight());
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("Error creating PDF thumbnail", e);
+        }
+        return null;
+    }
+
     public void checkForImage(String filePath, int width, int height) {
+        if (!areParametersValidWithLog(width, height, filePath)) {
+            return;
+        }
         File file = new File(filePath);
         if (!file.exists()) {
             return;
@@ -200,7 +276,12 @@ public class ImageCacheService {
         if (path.toFile().exists()) {
             return;
         }
-        Image image = getImageFromFile(filePath);
+        Image image;
+        if (isPdfFile(filePath)) {
+            image = getPdfThumbnail(filePath, width, height);
+        } else {
+            image = getImageFromFile(filePath);
+        }
         if (image != null) {
             createCache(image, width, height, cacheImagePath);
         }
@@ -233,6 +314,14 @@ public class ImageCacheService {
     }
 
     public static BufferedImage resizeImage(Image originalImage, int newWidth, int newHeight) {
+        if (originalImage == null) {
+            return null;
+        }
+
+        if (areDimensionsInValidWithLog(newWidth, newHeight, "resizeImage")) {
+            return null;
+        }
+
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(originalImage, null);
         if (bufferedImage == null) {
             return null;
@@ -240,6 +329,11 @@ public class ImageCacheService {
 
         double width = originalImage.getWidth();
         double height = originalImage.getHeight();
+
+        if (areDimensionsInValidWithLog(width, height)) {
+            return null;
+        }
+
         double aspectRatio = width / height;
 
         // Calculate the new dimensions while maintaining the aspect ratio
@@ -247,6 +341,10 @@ public class ImageCacheService {
             newWidth = (int) (newHeight * aspectRatio);
         } else {
             newHeight = (int) (newWidth / aspectRatio);
+        }
+
+        if (areDimensionsInValidWithLog(newWidth, newHeight, "calculated dimensions")) {
+            return null;
         }
 
         BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, bufferedImage.getType());

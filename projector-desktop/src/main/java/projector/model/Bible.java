@@ -8,6 +8,7 @@ import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 public class Bible extends BaseEntity {
 
@@ -204,5 +205,17 @@ public class Bible extends BaseEntity {
 
     public boolean hasVerseIndicesChecked() {
         return hasVerseIndicesChecked;
+    }
+
+    @Override
+    public String getUuid() {
+        ensureUuid();
+        return super.getUuid();
+    }
+
+    private void ensureUuid() {
+        if (super.getUuid() == null) {
+            setUuid(UUID.randomUUID().toString());
+        }
     }
 }

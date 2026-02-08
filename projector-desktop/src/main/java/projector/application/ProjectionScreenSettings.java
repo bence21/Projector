@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import projector.controller.ProjectionScreenController;
 import projector.controller.SettingsController;
 import projector.controller.util.ProjectionScreenHolder;
+import projector.model.Bible;
 import projector.utils.AppProperties;
 import projector.utils.monitors.Monitor;
 import projector.utils.monitors.MonitorUtil;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static projector.application.ScreenProjectionType.copyList;
+import static projector.utils.StringUtils.copyStringList;
 
 public class ProjectionScreenSettings {
 
@@ -117,6 +119,8 @@ public class ProjectionScreenSettings {
     private String name;
     @Expose
     private Boolean guideView;
+    @Expose
+    private List<String> parallelBibleUuidSkipping;
     // check for copy constructor!
     private Listener onChangedListener = null;
     private transient String nameForMonitorForScreen;
@@ -138,7 +142,7 @@ public class ProjectionScreenSettings {
         this.useGlobalSettings = projectionScreenSettings.useGlobalSettings;
     }
 
-    private Settings copyFromOther(ProjectionScreenSettings projectionScreenSettings) {
+    public Settings copyFromOther(ProjectionScreenSettings projectionScreenSettings) {
         final Settings settings = projectionScreenSettings.settings;
         this.maxFont = projectionScreenSettings.maxFont;
         this.backgroundColor = projectionScreenSettings.backgroundColor;
@@ -176,6 +180,7 @@ public class ProjectionScreenSettings {
         this.nextSectionHeight = projectionScreenSettings.nextSectionHeight;
         this.name = projectionScreenSettings.name;
         this.guideView = projectionScreenSettings.guideView;
+        this.parallelBibleUuidSkipping = copyStringList(projectionScreenSettings.parallelBibleUuidSkipping);
         // Also copy fromJson in load method!!!
         return settings;
     }
@@ -309,9 +314,24 @@ public class ProjectionScreenSettings {
         }
     }
 
+    private void clearMonitorScreen() {
+        ProjectionScreenController projectionScreenController = getProjectionScreenController();
+        if (projectionScreenController != null) {
+            Monitor monitor = projectionScreenController.getMonitor();
+            if (monitor != null) {
+                monitor.setScreen(null);
+            }
+        }
+    }
+
+    public void clearMonitorCache() {
+        clearMonitorScreen();
+        nameForMonitorForScreen = null;
+    }
+
     public void reload() {
         try {
-            nameForMonitorForScreen = null;
+            clearMonitorCache();
             File file = new File(getFileName());
             if (!file.exists()) {
                 copyFromOther(this);
@@ -385,17 +405,26 @@ public class ProjectionScreenSettings {
             this.nextSectionHeight = fromJson.nextSectionHeight;
             this.name = fromJson.name;
             this.guideView = fromJson.guideView;
+            this.parallelBibleUuidSkipping = fromJson.parallelBibleUuidSkipping;
         } catch (FileNotFoundException ignored) {
         } catch (IOException e) {
             LOG.error(e.getMessage(), e);
         }
     }
 
+    public Screen getScreen() {
+        ProjectionScreenController projectionScreenController = getProjectionScreenController();
+        if (projectionScreenController == null) {
+            return null;
+        }
+        return projectionScreenController.getScreen();
+    }
+
     private String getFileName() {
         return getFileName(getNameForMonitor());
     }
 
-    private String getNameForMonitor() {
+    public String getNameForMonitor() {
         String nameForMonitor = getNameForMonitorForScreen();
         if (nameForMonitor != null) {
             return nameForMonitor;
@@ -407,10 +436,7 @@ public class ProjectionScreenSettings {
     private String getNameForMonitorForScreen() {
         try {
             if (nameForMonitorForScreen == null) {
-                if (projectionScreenHolder == null) {
-                    return null;
-                }
-                ProjectionScreenController projectionScreenController = projectionScreenHolder.getProjectionScreenController();
+                ProjectionScreenController projectionScreenController = getProjectionScreenController();
                 if (projectionScreenController == null) {
                     return null;
                 }
@@ -421,6 +447,13 @@ public class ProjectionScreenSettings {
             LOG.error(e.getMessage(), e);
             return null;
         }
+    }
+
+    private ProjectionScreenController getProjectionScreenController() {
+        if (projectionScreenHolder == null) {
+            return null;
+        }
+        return projectionScreenHolder.getProjectionScreenController();
     }
 
     // Function to calculate the overlap area between two rectangles
@@ -684,22 +717,28 @@ public class ProjectionScreenSettings {
     }
 
     public void renameSettingsFile2(String newValue, boolean ignoreFileNotExists) {
-        renameSettingsFile3(projectionScreenHolder.getName(), newValue, ignoreFileNotExists);
+        renameSettingsFile3(getNameForMonitor(), newValue, ignoreFileNotExists);
     }
 
     public void renameSettingsFile3(String oldFileName, String newValue, boolean ignoreFileNotExists) {
         try {
-            File oldFile = new File(getFileName(oldFileName));
+            String oldFileJson = getFileName(oldFileName);
+            File oldFile = new File(oldFileJson);
             if (!oldFile.exists()) {
                 if (ignoreFileNotExists) {
                     return;
                 }
                 LOG.warn("File not exists: {}", oldFileName);
             }
-            File newFile = new File(getFileName(newValue));
+            String newFileJson = getFileName(newValue);
+            File newFile = new File(newFileJson);
+            if (newFile.exists()) {
+                boolean deleted = newFile.delete();
+                LOG.debug("Deleted existing target file: {}", deleted);
+            }
             boolean success = oldFile.renameTo(newFile);
             if (!success) {
-                LOG.warn("Could not rename: {} to {}", oldFileName, newValue);
+                LOG.warn("Could not rename: {} to {}", oldFileJson, newFileJson);
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -830,6 +869,65 @@ public class ProjectionScreenSettings {
 
     public void setGuideView(boolean guideView) {
         this.guideView = guideView;
+    }
+
+    public List<Bible> getPreferredBibles(List<Bible> allBibles) {
+        List<String> parallelBibleUuidSkipping = getParallelBibleUuidSkipping();
+        if (parallelBibleUuidSkipping.isEmpty()) {
+            return null;
+        }
+        ArrayList<Bible> preferredBibles = new ArrayList<>();
+        for (Bible bible : allBibles) {
+            if (!parallelBibleUuidSkipping.contains(bible.getUuid())) {
+                preferredBibles.add(bible);
+            }
+        }
+        if (allBibles.size() == preferredBibles.size()) {
+            return null;
+        }
+        return preferredBibles;
+    }
+
+    public List<String> getParallelBibleUuidSkipping() {
+        if (parallelBibleUuidSkipping == null) {
+            parallelBibleUuidSkipping = new ArrayList<>();
+        }
+        return parallelBibleUuidSkipping;
+    }
+
+    public boolean hasSkippedBible() {
+        return getParallelBibleUuidSkipping().size() > 0;
+    }
+
+    public boolean isSkipped(Bible bible) {
+        if (bible == null || bible.getUuid() == null) {
+            return false;
+        }
+        String bibleUuid = bible.getUuid();
+        List<String> parallelBibleUuidSkipping = getParallelBibleUuidSkipping();
+        for (String skippedUuid : parallelBibleUuidSkipping) {
+            if (skippedUuid.equals(bibleUuid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void handleBibleSkipping(Bible bible, boolean skip) {
+        if (bible == null || bible.getUuid() == null) {
+            return;
+        }
+        String bibleUuid = bible.getUuid();
+        List<String> parallelBibleUuidSkipping = getParallelBibleUuidSkipping();
+        if (parallelBibleUuidSkipping.contains(bibleUuid)) {
+            if (!skip) {
+                parallelBibleUuidSkipping.remove(bibleUuid);
+            }
+        } else {
+            if (skip) {
+                parallelBibleUuidSkipping.add(bibleUuid);
+            }
+        }
     }
 
     public interface Listener {

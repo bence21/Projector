@@ -32,7 +32,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.res.ResourcesCompat;
@@ -75,7 +74,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
-public class SongActivity extends AppCompatActivity {
+public class SongActivity extends BaseActivity {
     public static final int NEW_SONG_REQUEST = 4;
     private static final String TAG = "SongActivity";
 

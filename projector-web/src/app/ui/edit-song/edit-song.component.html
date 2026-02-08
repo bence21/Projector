@@ -125,5 +125,18 @@
 
     </mat-card-content>
   </mat-card>
+  
+  <!-- Word List Panel -->
+  <mat-card *ngIf="song && selectedLanguage && auth.getUser()?.isAdmin()">
+    <mat-card-content>
+      <app-song-word-list-panel
+        [song]="currentSongForWordList" 
+        [language]="selectedLanguageCopy"
+        [hasChanges]="formHasChanges"
+        (refreshRequested)="onWordListRefresh()">
+      </app-song-word-list-panel>
+    </mat-card-content>
+  </mat-card>
+  
   <br>
 </div>

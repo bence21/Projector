@@ -229,7 +229,14 @@ public class ProjectionScreenSettingsController {
             nameTextField.setText(projectionScreenSettings.getName());
             nameTextField.textProperty().addListener((observableValue, oldValue, newValue) -> projectionScreenSettingsModel.setName(newValue));
             handleProjectionScreensWithScreenComboBox(screenComboBox, projectionScreenHolder);
-            screenComboBox.getSelectionModel().selectedItemProperty().addListener((o, old, newValue) -> swapProjectionScreen(projectionScreenHolder, newValue.getProjectionScreenHolder()));
+            SingleSelectionModel<ProjectionScreenBunch> selectionModel = screenComboBox.getSelectionModel();
+            selectionModel.selectedItemProperty().addListener((o, old, newValue) -> {
+                if (newValue == null) {
+                    return;
+                }
+                Platform.runLater(selectionModel::clearSelection);
+                swapProjectionScreen(projectionScreenHolder, newValue.getProjectionScreenHolder());
+            });
             if (screenComboBox.getItems().size() == 0) {
                 swapScreenHBox.setVisible(false); // parent container is important for styleClass
             }
@@ -240,18 +247,14 @@ public class ProjectionScreenSettingsController {
 
     private void swapProjectionScreen(ProjectionScreenHolder projectionScreenHolder1, ProjectionScreenHolder projectionScreenHolder2) {
         try {
-            String temp = projectionScreenHolder1.getName();
-            String temporarySwappingScreen = "TemporarySwappingScreen";
             ProjectionScreenSettings projectionScreenSettings1 = projectionScreenHolder1.getProjectionScreenSettings();
             ProjectionScreenSettings projectionScreenSettings2 = projectionScreenHolder2.getProjectionScreenSettings();
-            String settings1Name_ = projectionScreenSettings1.getName_();
-            projectionScreenSettings1.setName(projectionScreenSettings2.getName_());
-            projectionScreenSettings2.setName(settings1Name_);
+            ProjectionScreenSettings temp = new ProjectionScreenSettings(projectionScreenSettings1);
+            projectionScreenSettings1.copyFromOther(projectionScreenSettings2);
+            projectionScreenSettings2.copyFromOther(temp);
             projectionScreenSettings1.save();
             projectionScreenSettings2.save();
-            projectionScreenSettings2.renameSettingsFile2(temporarySwappingScreen, true);
-            projectionScreenSettings1.renameSettingsFile2(projectionScreenHolder2.getName(), true);
-            projectionScreenSettings2.renameSettingsFile3(temporarySwappingScreen, temp, true);
+            projectionScreenHolder1.clearMonitorCache();
             projectionScreenHolder1.reload();
             projectionScreenHolder2.reload();
             stage.close();
@@ -376,7 +379,9 @@ public class ProjectionScreenSettingsController {
         marginTextFieldBind(bottomMarginTextField, projectionScreenSettingsModel::setBottomMargin);
         marginTextFieldBind(leftMarginTextField, projectionScreenSettingsModel::setLeftMargin);
         asPaddingCheckbox.selectedProperty().addListener((observableValue, oldValue, newValue) -> {
-            projectionScreenSettingsModel.setAsPadding(newValue);
+            if (projectionScreenSettingsModel != null) {
+                projectionScreenSettingsModel.setAsPadding(newValue);
+            }
             setMarginsResetVisibility();
         });
     }

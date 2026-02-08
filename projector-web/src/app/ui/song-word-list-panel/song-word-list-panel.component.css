@@ -1,0 +1,238 @@
+mat-expansion-panel {
+  margin: 16px 0;
+}
+
+mat-expansion-panel-header {
+  padding: 12px 16px;
+}
+
+mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+mat-panel-description {
+  justify-content: flex-end;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  gap: 12px;
+}
+
+.no-words {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.filter-buttons button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-buttons button.active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+/* Filter button icon colors matching status icon colors */
+.filter-icon-good {
+  color: #4caf50 !important; /* Green - matches status-icon-good */
+}
+
+.filter-icon-unreviewed {
+  color: #ff9800 !important; /* Orange - matches status-icon-unreviewed */
+}
+
+.filter-icon-banned {
+  color: #f44336 !important; /* Red - matches status-icon-banned */
+}
+
+.filter-icon-rejected {
+  color: #ff5722 !important; /* Red-Orange - matches status-icon-rejected */
+}
+
+.word-item {
+  height: auto !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.word-item:last-child {
+  border-bottom: none;
+}
+
+.status-icon {
+  margin-right: 12px;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Status icon colors matching action button colors */
+.status-icon-good {
+  color: #4caf50 !important; /* Green - matches mark-as-good-button */
+}
+
+.status-icon-context {
+  color: #ffc107 !important; /* Yellow/Amber - matches mark-as-context-specific-button */
+}
+
+.status-icon-accepted {
+  color: #2196f3 !important; /* Blue - matches mark-as-accepted-button */
+}
+
+.status-icon-auto-accepted {
+  color: #00bcd4 !important; /* Cyan/Teal - different from reviewed good to distinguish auto-accepted */
+}
+
+.status-icon-banned {
+  color: #f44336 !important; /* Red - matches mark-as-banned-button */
+}
+
+.status-icon-rejected {
+  color: #ff5722 !important; /* Red-Orange - matches mark-as-rejected-button */
+}
+
+.status-icon-unreviewed {
+  color: #ff9800 !important; /* Orange - for unreviewed status */
+}
+
+.word-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.word-text {
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.word-count,
+.word-count-total {
+  font-size: 0.85em;
+  color: #666;
+  margin-right: 8px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.commonness-badge {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.commonness-badge.common-word {
+  background-color: #4caf50;
+}
+
+.commonness-badge.rare-word {
+  background-color: #ff9800;
+}
+
+.source-language-badge {
+  display: inline-block;
+  font-size: 0.75em;
+  padding: 2px 6px;
+  margin-left: 6px;
+  border-radius: 4px;
+  background-color: #e8eaf6;
+  color: #3f51b5;
+}
+
+.good-word {
+  color: #4caf50;
+}
+
+.unreviewed-word {
+  color: #ff9800;
+}
+
+.banned-word {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.rejected-word {
+  color: #ff9800;
+}
+
+.suggestions {
+  margin-top: 8px;
+  margin-left: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion-label {
+  font-size: 0.85em;
+  color: #666;
+  font-weight: 500;
+}
+
+mat-chip-list {
+  display: inline-block;
+}
+
+.word-actions {
+  margin-left: auto;
+}
+
+.action-buttons-container {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: fit-content;
+  gap: 0;
+}
+
+.button-group {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.button-group-negative {
+  margin-right: 12px;
+}
+
+.button-group-positive {
+  margin-left: 0;
+}
+
+mat-list-item {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* Make tooltips respect line breaks */
+::ng-deep .mat-tooltip {
+  white-space: pre-line !important;
+  max-width: 300px;
+  text-align: left;
+}

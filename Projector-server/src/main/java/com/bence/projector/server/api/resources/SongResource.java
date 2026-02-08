@@ -6,6 +6,7 @@ import com.bence.projector.common.dto.SongDTO;
 import com.bence.projector.common.dto.SongFavouritesDTO;
 import com.bence.projector.common.dto.SongTitleDTO;
 import com.bence.projector.common.dto.SongViewsDTO;
+import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.server.api.assembler.SongAssembler;
 import com.bence.projector.server.api.assembler.SongTitleAssembler;
 import com.bence.projector.server.api.resources.util.UserPrincipalUtil;
@@ -20,6 +21,7 @@ import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongService;
+import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.StatisticsService;
 import com.bence.projector.server.backend.service.SuggestionService;
 import com.bence.projector.server.backend.service.UserService;
@@ -65,6 +67,7 @@ public class SongResource {
     private final MailSenderService mailSenderService;
     private final SongCollectionService songCollectionService;
     private final SuggestionService suggestionService;
+    private final SongWordValidationService songWordValidationService;
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -77,7 +80,8 @@ public class SongResource {
                         LanguageService languageService,
                         MailSenderService mailSenderService,
                         SuggestionService suggestionService,
-                        SongCollectionService songCollectionService
+                        SongCollectionService songCollectionService,
+                        SongWordValidationService songWordValidationService
     ) {
         this.songRepository = songRepository;
         this.songService = songService;
@@ -89,6 +93,7 @@ public class SongResource {
         this.mailSenderService = mailSenderService;
         this.songCollectionService = songCollectionService;
         this.suggestionService = suggestionService;
+        this.songWordValidationService = songWordValidationService;
     }
 
     static boolean hasReviewerRoleForSong(User user, Song song) {
@@ -741,6 +746,14 @@ public class SongResource {
             return new ResponseEntity<>(songAssembler.createDtoList(similar), HttpStatus.ACCEPTED);
         }
         return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/api/song/validateWords")
+    public ResponseEntity<Object> validateWords(@RequestBody final SongDTO songDTO, HttpServletRequest httpServletRequest) {
+        saveStatistics(httpServletRequest, statisticsService);
+        Song song = songAssembler.createModel(songDTO);
+        SongWordValidationResult result = songWordValidationService.validateWords(song);
+        return new ResponseEntity<>(result, HttpStatus.ACCEPTED);
     }
 
     @RequestMapping(method = RequestMethod.PUT, value = "/api/song/{songId}/incViews")

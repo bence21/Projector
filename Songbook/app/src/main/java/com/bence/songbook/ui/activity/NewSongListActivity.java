@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.songbook.Memory;
@@ -23,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class NewSongListActivity extends AppCompatActivity {
+public class NewSongListActivity extends BaseActivity {
     public static final String TAG = NewSongListActivity.class.getSimpleName();
     private boolean saveQueue;
     private EditText titleEditText;

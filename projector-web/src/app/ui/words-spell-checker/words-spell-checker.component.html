@@ -1,8 +1,48 @@
 <mat-card class="dark-theme">
   <mat-card-content style="overflow-x: auto">
+    <app-language-selector 
+      [languages]="languages" 
+      [selectedLanguage]="selectedLanguage"
+      [darkTheme]="true"
+      (selectedLanguageChange)="onLanguageChange($event)">
+    </app-language-selector>
+    
+    <div style="margin-bottom: 16px;">
+      <mat-form-field class="filter-select">
+        <mat-label>Filter</mat-label>
+        <mat-select [(ngModel)]="filterType" (selectionChange)="onFilterChange()">
+          <mat-option value="unreviewed">Unreviewed</mat-option>
+          <mat-option value="problematic">Problematic Only</mat-option>
+          <mat-option value="reviewed-good">Reviewed Good</mat-option>
+          <mat-option value="context-specific">Context-Specific</mat-option>
+          <mat-option value="accepted">Accepted</mat-option>
+          <mat-option value="rejected">Rejected</mat-option>
+          <mat-option value="banned">Banned Words</mat-option>
+          <mat-option value="auto-accepted-from-public">Auto Accepted From Public</mat-option>
+          <mat-option value="all">All</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh data" style="margin-left: 16px; vertical-align: middle;">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button *ngIf="someSelected" mat-raised-button color="primary" (click)="bulkMarkAsGood()" style="margin-left: 16px;">
+        Mark Selected as Good
+      </button>
+    </div>
     <div class="example-container mat-elevation-z8">
 
       <mat-table #table [dataSource]="dataSource" class="example-table" matSort>
+
+        <ng-container matColumnDef="select">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell">
+            <mat-checkbox (change)="toggleAllSelection()" [checked]="allSelected" [indeterminate]="someSelected">
+            </mat-checkbox>
+          </mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">
+            <mat-checkbox (change)="toggleRowSelection(row)" [checked]="row.selected">
+            </mat-checkbox>
+          </mat-cell>
+        </ng-container>
 
         <ng-container matColumnDef="Nr">
           <mat-header-cell *matHeaderCellDef class="example-header-cell">Nr</mat-header-cell>
@@ -18,8 +58,15 @@
         <ng-container matColumnDef="word">
           <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{'Word'}}</mat-header-cell>
           <mat-cell *matCellDef="let row" class="example-cell">
-            <span *ngIf="row.wordBunch.problematic" [style.color]="getRedIntensityColorString(row)">{{row.word}}</span>
-            <span *ngIf="!row.wordBunch.problematic">{{row.word}}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span *ngIf="row.wordBunch.problematic" [style.color]="getRedIntensityColorString(row)">{{row.word}}</span>
+              <span *ngIf="!row.wordBunch.problematic">{{row.word}}</span>
+              <mat-chip *ngIf="row.wordBunch.reviewedWord && row.wordBunch.reviewedWord.status" 
+                        [class]="getStatusChipClass(row.wordBunch.reviewedWord.status)"
+                        class="status-chip">
+                {{formatStatus(row.wordBunch.reviewedWord.status)}}
+              </mat-chip>
+            </div>
           </mat-cell>
         </ng-container>
 
@@ -29,7 +76,7 @@
           <mat-cell *matCellDef="let row" class="example-cell">
             <div class="correction-container">
               {{row.correction}}
-              <button *ngIf="row.wordBunch.problematic" mat-raised-button color="accent" class="change-all-button-dark" (click)="changeAll(row)">
+              <button *ngIf="row.wordBunch.problematic && row.count > 0" mat-raised-button color="accent" class="change-all-button-dark" (click)="changeAll(row)">
                 Change all ({{row.count}})
               </button>
             </div>
@@ -45,6 +92,42 @@
           <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{'Song'}}</mat-header-cell>
           <mat-cell *matCellDef="let row" class="example-cell">
             <a [href]="row.getSongLink()" target="_blank">{{row.getSongTitle()}}</a>
+          </mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="actionsLeft">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell"></mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">
+            <div class="action-buttons-container button-group-negative">
+              <app-mark-as-banned-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (bannedClick)="markAsBanned(row)">
+              </app-mark-as-banned-button>
+              <app-mark-as-rejected-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (rejectedClick)="markAsRejected(row)">
+              </app-mark-as-rejected-button>
+            </div>
+          </mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="actionsRight">
+          <mat-header-cell *matHeaderCellDef class="example-header-cell"></mat-header-cell>
+          <mat-cell *matCellDef="let row" class="example-cell">
+            <div class="action-buttons-container button-group-positive">
+              <app-mark-as-good-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (goodClick)="markAsGood(row)">
+              </app-mark-as-good-button>
+              <app-mark-as-context-specific-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (contextSpecificClick)="markAsContextSpecific(row)">
+              </app-mark-as-context-specific-button>
+              <app-mark-as-accepted-button 
+                      [wordWithStatus]="getWordWithStatusForRow(row)"
+                      (acceptedClick)="markAsAccepted(row)">
+              </app-mark-as-accepted-button>
+            </div>
           </mat-cell>
         </ng-container>
 

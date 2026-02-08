@@ -155,7 +155,7 @@ public class MonitorUtil {
             MonitorEnumProc monitorEnumProc = MonitorUtil::monitorEnumProc;
             monitors = new ArrayList<>();
             user32.EnumDisplayMonitors(null, null, monitorEnumProc, null);
-            applyMonitorInfos(monitors);
+            // applyMonitorInfos(monitors);
             calculateDpiPositions(monitors);
             for (Monitor monitor : monitors) {
                 if (!monitor.isPrimaryMonitor()) {
@@ -462,7 +462,6 @@ public class MonitorUtil {
     private static void linkMonitorInfoToMonitor(Monitor monitor, List<MonitorInfo> monitorInfos) {
         for (MonitorInfo monitorInfo : monitorInfos) {
             if (!monitorInfo.isUsed() && monitor.samePosition(monitorInfo.getX(), monitorInfo.getY())) {
-                monitor.setIdentifier(monitorInfo.getMonitorIdentifier());
                 monitorInfo.setUsed(true);
                 return;
             }

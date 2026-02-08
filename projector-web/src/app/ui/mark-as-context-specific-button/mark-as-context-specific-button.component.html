@@ -1,0 +1,8 @@
+<button mat-icon-button 
+        *ngIf="visible"
+        (click)="onClick()"
+        [class.reviewed]="isReviewed"
+        [disabled]="disabled"
+        [matTooltip]="isReviewed ? 'Word is already reviewed - click to change status' : 'Mark as Context-Specific'">
+  <mat-icon>label</mat-icon>
+</button>

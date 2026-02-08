@@ -1,11 +1,10 @@
 package com.bence.songbook.ui.activity;
 
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.bence.songbook.R;
 
-public class ExplanationActivity extends AppCompatActivity {
+public class ExplanationActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

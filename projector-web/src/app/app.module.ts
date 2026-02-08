@@ -71,6 +71,7 @@ import { CompareSongsComponent } from './ui/compare-songs/compare-songs.componen
 import { SuggestionComponent } from './ui/suggestion/suggestion.component';
 import { SuggestionDataService } from "./services/suggestion-data.service";
 import { SuggestionListComponent } from "./ui/suggestion-list/suggestion-list.component";
+import { LanguageSelectorComponent } from "./ui/language-selector/language-selector.component";
 import { DownloadAppComponent } from './ui/download-app/download-app.component';
 import { ShareComponent } from './ui/share/share.component';
 import { HttpClientModule } from "@angular/common/http";
@@ -105,6 +106,20 @@ import { GuidelineDataService } from './services/guidelines-data.service';
 import { SongGuidelineCheckerComponent } from './ui/song-guideline-checker/song-guideline-checker.component';
 import { WordsSpellCheckerComponent } from './ui/words-spell-checker/words-spell-checker.component';
 import { NormalizedWordBunchDataService } from './services/normalized-word-bunch-data.service';
+import { ReviewedWordDataService } from './services/reviewed-word-data.service';
+import { WordReviewHelperService } from './services/word-review-helper.service';
+import { SongWordValidationService } from './services/song-word-validation.service';
+import { WordReviewDialogComponent } from './ui/word-review-dialog/word-review-dialog.component';
+import { WordContextDialogComponent } from './ui/word-context-dialog/word-context-dialog.component';
+import { SongWordValidationDialogComponent } from './ui/song-word-validation-dialog/song-word-validation-dialog.component';
+import { SongWordListPanelComponent } from './ui/song-word-list-panel/song-word-list-panel.component';
+import { WordListComponent } from './ui/word-list/word-list.component';
+import { MarkAsBannedButtonComponent } from './ui/mark-as-banned-button/mark-as-banned-button.component';
+import { MarkAsRejectedButtonComponent } from './ui/mark-as-rejected-button/mark-as-rejected-button.component';
+import { MarkAsGoodButtonComponent } from './ui/mark-as-good-button/mark-as-good-button.component';
+import { MarkAsContextSpecificButtonComponent } from './ui/mark-as-context-specific-button/mark-as-context-specific-button.component';
+import { MarkAsAcceptedButtonComponent } from './ui/mark-as-accepted-button/mark-as-accepted-button.component';
+import { ConfirmActionDialogComponent } from './ui/confirm-action-dialog/confirm-action-dialog.component';
 
 @NgModule({
   exports: [
@@ -170,6 +185,7 @@ export class PlunkerMaterialModule {
     CompareSongsComponent,
     SuggestionComponent,
     SuggestionListComponent,
+    LanguageSelectorComponent,
     DownloadAppComponent,
     ShareComponent,
     AuthenticateComponent,
@@ -198,6 +214,17 @@ export class PlunkerMaterialModule {
     SongGuidelinesCheckerComponent,
     SongGuidelineCheckerComponent,
     WordsSpellCheckerComponent,
+    WordReviewDialogComponent,
+    WordContextDialogComponent,
+    SongWordValidationDialogComponent,
+    SongWordListPanelComponent,
+    WordListComponent,
+    MarkAsBannedButtonComponent,
+    MarkAsRejectedButtonComponent,
+    MarkAsGoodButtonComponent,
+    MarkAsContextSpecificButtonComponent,
+    MarkAsAcceptedButtonComponent,
+    ConfirmActionDialogComponent,
   ],
   imports: [
     BrowserModule,
@@ -219,6 +246,10 @@ export class PlunkerMaterialModule {
     OpenInAppComponent,
     AddToCollectionComponent,
     SongCollectionElementComponent,
+    WordReviewDialogComponent,
+    WordContextDialogComponent,
+    SongWordValidationDialogComponent,
+    ConfirmActionDialogComponent,
   ],
   providers: [
     ApiService,
@@ -235,6 +266,9 @@ export class PlunkerMaterialModule {
     SongLinkDataService,
     GuidelineDataService,
     NormalizedWordBunchDataService,
+    ReviewedWordDataService,
+    WordReviewHelperService,
+    SongWordValidationService,
   ],
   bootstrap: [AppComponent]
 })

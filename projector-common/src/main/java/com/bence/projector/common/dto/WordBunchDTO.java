@@ -6,6 +6,7 @@ public class WordBunchDTO {
     private int count;
     private SongTitleDTO song;
     private boolean problematic;
+    private ReviewedWordDTO reviewedWord;
 
     public void setWord(String word) {
         this.word = word;
@@ -37,5 +38,13 @@ public class WordBunchDTO {
 
     public boolean isProblematic() {
         return problematic;
+    }
+
+    public void setReviewedWord(ReviewedWordDTO reviewedWord) {
+        this.reviewedWord = reviewedWord;
+    }
+
+    public ReviewedWordDTO getReviewedWord() {
+        return reviewedWord;
     }
 }

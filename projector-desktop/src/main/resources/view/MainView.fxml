@@ -17,7 +17,7 @@
     </top>
     <center>
         <AnchorPane>
-            <TabPane fx:id="tabPane" prefHeight="600" prefWidth="800" tabClosingPolicy="UNAVAILABLE"
+            <TabPane fx:id="tabPane" prefHeight="600" prefWidth="800"
                      AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
                      AnchorPane.topAnchor="0.0">
                 <Tab fx:id="bibleTab" closable="false" text="%Bible">
@@ -35,19 +35,19 @@
                     <!--suppress JavaFxUnresolvedFxIdReference -->
                     <fx:include fx:id="recent" source="Recent.fxml"/>
                 </Tab>
-                <Tab text="%History">
+                <Tab text="%History" closable="false">
                     <!--suppress JavaFxUnresolvedFxIdReference -->
                     <fx:include fx:id="history" source="History.fxml"/>
                 </Tab>
-                <Tab fx:id="galleryTab" text="Gallery">
+                <Tab fx:id="galleryTab" closable="false" text="Gallery">
                     <!--suppress JavaFxUnresolvedFxIdReference -->
                     <fx:include fx:id="gallery" source="Gallery.fxml"/>
                 </Tab>
-                <Tab text="Utils">
+                <Tab text="Utils" closable="false">
                     <!--suppress JavaFxUnresolvedFxIdReference -->
                     <fx:include fx:id="utils" source="Utils.fxml"/>
                 </Tab>
-                <Tab fx:id="projectionScreensTab" text="Projection screens">
+                <Tab fx:id="projectionScreensTab" closable="false" text="Projection screens">
                     <!--suppress JavaFxUnresolvedFxIdReference -->
                     <fx:include fx:id="projectionScreens" source="ProjectionScreens.fxml"/>
                 </Tab>

@@ -1,7 +1,10 @@
 package projector.controller;
 
+import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -18,6 +21,8 @@ import projector.application.ScreenProjectionAction;
 import projector.application.ScreenProjectionType;
 import projector.application.Settings;
 import projector.controller.util.ProjectionScreenHolder;
+import projector.model.Bible;
+import projector.service.ServiceManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +36,10 @@ public class ProjectionTypeController {
     public VBox vBox;
     public CheckBox focusOnSongPartCheckBox;
     public CheckBox guideViewCheckBox;
+    private ProjectionScreenHolder projectionScreenHolder;
 
     public void setProjectionScreenHolder(ProjectionScreenHolder projectionScreenHolder) {
+        this.projectionScreenHolder = projectionScreenHolder;
         ProjectionScreenSettings projectionScreenSettings = projectionScreenHolder.getProjectionScreenSettings();
         focusOnSongPartCheckBox.setSelected(projectionScreenSettings.isFocusOnSongPart());
         addProjectionTypesToVBox(projectionScreenSettings);
@@ -83,8 +90,33 @@ public class ProjectionTypeController {
         selectionModel.selectedItemProperty().addListener((observable, oldValue, newValue) -> screenProjectionType.setScreenProjectionAction(newValue));
 
         Label label = new Label(screenProjectionType.getProjectionType() + "");
-        hBox.getChildren().addAll(label, actionComboBox);
+        ObservableList<Node> hBoxChildren = hBox.getChildren();
+        hBoxChildren.addAll(label, actionComboBox);
+        handleInitialization_bible(screenProjectionType, hBoxChildren);
         vBox.getChildren().add(hBox);
+    }
+
+    private void handleInitialization_bible(ScreenProjectionType screenProjectionType, ObservableList<Node> hBoxChildren) {
+        if (screenProjectionType.getProjectionType() == ProjectionType.BIBLE) {
+            Button parallelButton = new Button(Settings.getInstance().getResourceBundle().getString("Parallel"));
+            parallelButton.setOnAction(e -> openProjectionParallelBibles());
+            hBoxChildren.add(parallelButton);
+        }
+    }
+
+    public void openProjectionParallelBibles() {
+        try {
+            FXMLLoader loader = getFxmlLoader("ProjectionParallelBibles");
+            Pane root = loader.load();
+            ProjectionParallelBiblesController projectionParallelBiblesController = loader.getController();
+            Stage stage = getStageWithRoot(getClass(), root);
+            stage.setTitle(Settings.getInstance().getResourceBundle().getString("Parallel"));
+            List<Bible> bibles = ServiceManager.getBibleService().findAll();
+            projectionParallelBiblesController.initialize(bibles, projectionScreenHolder.getProjectionScreenSettings(), stage);
+            stage.show();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
     }
 
     private List<ProjectionType> getProjectionTypes() {

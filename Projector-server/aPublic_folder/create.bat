@@ -24,12 +24,16 @@ copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projecto
 copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\Projector.cfg" "%mainDirectory%\%subDirectory%"
 copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\projector-common.jar" "%mainDirectory%\%subDirectory%"
 copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\Projector-Desktop.jar" "%mainDirectory%\%subDirectory%"
+copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\commons-logging-1.3.5.jar" "%mainDirectory%\%subDirectory%"
+copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\fontbox-3.0.6.jar" "%mainDirectory%\%subDirectory%"
+copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\pdfbox-3.0.6.jar" "%mainDirectory%\%subDirectory%"
+copy "C:\workspace\Projector\Projector\projector-desktop\build\jpackage\Projector\app\pdfbox-io-3.0.6.jar" "%mainDirectory%\%subDirectory%"
 
 echo "Directory and subdirectory created, file copied successfully."
 
 endlocal
 
-powershell Compress-Archive -Path "C:\workspace\Projector\Projector\Projector-server\aPublic_folder\update\*" -DestinationPath "projectorUpdate93.zip" -Force
+powershell Compress-Archive -Path "C:\workspace\Projector\Projector\Projector-server\aPublic_folder\update\*" -DestinationPath "projectorUpdate99.zip" -Force
 
 echo "Update tried to create!"
 

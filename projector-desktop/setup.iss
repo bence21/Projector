@@ -1,7 +1,7 @@
 [Setup]
 AppName=Projector
 AppId=Projector_3
-AppVersion=3.6.2
+AppVersion=3.7.2
 AppVerName=Projector
 AppPublisher=SongPraise.com
 AppPublisherURL=https://www.songpraise.com/#/desktop-app
@@ -22,7 +22,9 @@ SetupIconFile=projector_icon.ico
 Source: ".\build\jpackage\Projector\Projector.exe"; DestDir: "{app}\."
 Source: ".\build\jpackage\Projector\Projector.ico"; DestDir: "{app}\."
 Source: ".\build\jpackage\Projector\app\.jpackage.xml"; DestDir: "{app}\app"
+Source: ".\build\jpackage\Projector\app\commons-logging-1.3.5.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\converter-gson-2.3.0.jar"; DestDir: "{app}\app"
+Source: ".\build\jpackage\Projector\app\fontbox-3.0.6.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\gson-2.8.6.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\h2-1.4.193.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\javafx-base-19-win.jar"; DestDir: "{app}\app"
@@ -48,6 +50,8 @@ Source: ".\build\jpackage\Projector\app\okio-1.13.0.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\ormlite-core-4.48.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\ormlite-jdbc-4.48.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\oshi-core-6.6.5.jar"; DestDir: "{app}\app"
+Source: ".\build\jpackage\Projector\app\pdfbox-3.0.6.jar"; DestDir: "{app}\app"
+Source: ".\build\jpackage\Projector\app\pdfbox-io-3.0.6.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\projector-common.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\Projector-Desktop.jar"; DestDir: "{app}\app"
 Source: ".\build\jpackage\Projector\app\Projector.cfg"; DestDir: "{app}\app"

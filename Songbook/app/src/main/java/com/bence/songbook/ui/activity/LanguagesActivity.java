@@ -16,8 +16,6 @@ import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
 import com.bence.songbook.api.LanguageApiBean;
@@ -25,11 +23,12 @@ import com.bence.songbook.models.Language;
 import com.bence.songbook.repository.LanguageRepository;
 import com.bence.songbook.repository.impl.ormLite.LanguageRepositoryImpl;
 import com.bence.songbook.ui.adapter.LanguageAdapter;
+import com.bence.songbook.utils.LanguageUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class LanguagesActivity extends AppCompatActivity {
+public class LanguagesActivity extends BaseActivity {
 
     public static String syncAutomatically = "syncAutomatically";
     private LanguageAdapter dataAdapter = null;
@@ -106,20 +105,7 @@ public class LanguagesActivity extends AppCompatActivity {
             LanguageApiBean languageApi = new LanguageApiBean();
             List<Language> onlineLanguages = languageApi.getLanguages();
             if (onlineLanguages != null) {
-                List<Language> newLanguages = new ArrayList<>();
-                for (Language onlineLanguage : onlineLanguages) {
-                    boolean was = false;
-                    for (Language language : languages) {
-                        if (language.getUuid().equals(onlineLanguage.getUuid())) {
-                            language.setSize(onlineLanguage.getSize());
-                            was = true;
-                            break;
-                        }
-                    }
-                    if (!was) {
-                        newLanguages.add(onlineLanguage);
-                    }
-                }
+                List<Language> newLanguages = LanguageUtils.findNewLanguages(languages, onlineLanguages, true);
                 languages.addAll(newLanguages);
             }
             return null;

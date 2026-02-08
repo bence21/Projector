@@ -1,0 +1,111 @@
+<h2 mat-dialog-title>Word Validation Issues</h2>
+<mat-dialog-content>
+  <div *ngIf="loading" class="loading-overlay" style="text-align: center; padding: 20px;">
+    <mat-spinner diameter="30" style="margin: 0 auto;"></mat-spinner>
+    <p style="margin-top: 10px;">Reloading word validation...</p>
+  </div>
+
+  <p *ngIf="!validationResult.hasIssues && !loading" class="no-issues">
+    No word issues found. The song is ready to be saved.
+  </p>
+
+  <div *ngIf="validationResult.hasIssues && !loading">
+    <div *ngIf="publish" class="publish-warning">
+      <mat-icon class="error-icon">error</mat-icon>
+      <p class="warning-text">
+        <strong>You cannot publish this song until all word issues are resolved.</strong> Please review and fix all issues below.
+      </p>
+    </div>
+    <p class="intro-text">
+      The following word issues were found in your song. Please review and fix them before publishing.
+    </p>
+
+    <!-- Unreviewed Words Section -->
+    <div *ngIf="getUnreviewedCount() > 0" class="issue-section">
+      <h3>
+        <mat-icon class="warning-icon">info</mat-icon>
+        Unreviewed Words ({{getUnreviewedCount()}})
+      </h3>
+      <p class="section-description">These words have not been reviewed yet. Please review them to ensure they are correct.</p>
+      <app-word-list
+        [words]="unreviewedWordsWithStatus"
+        [hasReviewerRole]="hasReviewerRole"
+        [disabled]="inputPaused"
+        (goodClick)="markAsGood($event)"
+        (contextSpecificClick)="markAsContextSpecific($event)"
+        (acceptedClick)="markAsAccepted($event)"
+        (bannedClick)="markAsBanned($event)"
+        (rejectedClick)="markAsRejected($event)">
+      </app-word-list>
+    </div>
+
+    <!-- Banned Words Section -->
+    <div *ngIf="getBannedCount() > 0" class="issue-section banned-section">
+      <h3>
+        <mat-icon class="error-icon">error</mat-icon>
+        Banned Words ({{getBannedCount()}})
+      </h3>
+      <p class="section-description">These words are banned and should be removed or replaced. Please edit the song to fix them.</p>
+      <app-word-list
+        [words]="bannedWordsWithStatus"
+        [hasReviewerRole]="hasReviewerRole"
+        [disabled]="inputPaused">
+      </app-word-list>
+    </div>
+
+    <!-- Rejected Words Section -->
+    <div *ngIf="getRejectedCount() > 0" class="issue-section">
+      <h3>
+        <mat-icon class="warning-icon">warning</mat-icon>
+        Rejected Words ({{getRejectedCount()}})
+      </h3>
+      <p class="section-description">These words are rejected. Please select a suggested replacement or edit the song manually.</p>
+      <app-word-list
+        [words]="rejectedWordsWithStatus"
+        [hasReviewerRole]="hasReviewerRole"
+        [disabled]="inputPaused"
+        (goodClick)="markAsGood($event)"
+        (contextSpecificClick)="markAsContextSpecific($event)"
+        (acceptedClick)="markAsAccepted($event)"
+        (bannedClick)="markAsBanned($event)"
+        (rejectedClick)="markAsRejected($event)">
+      </app-word-list>
+      <div *ngFor="let rejected of validationResult.rejectedWords" class="rejected-suggestion-selector" style="margin-top: 8px; margin-left: 16px;">
+        <span *ngIf="rejected.primarySuggestion || (rejected.alternativeSuggestions && rejected.alternativeSuggestions.length > 0)">
+          <span style="font-size: 0.85em; color: #666; margin-right: 8px;">Select replacement for "{{rejected.word}}":</span>
+          <mat-chip-list>
+            <mat-chip 
+              *ngIf="rejected.primarySuggestion"
+              [class.selected]="selectedRejections.get(rejected.word) === rejected.primarySuggestion"
+              [class.disabled]="inputPaused"
+              (click)="!inputPaused && onSelectSuggestion(rejected, rejected.primarySuggestion)">
+              {{rejected.primarySuggestion}}
+            </mat-chip>
+            <mat-chip 
+              *ngFor="let alt of rejected.alternativeSuggestions"
+              [class.selected]="selectedRejections.get(rejected.word) === alt"
+              [class.disabled]="inputPaused"
+              (click)="!inputPaused && onSelectSuggestion(rejected, alt)">
+              {{alt}}
+            </mat-chip>
+          </mat-chip-list>
+        </span>
+        <span *ngIf="!rejected.primarySuggestion && (!rejected.alternativeSuggestions || rejected.alternativeSuggestions.length === 0)" 
+              class="no-suggestions">
+          No suggestions available for "{{rejected.word}}". Please edit manually.
+        </span>
+      </div>
+    </div>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button 
+    mat-button 
+    color="primary" 
+    (click)="onProceedAnyway()"
+    [disabled]="inputPaused || (publish && validationResult.hasIssues)"
+    *ngIf="validationResult.hasIssues">
+    {{ publish ? 'Save as Draft' : 'Proceed Anyway' }}
+  </button>
+</mat-dialog-actions>

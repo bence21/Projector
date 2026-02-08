@@ -90,10 +90,6 @@ public class SongRepositoryImpl extends AbstractRepository<Song> implements Song
                         }
                         return null;
                     });
-        } catch (RepositoryException e) {
-            String msg = "Could not save songs";
-            Log.e(TAG, msg);
-            throw new RepositoryException(msg, e);
         } catch (Exception e) {
             String msg = "Could not save songs";
             Log.e(TAG, msg);
@@ -113,10 +109,6 @@ public class SongRepositoryImpl extends AbstractRepository<Song> implements Song
                         }
                         return null;
                     });
-        } catch (RepositoryException e) {
-            String msg = "Could not save songs";
-            Log.e(TAG, msg);
-            throw new RepositoryException(msg, e);
         } catch (Exception e) {
             String msg = "Could not save songs";
             Log.e(TAG, msg);
@@ -128,14 +120,11 @@ public class SongRepositoryImpl extends AbstractRepository<Song> implements Song
     public Song findByUUID(String uuid) {
         String msg = "Could not find song";
         try {
-            ArrayList<Song> uuid1 = (ArrayList<Song>) songDao.queryForEq("uuid", uuid);
+            ArrayList<Song> uuid1 = songDao.queryForEq("uuid", uuid);
             if (uuid1 != null && uuid1.size() > 0) {
                 return uuid1.get(0);
             }
             return null;
-        } catch (SQLException e) {
-            Log.e(TAG, msg);
-            throw new RepositoryException(msg, e);
         } catch (Exception e) {
             Log.e(TAG, msg);
             throw new RepositoryException(msg, e);
@@ -152,9 +141,6 @@ public class SongRepositoryImpl extends AbstractRepository<Song> implements Song
                 songs.add(byUUID);
             }
             return songs;
-        } catch (SQLException e) {
-            Log.e(TAG, msg);
-            throw new RepositoryException(msg, e);
         } catch (Exception e) {
             Log.e(TAG, msg);
             throw new RepositoryException(msg, e);
@@ -164,13 +150,20 @@ public class SongRepositoryImpl extends AbstractRepository<Song> implements Song
     @Override
     public void saveViews(final List<SongViewsDTO> songViewsDTOS) {
         try {
+            if (songViewsDTOS == null || songViewsDTOS.isEmpty()) {
+                return;
+            }
             TransactionManager.callInTransaction(databaseHelper.getConnectionSource(),
-                    (Callable<Void>) () -> {
-                        if (songViewsDTOS.size() > 0) {
-                            for (SongViewsDTO verseIndex : songViewsDTOS) {
-                                songDao.executeRaw("UPDATE song SET views = "
-                                        + verseIndex.getViews()
-                                        + " WHERE uuid = '" + verseIndex.getUuid() + "'");
+                    () -> {
+                        for (SongViewsDTO songViewsDTO : songViewsDTOS) {
+                            if (songViewsDTO != null) {
+                                String songViewsDTOUuid = songViewsDTO.getUuid();
+                                if (songViewsDTOUuid != null) {
+                                    String uuid = songViewsDTOUuid.replace("'", "''");
+                                    songDao.executeRaw("UPDATE song SET views = "
+                                            + songViewsDTO.getViews()
+                                            + " WHERE uuid = '" + uuid + "'");
+                                }
                             }
                         }
                         return null;

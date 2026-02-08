@@ -101,6 +101,7 @@
     <string name="drag">Drag</string>
     <string name="queue">Queue</string>
     <string name="added_to_queue">Added to queue</string>
+    <string name="no_shareable_songs_in_queue">No shareable songs in queue</string>
     <string name="search_in_verses">Search in verses</string>
     <string name="my_library">My library</string>
     <string name="song_lists">Song lists</string>

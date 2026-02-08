@@ -11,7 +11,6 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.projector.common.dto.LoginDTO;
@@ -24,7 +23,7 @@ import com.bence.songbook.repository.impl.ormLite.LoggedInUserRepositoryImpl;
 import com.bence.songbook.ui.utils.Preferences;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
 
     public static final int RESULT_LOGGED_IN = 1;
 

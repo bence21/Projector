@@ -3,9 +3,6 @@ package projector.utils.monitors;
 import java.util.List;
 
 public class MonitorInfo {
-    private String manufacturer;
-    private String model;
-    private String serialNumber;
     private List<Integer> position;
     private List<Integer> resolution;
     private Integer x;
@@ -14,37 +11,9 @@ public class MonitorInfo {
     private boolean used;
 
     // Constructor
-    public MonitorInfo(String manufacturer, String model, String serialNumber, List<Integer> position, List<Integer> resolution) {
-        this.manufacturer = manufacturer;
-        this.model = model;
-        this.serialNumber = serialNumber;
+    public MonitorInfo(List<Integer> position, List<Integer> resolution) {
         this.position = position;
         this.resolution = resolution;
-    }
-
-    // Getters and setters
-    public String getManufacturer() {
-        return manufacturer;
-    }
-
-    public void setManufacturer(String manufacturer) {
-        this.manufacturer = manufacturer;
-    }
-
-    public String getModel() {
-        return model;
-    }
-
-    public void setModel(String model) {
-        this.model = model;
-    }
-
-    public String getSerialNumber() {
-        return serialNumber;
-    }
-
-    public void setSerialNumber(String serialNumber) {
-        this.serialNumber = serialNumber;
     }
 
     public int getX() {
@@ -78,10 +47,6 @@ public class MonitorInfo {
 
     public void setResolution(List<Integer> resolution) {
         this.resolution = resolution;
-    }
-
-    public String getMonitorIdentifier() {
-        return manufacturer + SEPARATOR + model + SEPARATOR + serialNumber;
     }
 
     public void setUsed(boolean used) {

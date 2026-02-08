@@ -6,23 +6,35 @@ ext {
     support_version = "27.1.1"
 }
 android {
-    compileSdk 34
+    compileSdkVersion 36
     defaultConfig {
         applicationId "com.bence.songbook.dev"
         minSdkVersion 21
         //noinspection OldTargetApi
-        targetSdkVersion 34
-        versionCode 130
-        versionName '2.15.3'
+        targetSdkVersion 35
+        versionCode 139
+        versionName '2.16.8'
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
+        // debug { // This can be used if we want to test e2e with minifyEnabled and proguard feature
+        //     // This build type uses ProGuard but is debuggable
+        //     // Useful for testing ProGuard rules without release signing
+        //     minifyEnabled true
+        //     shrinkResources true
+        //     debuggable true
+        //     proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        //     // Use debug signing config (no need for release keys)
+        //     signingConfig signingConfigs.debug
+        // }
         release {
             minifyEnabled false // if it's true app from play store doesn't open
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // minifyEnabled true // apply after e2e is complete for all features.
+            // shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
@@ -77,10 +89,11 @@ dependencies {
     //noinspection GradleDependency
     implementation "com.google.android.gms:play-services-drive:$play_services_version"
     implementation 'androidx.multidex:multidex:2.0.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.6.1'
-    androidTestImplementation "androidx.test.ext:junit:1.2.1"
-    androidTestImplementation "androidx.test:runner:1.6.1"
-    androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation "androidx.test.ext:junit:1.1.5"
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
 }
 
 //apply plugin: 'com.google.gms.google-services'

@@ -1,11 +1,13 @@
 package projector.network;
 
+import javafx.application.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
 import projector.controller.ProjectionScreenController;
 import projector.controller.song.SongController;
 
+import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -23,17 +25,18 @@ public class TCPServer {
 
     public synchronized static void startShareNetwork(ProjectionScreenController projectionScreenController, SongController songController) {
         Settings.getInstance().setShareOnNetwork(true);
-        if (thread == null) {
-            createThreads(projectionScreenController, songController);
-        } else {
-            close();
-            createThreads(projectionScreenController, songController);
-        }
+        // Clear any previous error message
+        Settings.getInstance().setNetworkSharingError(null);
+        createThreads(projectionScreenController, songController);
         thread.start();
         imageThread.start();
     }
 
     private static void createThreads(ProjectionScreenController projectionScreenController, SongController songController) {
+        // Close previously started threads if any
+        if (thread != null || imageThread != null) {
+            close();
+        }
         thread = getSenderThread(projectionScreenController, songController, TCPClient.PORT, SenderType.TEXT);
         imageThread = getSenderThread(projectionScreenController, songController, TCPImageClient.PORT, SenderType.IMAGE);
     }
@@ -42,12 +45,16 @@ public class TCPServer {
         return new Thread(() -> {
             try {
                 ServerSocket welcomeSocket = new ServerSocket(port);
-                welcomeSockets.add(welcomeSocket);
+                synchronized (welcomeSockets) {
+                    welcomeSockets.add(welcomeSocket);
+                }
                 while (!closed) {
                     Socket connectionSocket = welcomeSocket.accept();
                     Sender sender = new Sender(connectionSocket, projectionScreenController, songController, senderType);
                     addSocket(sender);
                 }
+            } catch (BindException e) {
+                handleBindException(e, senderType);
             } catch (SocketException e) {
                 try {
                     if (e.getMessage().equalsIgnoreCase("socket closed")) {
@@ -72,15 +79,22 @@ public class TCPServer {
         for (Sender sender : senders) {
             sender.stop();
         }
+        senders.clear();
         interruptTread(thread);
         interruptTread(imageThread);
-        for (ServerSocket welcomeSocket : welcomeSockets) {
-            try {
-                welcomeSocket.close();
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
+        thread = null;
+        imageThread = null;
+        synchronized (welcomeSockets) {
+            for (ServerSocket welcomeSocket : welcomeSockets) {
+                try {
+                    welcomeSocket.close();
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
             }
+            welcomeSockets.clear();
         }
+        closed = false;
     }
 
     private static void interruptTread(Thread thread) {
@@ -91,5 +105,32 @@ public class TCPServer {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
+    }
+
+    private static void handleBindException(BindException e, SenderType senderType) {
+        LOG.error("Address already in use: bind", e);
+        Platform.runLater(() -> {
+            Settings settings = Settings.getInstance();
+            String newErrorMessage;
+            if (senderType == SenderType.IMAGE) {
+                // Image port failure is non-critical - text sharing can still work
+                newErrorMessage = settings.getResourceBundle().getString("Image sharing port is unavailable.");
+                // Don't stop network sharing for image port issues
+            } else {
+                // Text port failure is critical - stop network sharing
+                settings.setShareOnNetwork(false);
+                newErrorMessage = settings.getResourceBundle().getString("Port already in use. Another application may be using the required port. Please close it and try again.");
+            }
+
+            // Append to existing error message if both ports failed
+            String existingError = settings.networkSharingErrorProperty().get();
+            String finalErrorMessage;
+            if (existingError != null && !existingError.isEmpty()) {
+                finalErrorMessage = existingError + "\n" + newErrorMessage;
+            } else {
+                finalErrorMessage = newErrorMessage;
+            }
+            settings.setNetworkSharingError(finalErrorMessage);
+        });
     }
 }

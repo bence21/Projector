@@ -45,6 +45,63 @@
   /* If you want the button pushed to the right */
 }
 
+.action-buttons-container {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: fit-content;
+}
+
+.button-group-negative {
+  margin-right: 12px;
+}
+
+.button-group-positive {
+  margin-left: 0;
+}
+
+/* Subtle greenish background for action buttons container in actionsRight column */
+.mat-table>.mat-row>.mat-cell.mat-column-actionsRight {
+  padding: 0 !important;
+  vertical-align: middle;
+  line-height: 1;
+  position: relative;
+}
+
+.mat-table>.mat-row>.mat-cell.mat-column-actionsRight .action-buttons-container {
+  background-color: rgb(38, 49, 39) !important;
+  padding: 0px;
+  border-radius: 4px;
+  margin: 0;
+  display: flex;
+  height: 100%;
+  width: fit-content;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* Remove background from actionsRight cell - it will be on the container instead */
+.mat-table>.mat-row>.mat-cell.mat-column-actionsRight {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* Constrain actionsRight column width to fit content */
+.mat-table>.mat-header-row>.mat-header-cell.mat-column-actionsRight,
+.mat-table>.mat-row>.mat-cell.mat-column-actionsRight {
+  width: auto;
+  min-width: fit-content;
+  white-space: nowrap;
+}
+
+/* Also constrain actionsLeft column width */
+.mat-table>.mat-header-row>.mat-header-cell.mat-column-actionsLeft,
+.mat-table>.mat-row>.mat-cell.mat-column-actionsLeft {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .change-all-button-dark {
   background-color: #333;
   /* Dark theme background */
@@ -60,4 +117,282 @@ button.mat-raised-button {
 button.mat-raised-button:hover {
   background-color: #555;
   /* Slightly lighter color on hover */
+}
+
+/* Dark theme checkbox styling */
+::ng-deep mat-checkbox .mat-checkbox-frame {
+  border-color: rgba(255, 255, 255, 0.5);
+  border-width: 2px;
+  background-color: transparent;
+  transition: all 0.2s ease;
+}
+
+::ng-deep mat-checkbox:hover .mat-checkbox-frame {
+  border-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked .mat-checkbox-frame {
+  border-color: #66BB6A !important;
+  background-color: #66BB6A !important;
+  border-width: 2px;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked:hover .mat-checkbox-frame {
+  border-color: #81C784 !important;
+  background-color: #81C784 !important;
+}
+
+::ng-deep mat-checkbox .mat-checkbox-background {
+  background-color: transparent;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked .mat-checkbox-background {
+  background-color: #66BB6A !important;
+  transition: all 0.2s ease;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked:hover .mat-checkbox-background {
+  background-color: #81C784 !important;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked.mat-accent .mat-checkbox-frame,
+::ng-deep mat-checkbox.mat-checkbox-checked.mat-primary .mat-checkbox-frame {
+  border-color: #66BB6A !important;
+  background-color: #66BB6A !important;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked.mat-accent .mat-checkbox-background,
+::ng-deep mat-checkbox.mat-checkbox-checked.mat-primary .mat-checkbox-background {
+  background-color: #66BB6A !important;
+}
+
+::ng-deep mat-checkbox .mat-checkbox-checkmark {
+  color: white;
+}
+
+::ng-deep mat-checkbox .mat-checkbox-checkmark-path {
+  stroke: white !important;
+  stroke-width: 2.5px;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked .mat-checkbox-checkmark {
+  color: white;
+  opacity: 1;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-checked .mat-checkbox-checkmark-path {
+  stroke: white !important;
+  stroke-width: 3px;
+  opacity: 1;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-indeterminate .mat-checkbox-frame {
+  border-color: #42A5F5 !important;
+  background-color: #42A5F5 !important;
+  transition: all 0.2s ease;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-indeterminate:hover .mat-checkbox-frame {
+  border-color: #64B5F6 !important;
+  background-color: #64B5F6 !important;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-indeterminate .mat-checkbox-background {
+  background-color: #42A5F5 !important;
+  transition: all 0.2s ease;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-indeterminate:hover .mat-checkbox-background {
+  background-color: #64B5F6 !important;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-indeterminate.mat-accent .mat-checkbox-frame,
+::ng-deep mat-checkbox.mat-checkbox-indeterminate.mat-primary .mat-checkbox-frame {
+  border-color: #42A5F5 !important;
+  background-color: #42A5F5 !important;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-indeterminate.mat-accent .mat-checkbox-background,
+::ng-deep mat-checkbox.mat-checkbox-indeterminate.mat-primary .mat-checkbox-background {
+  background-color: #42A5F5 !important;
+}
+
+::ng-deep mat-checkbox.mat-checkbox-indeterminate .mat-checkbox-mixedmark {
+  background-color: white !important;
+}
+
+/* Dark theme select dropdown styling */
+::ng-deep .dark-theme mat-form-field .mat-select-value,
+::ng-deep .dark-theme mat-form-field .mat-select-value *,
+::ng-deep .dark-theme mat-form-field .mat-select-value-text,
+::ng-deep .dark-theme mat-form-field .mat-select-value-text *,
+::ng-deep .dark-theme mat-form-field .mat-select-value span,
+::ng-deep .dark-theme mat-form-field .mat-select-value span *,
+::ng-deep .dark-theme mat-form-field .mat-select-trigger,
+::ng-deep .dark-theme mat-form-field .mat-select-trigger *,
+::ng-deep .dark-theme mat-form-field .mat-select-trigger .mat-select-value,
+::ng-deep .dark-theme mat-form-field .mat-select-trigger .mat-select-value *,
+::ng-deep .dark-theme mat-form-field .mat-select-trigger .mat-select-value-text,
+::ng-deep .dark-theme mat-form-field .mat-select-trigger .mat-select-value-text *,
+::ng-deep .dark-theme mat-form-field.mat-primary .mat-select-value,
+::ng-deep .dark-theme mat-form-field.mat-primary .mat-select-value *,
+::ng-deep .dark-theme mat-form-field.mat-primary .mat-select-value-text,
+::ng-deep .dark-theme mat-form-field.mat-primary .mat-select-value-text *,
+::ng-deep .dark-theme mat-form-field.mat-accent .mat-select-value,
+::ng-deep .dark-theme mat-form-field.mat-accent .mat-select-value *,
+::ng-deep .dark-theme mat-form-field.mat-accent .mat-select-value-text,
+::ng-deep .dark-theme mat-form-field.mat-accent .mat-select-value-text * {
+  color: white !important;
+}
+
+::ng-deep .dark-theme mat-form-field .mat-form-field-label {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+::ng-deep .dark-theme mat-form-field.mat-focused .mat-form-field-label {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+::ng-deep .dark-theme mat-form-field .mat-select-arrow {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+::ng-deep .dark-theme mat-form-field .mat-form-field-underline {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+::ng-deep .dark-theme mat-form-field.mat-focused .mat-form-field-underline {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Additional selectors for Material form field input */
+::ng-deep .dark-theme mat-form-field .mat-form-field-infix,
+::ng-deep .dark-theme mat-form-field .mat-form-field-infix * {
+  color: white !important;
+}
+
+::ng-deep .dark-theme mat-form-field input,
+::ng-deep .dark-theme mat-form-field select {
+  color: white !important;
+}
+
+/* Specific selector for filter select */
+::ng-deep .dark-theme .filter-select .mat-select-value,
+::ng-deep .dark-theme .filter-select .mat-select-value *,
+::ng-deep .dark-theme .filter-select .mat-select-value-text,
+::ng-deep .dark-theme .filter-select .mat-select-value-text *,
+::ng-deep .dark-theme .filter-select .mat-select-trigger,
+::ng-deep .dark-theme .filter-select .mat-select-trigger *,
+::ng-deep .dark-theme .filter-select .mat-form-field-infix,
+::ng-deep .dark-theme .filter-select .mat-form-field-infix * {
+  color: white !important;
+  font-weight: 500 !important;
+  -webkit-font-smoothing: antialiased !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* Dark theme background styling for form fields */
+::ng-deep .dark-theme mat-form-field {
+  background-color: #1e1e1e !important;
+}
+
+::ng-deep .dark-theme mat-form-field .mat-form-field-wrapper {
+  background-color: #1e1e1e !important;
+}
+
+::ng-deep .dark-theme mat-form-field .mat-form-field-flex {
+  background-color: #1e1e1e !important;
+}
+
+/* Dark theme styling for mat-select panel (dropdown menu) */
+::ng-deep .dark-theme .mat-select-panel {
+  background-color: #1e1e1e !important;
+}
+
+/* Dark theme styling for mat-option items */
+::ng-deep .dark-theme .mat-option {
+  background-color: #1e1e1e !important;
+  color: #e0e0e0 !important;
+}
+
+::ng-deep .dark-theme .mat-option:hover {
+  background-color: #424242 !important;
+}
+
+::ng-deep .dark-theme .mat-option.mat-selected {
+  background-color: #424242 !important;
+  color: #e0e0e0 !important;
+}
+
+::ng-deep .dark-theme .mat-option.mat-selected:not(.mat-option-disabled) {
+  background-color: #424242 !important;
+  color: #e0e0e0 !important;
+}
+
+/* Dark theme styling for mat-select not in form field */
+::ng-deep .dark-theme mat-select {
+  color: #e0e0e0 !important;
+}
+
+::ng-deep .dark-theme mat-select .mat-select-trigger {
+  color: #e0e0e0 !important;
+}
+
+::ng-deep .dark-theme mat-select .mat-select-value {
+  color: #e0e0e0 !important;
+}
+
+::ng-deep .dark-theme mat-select .mat-select-arrow {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Dark theme styling for mat-card */
+::ng-deep .dark-theme mat-card {
+  background-color: #1e1e1e !important;
+  color: #e0e0e0 !important;
+}
+
+::ng-deep .dark-theme mat-card-content {
+  background-color: #1e1e1e !important;
+  color: #e0e0e0 !important;
+}
+
+/* Status chip styling */
+.status-chip {
+  font-size: 11px;
+  height: 20px;
+  line-height: 20px;
+  padding: 0 8px;
+  margin: 0;
+}
+
+.status-chip-good {
+  background-color: #4caf50 !important; /* Green - matches mark-as-good-button */
+  color: white !important;
+}
+
+.status-chip-accepted {
+  background-color: #2196f3 !important; /* Blue - matches mark-as-accepted-button */
+  color: white !important;
+}
+
+.status-chip-banned {
+  background-color: #f44336 !important; /* Red - matches mark-as-banned-button */
+  color: white !important;
+}
+
+.status-chip-rejected {
+  background-color: #ff5722 !important; /* Red-Orange - matches mark-as-rejected-button */
+  color: white !important;
+}
+
+.status-chip-context {
+  background-color: #ffc107 !important; /* Yellow/Amber - matches mark-as-context-specific-button */
+  color: white !important;
+}
+
+.status-chip-default {
+  background-color: #9e9e9e !important;
+  color: white !important;
 }

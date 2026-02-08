@@ -70,7 +70,6 @@ import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.net.URL;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
@@ -85,6 +84,7 @@ import static projector.utils.ColorUtil.getReferenceTextColor;
 import static projector.utils.ContextMenuUtil.getDeleteMenuItem;
 import static projector.utils.ContextMenuUtil.initializeContextMenu;
 import static projector.utils.KeyEventUtil.getTextFromEvent;
+import static projector.utils.NumberUtil.parseSafeInt;
 import static projector.utils.SceneUtils.getAStage;
 import static projector.utils.SceneUtils.getCustomStage2;
 
@@ -168,18 +168,7 @@ public class BibleController {
 
     private static String strip(String s) {
         try {
-            s = stripAccents(s).replaceAll("[^a-zA-Z0-9]", "").toLowerCase(Locale.US).trim();
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
-        return s;
-    }
-
-    private static String stripAccents(String s) {
-        try {
-            s = Normalizer.normalize(s, Normalizer.Form.NFD);
-            //noinspection RegExpSimplifiable
-            s = s.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
+            s = StringUtils.stripAccentsPreservingStructure(s).replaceAll("[^a-zA-Z0-9]", "").toLowerCase(Locale.US).trim();
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
@@ -939,7 +928,7 @@ public class BibleController {
                                 bookIndex = bible.getBookIndex(bookName);
                                 // System.out.println(bookName + " " + bookIndex);
                             } else {
-                                part = Integer.parseInt(bookName.trim());
+                                part = parseSafeInt(bookName.trim(), part);
                             }
                             if (startIndex >= line.length()) {
                                 startIndex -= line.length() + 1;
@@ -1282,7 +1271,7 @@ public class BibleController {
                             reference.setFont(verseFont);
                             setReferenceTextColor(reference);
                             textFlow.getChildren().add(reference);
-                            char[] chars = stripAccents(verse).toLowerCase().toCharArray();
+                            char[] chars = StringUtils.stripAccentsPreservingStructure(verse).toLowerCase().toCharArray();
                             char[] searchTextChars = text3.toCharArray();
                             int verseIndex = 0;
                             int fromIndex = 0;

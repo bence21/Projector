@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.media.MediaView?>
+<BorderPane fx:id="borderPane" xmlns:fx="http://javafx.com/fxml/1" minHeight="400"
+            minWidth="600" xmlns="http://javafx.com/javafx/8.0.171"
+            fx:controller="projector.controller.VideoViewerController">
+    <center>
+        <StackPane fx:id="mediaStackPane">
+            <MediaView fx:id="mediaView"/>
+        </StackPane>
+    </center>
+    <bottom>
+        <HBox fx:id="controlBar" alignment="CENTER_LEFT" spacing="10.0"
+              style="-fx-padding: 10; -fx-background-color: rgba(0, 0, 0, 0.7);">
+            <Button fx:id="playPauseButton" onAction="#togglePlayPause" text="Play" minWidth="60.0"/>
+            <Label fx:id="timeLabel" text="00:00 / 00:00" minWidth="120.0"/>
+            <Slider fx:id="seekSlider"
+                    onMousePressed="#onSeekSliderPressed"
+                    onMouseReleased="#onSeekSliderReleased"
+                    HBox.hgrow="ALWAYS" minWidth="200.0"/>
+            <Label fx:id="volumeLabel" text="100%" minWidth="50.0"/>
+            <Slider fx:id="volumeSlider" max="1.0" value="1.0"
+                    prefWidth="100.0" maxWidth="150.0"/>
+        </HBox>
+    </bottom>
+</BorderPane>
+

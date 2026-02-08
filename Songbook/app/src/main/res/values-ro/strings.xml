@@ -98,6 +98,7 @@
     <string name="add_to_queue">Adăugați la coadă</string>
     <string name="added_to_queue">Adăugat la coadă</string>
     <string name="queue">În așteptare</string>
+    <string name="no_shareable_songs_in_queue">Nu există cântece partajabile în coadă</string>
     <string name="edit_song_list">Editați lista de cântece</string>
     <string name="some_of_these_songs_are_already_in_this_song_list">Unele dintre aceste cântece se află deja în această listă de cântece.</string>
     <string name="delete">Șterge</string>

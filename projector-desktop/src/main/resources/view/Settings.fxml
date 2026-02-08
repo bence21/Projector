@@ -280,7 +280,13 @@
                                 </HBox>
                             </center>
                         </BorderPane>
-                        <HBox GridPane.columnSpan="2" GridPane.rowIndex="30">
+                        <Label fx:id="networkSharingErrorLabel" textFill="RED" wrapText="true" managed="false"
+                               GridPane.columnSpan="2" GridPane.rowIndex="30">
+                            <GridPane.margin>
+                                <Insets top="4.0" left="12.0" right="12.0"/>
+                            </GridPane.margin>
+                        </Label>
+                        <HBox GridPane.columnSpan="2" GridPane.rowIndex="31">
                             <ToggleButton fx:id="allowRemoteButton" onAction="#allowRemoteButtonOnAction"
                                           text="%Allow remote" visible="false"/>
                         </HBox>

@@ -370,7 +370,7 @@ public class MainDesktop extends Application {
         Updater.getInstance().checkForUpdate();
         if (startDate != null) {
             Date date1 = new Date();
-            LOG.info((date1.getTime() - startDate.getTime()) + " ms");
+            LOG.info("{} ms", date1.getTime() - startDate.getTime());
         }
     }
 
@@ -418,9 +418,63 @@ public class MainDesktop extends Application {
         if (tmpStage != null) {
             tmpStage.close();
         }
+        // Close all settings windows
+        closeAllSettingsWindows();
+        myController.closeAllPdfFiles();
+        myController.closeAllVideoFiles();
         myController.close();
         ProjectionScreensUtil.getInstance().onClose();
         CustomCanvasService.getInstance().save();
+    }
+
+    private void closeAllSettingsWindows() {
+        closeMainSettingsWindow();
+        closeProjectionScreenSettingsWindows();
+    }
+
+    private void closeMainSettingsWindow() {
+        try {
+            if (myController != null && myController.getSettingsController() != null) {
+                Stage settingsStage = myController.getSettingsController().getStage();
+                if (settingsStage != null && settingsStage.isShowing()) {
+                    settingsStage.close();
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("Error closing main settings window: {}", e.getMessage(), e);
+        }
+    }
+
+    private void closeProjectionScreenSettingsWindows() {
+        try {
+            javafx.stage.Window.getWindows().stream()
+                    .filter(window -> window instanceof Stage)
+                    .map(window -> (Stage) window)
+                    .filter(this::isSettingsWindow)
+                    .forEach(this::closeStageSafely);
+        } catch (Exception e) {
+            LOG.error("Error closing projection screen settings windows: {}", e.getMessage(), e);
+        }
+    }
+
+    private boolean isSettingsWindow(Stage stage) {
+        try {
+            String title = stage.getTitle();
+            return title != null && title.contains("Settings");
+        } catch (Exception e) {
+            LOG.warn("Error checking if stage is settings window: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private void closeStageSafely(Stage stage) {
+        try {
+            if (stage != null && stage.isShowing()) {
+                stage.close();
+            }
+        } catch (Exception e) {
+            LOG.warn("Error closing stage: {}", e.getMessage(), e);
+        }
     }
 
     private void primarySceneEventHandler() {
@@ -476,7 +530,7 @@ public class MainDesktop extends Application {
         while (it.hasNext()) {
             Screen nextScreen = it.next();
             try {
-                ProjectionScreenController projectionScreenController = getProjectionScreenControllerOrDuplicate(index);
+                ProjectionScreenController projectionScreenController = getProjectionScreenControllerOrDuplicate(index, nextScreen);
                 ProjectionScreenHolder projectionScreenHolder = projectionScreenController.getProjectionScreenSettings().getProjectionScreenHolder();
                 projectionScreenHolder.setScreenIndex(index + 2);
                 projectionScreenController.setPrimaryStageVariable(primaryStage);
@@ -489,13 +543,13 @@ public class MainDesktop extends Application {
         ProjectionScreensUtil.getInstance().closeFromIndex(index);
     }
 
-    private ProjectionScreenController getProjectionScreenControllerOrDuplicate(Integer index) {
+    private ProjectionScreenController getProjectionScreenControllerOrDuplicate(Integer index, Screen screen) {
         ProjectionScreenHolder projectionScreenHolder = ProjectionScreensUtil.getInstance().getScreenHolderByIndex(index);
         ProjectionScreenController projectionScreenController;
         if (projectionScreenHolder != null) {
             projectionScreenController = projectionScreenHolder.getProjectionScreenController();
         } else {
-            projectionScreenController = this.projectionScreenController.duplicate2();
+            projectionScreenController = this.projectionScreenController.duplicate2(screen);
         }
         return projectionScreenController;
     }
@@ -565,6 +619,9 @@ public class MainDesktop extends Application {
         if (projectionScreenSettings != null) {
             ProjectionScreenHolder projectionScreenHolder = projectionScreenSettings.getProjectionScreenHolder();
             if (projectionScreenHolder != null) {
+                if (projectionScreenHolder.getScreenIndex() == null) {
+                    projectionScreenHolder.setScreenIndex(1);
+                }
                 projectionScreenHolder.popupCreated();
             }
         }

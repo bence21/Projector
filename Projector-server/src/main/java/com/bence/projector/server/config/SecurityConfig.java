@@ -1,5 +1,6 @@
 package com.bence.projector.server.config;
 
+import com.bence.projector.server.utils.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,7 +38,7 @@ public class SecurityConfig {
                 .formLogin()
                 .loginPage("/#/login")
                 .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/#/register", false).permitAll();
+                .defaultSuccessUrl(AppProperties.getInstance().baseUrl() + "/#/songs", false).permitAll();
         return httpSecurity.build();
     }
 

@@ -54,6 +54,15 @@ export class ApiService {
       .catch(ApiService.handleError);
   }
 
+  public postWithBody<T>(c: new (data) => T, api_url: string, body: any): Observable<T> {
+    return this.http
+      .post(api_url, body)
+      .map(response => {
+        return new c(response.json());
+      })
+      .catch(ApiService.handleError);
+  }
+
   public getById<T>(c: new (data) => T, api_url: string, id: number): Observable<T> {
     return this.http
       .get(api_url + id)
@@ -88,6 +97,13 @@ export class ApiService {
   public deleteById(api_url: string, id): Observable<null> {
     return this.http
       .delete(api_url + id)
+      .map(() => null)
+      .catch(ApiService.handleError);
+  }
+
+  public delete(api_url: string): Observable<null> {
+    return this.http
+      .delete(api_url)
       .map(() => null)
       .catch(ApiService.handleError);
   }

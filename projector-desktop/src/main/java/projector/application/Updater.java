@@ -39,7 +39,7 @@ public class Updater {
     private static final Logger LOG = LoggerFactory.getLogger(Updater.class);
     private static Updater instance;
     @SuppressWarnings("FieldCanBeLocal")
-    private final int projectorVersionNumber = 93;
+    private final int projectorVersionNumber = 99;
     private final Settings settings = Settings.getInstance();
     private final String updaterPath = "data\\updater.zip";
 
@@ -203,43 +203,111 @@ public class Updater {
     }
 
     private boolean unzipUpdater() {
-        try {
-            File destinationDir = new File("./");
-            byte[] buffer = new byte[1024];
-            File updateFile = new File(updaterPath);
-            if (!updateFile.exists()) {
-                return false;
-            }
-            ZipInputStream zis = new ZipInputStream(new FileInputStream(updateFile));
-            ZipEntry zipEntry = zis.getNextEntry();
-            while (zipEntry != null) {
-                File newFile = newFile(destinationDir, zipEntry);
-                if (zipEntry.isDirectory()) {
-                    if (!newFile.isDirectory() && !newFile.mkdirs()) {
-                        throw new IOException("Failed to create directory " + newFile);
-                    }
-                } else {
-                    File parent = newFile.getParentFile();
-                    if (!parent.isDirectory() && !parent.mkdirs()) {
-                        throw new IOException("Failed to create directory " + parent);
-                    }
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
-                    }
-                    fos.close();
-                }
-                zipEntry = zis.getNextEntry();
-            }
+        File updateFile = new File(updaterPath);
+        if (!updateFile.exists()) {
+            return false;
+        }
+
+        File destinationDir = new File("./");
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(updateFile))) {
+            extractAllEntries(zis, destinationDir);
             zis.closeEntry();
-            zis.close();
             //noinspection ResultOfMethodCallIgnored
             updateFile.delete();
             return true;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             return false;
+        }
+    }
+
+    private void extractAllEntries(ZipInputStream zis, File destinationDir) throws IOException {
+        ZipEntry zipEntry = zis.getNextEntry();
+        while (zipEntry != null) {
+            extractZipEntry(zis, zipEntry, destinationDir);
+            zipEntry = zis.getNextEntry();
+        }
+    }
+
+    private void extractZipEntry(ZipInputStream zis, ZipEntry zipEntry, File destinationDir) throws IOException {
+        File targetFile = newFile(destinationDir, zipEntry);
+        if (zipEntry.isDirectory()) {
+            extractDirectory(targetFile);
+        } else {
+            extractFile(zis, targetFile);
+        }
+    }
+
+    private void extractDirectory(File directory) throws IOException {
+        if (!directory.isDirectory() && !directory.mkdirs()) {
+            throw new IOException("Failed to create directory " + directory);
+        }
+    }
+
+    private void extractFile(ZipInputStream zis, File targetFile) throws IOException {
+        ensureParentDirectoryExists(targetFile);
+        File tempFile = writeFileToTemp(zis, targetFile);
+        replaceFileIfPossible(tempFile, targetFile);
+    }
+
+    private void ensureParentDirectoryExists(File file) throws IOException {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
+            throw new IOException("Failed to create directory " + parent);
+        }
+    }
+
+    private File writeFileToTemp(ZipInputStream zis, File targetFile) throws IOException {
+        File tempFile = new File(targetFile.getAbsolutePath() + ".tmp");
+        byte[] buffer = new byte[1024];
+        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+            int len;
+            while ((len = zis.read(buffer)) > 0) {
+                fos.write(buffer, 0, len);
+            }
+        }
+        return tempFile;
+    }
+
+    private void replaceFileIfPossible(File tempFile, File targetFile) {
+        if (!targetFile.exists()) {
+            renameTempToTarget(tempFile, targetFile);
+            return;
+        }
+
+        if (deleteExistingFile(targetFile)) {
+            renameTempToTarget(tempFile, targetFile);
+            return;
+        }
+
+        if (renameExistingFileToBackup(targetFile)) {
+            renameTempToTarget(tempFile, targetFile);
+            return;
+        }
+
+        // File is locked and can't be moved - leave temp file for next restart
+        LOG.warn("Could not replace locked file: " + targetFile.getName() +
+                ". The new version is saved as " + tempFile.getName() +
+                " and will be used on next application restart.");
+    }
+
+    private boolean deleteExistingFile(File file) {
+        return file.delete();
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private boolean renameExistingFileToBackup(File file) {
+        File backupFile = new File(file.getAbsolutePath() + ".old");
+        if (backupFile.exists()) {
+            backupFile.delete();
+        }
+        return file.renameTo(backupFile);
+    }
+
+    private void renameTempToTarget(File tempFile, File targetFile) {
+        if (!tempFile.renameTo(targetFile)) {
+            LOG.error("Failed to rename temporary file to " + targetFile.getName() +
+                    ". The file may be locked. Temp file remains as " + tempFile.getName());
         }
     }
 

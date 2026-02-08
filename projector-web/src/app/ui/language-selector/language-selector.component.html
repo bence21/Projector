@@ -1,0 +1,20 @@
+<mat-card [class.dark-theme]="darkTheme" *ngIf="languages.length > 1">
+  <mat-card-content>
+    <mat-select 
+      id="languageSelect" 
+      placeholder="Language" 
+      [value]="selectedLanguage"
+      (selectionChange)="onLanguageChange($event)">
+      <mat-option 
+        *ngIf="auth.isLoggedIn && auth.getUser().isAdmin()" 
+        value="{{'All'}}">
+        {{'All'}}
+      </mat-option>
+      <mat-option 
+        *ngFor="let language of languages" 
+        [value]="language">
+        {{ language.printLanguage() }}
+      </mat-option>
+    </mat-select>
+  </mat-card-content>
+</mat-card>

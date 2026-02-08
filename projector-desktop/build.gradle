@@ -59,6 +59,8 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
+    implementation 'org.apache.pdfbox:pdfbox:3.0.6'
+
     testImplementation 'junit:junit:4.12'
     testImplementation "org.testfx:testfx-core:4.0.+"
     testImplementation "org.testfx:testfx-junit:4.0.+"
@@ -103,7 +105,7 @@ runtime {
         installerOptions += ['--resource-dir', "src/main/resources"]
         installerOptions += ['--vendor', 'Bence']
         imageName = "Projector"
-        appVersion = "3.6.2"
+        appVersion = "3.7.2"
         jvmArgs = [
                 '-Djava.net.preferIPv4Stack=true',
                 '-Dprism.maxvram=4096m'

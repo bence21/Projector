@@ -61,12 +61,16 @@ import projector.controller.song.SongController;
 import projector.controller.util.AutomaticAction;
 import projector.controller.util.ImageCacheService;
 import projector.controller.util.OnResultListener;
+import projector.controller.util.PdfService;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
+import projector.model.Bible;
 import projector.model.CustomCanvas;
 import projector.model.Song;
 import projector.model.SongVerse;
+import projector.model.VerseIndex;
+import projector.service.ServiceManager;
 import projector.utils.SongVerseHolder;
 import projector.utils.monitors.Monitor;
 import projector.utils.scene.text.MyTextFlow;
@@ -85,10 +89,13 @@ import java.util.concurrent.Executors;
 
 import static java.lang.Math.max;
 import static java.lang.Thread.sleep;
+import static projector.controller.BibleController.getBibleVerseWithReferenceText;
 import static projector.controller.GalleryController.clearCanvas;
 import static projector.controller.GalleryController.isMediaFile;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
+import static projector.controller.util.PdfService.isPdfFile;
+import static projector.network.TCPClient.getFromIntegers;
 import static projector.utils.ColorUtil.getColorWithOpacity;
 import static projector.utils.ColorUtil.getGeneralTextColorByTheme;
 import static projector.utils.CountDownTimerUtil.getDisplayTextFromDateTime;
@@ -293,7 +300,13 @@ public class ProjectionScreenController {
                     }
                 }
             } else if (projectionType == ProjectionType.IMAGE) {
-                if (galleryController != null) {
+                if (isPdfFile(fileImagePath)) {
+                    if (next) {
+                        nextPdfPage();
+                    } else {
+                        previousPdfPage();
+                    }
+                } else if (galleryController != null) {
                     if (next) {
                         galleryController.setNext();
                     } else {
@@ -398,7 +411,7 @@ public class ProjectionScreenController {
             if (fileImagePath != null) {
                 setImage(fileImagePath, projectionType, null);
             } else {
-                drawImage(this.lastImage);
+                drawImage(this.lastImage, projectionType);
             }
             return;
         }
@@ -489,8 +502,8 @@ public class ProjectionScreenController {
         setText(newText, projectionType, null);
     }
 
-    public void songEnding() {
-        setText2("", ProjectionType.SONG_ENDING); // this should send also over network. The simple clear button not
+    public void songEnding(ProjectionType projectionType) {
+        setText2("", projectionType); // this should send also over network. The simple clear button not
     }
 
     public void setText(String newText, ProjectionType projectionType, ProjectionData projectionData) {
@@ -499,13 +512,15 @@ public class ProjectionScreenController {
 
     private void setText5(String newText, ProjectionType projectionType, ProjectionData projectionData) {
         if (projectionType == ProjectionType.SONG) {
-            setSongVerseProjection(projectionData, newText);
+            setSongVerseProjection(projectionData, newText, projectionType);
+        } else if (projectionType == ProjectionType.BIBLE) {
+            setBibleVerseProjection(projectionData, newText, projectionType);
         } else {
             setText3(newText, projectionType, projectionData);
         }
     }
 
-    private void setSongVerseProjection(ProjectionData projectionData, String text) {
+    private void setSongVerseProjection(ProjectionData projectionData, String text, ProjectionType projectionType) {
         if (projectionData != null) {
             List<SongVerseProjectionDTO> songVerseProjectionDTOS = null;
             ProjectionDTO projectionDTO = projectionData.getProjectionDTO();
@@ -518,7 +533,7 @@ public class ProjectionScreenController {
                 if (focusOnSongPart && !guideView) {
                     String focusedText = getFocusedText(songVerseProjectionDTOS);
                     if (!focusedText.isEmpty()) {
-                        setText3(focusedText, ProjectionType.SONG, projectionData);
+                        setText3(focusedText, projectionType, projectionData);
                         return;
                     }
                 }
@@ -528,7 +543,84 @@ public class ProjectionScreenController {
                 }
             }
         }
-        setText3(text, ProjectionType.SONG, projectionData);
+        setText3(text, projectionType, projectionData);
+    }
+
+    private static Bible getSelectedBible(ProjectionDTO projectionDTO, List<Bible> bibles) {
+        String selectedBibleUuid = projectionDTO.getSelectedBibleUuid();
+        if (selectedBibleUuid != null) {
+            for (Bible bible : bibles) {
+                if (selectedBibleUuid.equals(bible.getUuid())) {
+                    return bible;
+                }
+            }
+        }
+        String selectedBibleName = projectionDTO.getSelectedBibleName();
+        if (selectedBibleName != null) {
+            for (Bible bible : bibles) {
+                if (selectedBibleName.equals(bible.getName())) {
+                    return bible;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String getTextFromProjectionDTO(ProjectionDTO projectionDTO, String originalText) {
+        try {
+            if (projectionDTO == null) {
+                return originalText;
+            }
+            if (!projectionScreenSettings.hasSkippedBible()) {
+                return originalText;
+            }
+            List<Bible> allBibles = ServiceManager.getBibleService().findAll();
+            List<Bible> preferredBibles = projectionScreenSettings.getPreferredBibles(allBibles);
+            if (preferredBibles == null) {
+                return originalText;
+            }
+            StringBuilder text = new StringBuilder();
+            List<Long> verseIndexIntegers = projectionDTO.getVerseIndices();
+            List<VerseIndex> verseIndices = getFromIntegers(verseIndexIntegers);
+            Bible selectedBible = getSelectedBible(projectionDTO, allBibles);
+            for (Bible preferred : preferredBibles) {
+                if (shouldShowBible(preferred, selectedBible)) {
+                    if (!text.isEmpty()) {
+                        text.append("\n");
+                    }
+                    text.append(getBibleVerseWithReferenceText(verseIndices, preferred, projectionDTO.getSelectedBook(), projectionDTO.getSelectedPart(), projectionDTO.getVerseIndicesByPart()));
+                }
+            }
+            String s = text.toString().trim();
+            if (s.isEmpty()) {
+                return originalText;
+            }
+            return s;
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+            return originalText;
+        }
+    }
+
+    private boolean shouldShowBible(Bible preferred, Bible selectedBible) {
+        if (preferred == null) {
+            return false;
+        }
+        if (preferred.equivalent(selectedBible)) {
+            return true;
+        }
+        return preferred.isParallelSelected();
+    }
+
+    private void setBibleVerseProjection(ProjectionData projectionData, String text, ProjectionType projectionType) {
+        if (projectionData != null) {
+            ProjectionDTO projectionDTO = projectionData.getProjectionDTO();
+            if (projectionDTO != null) {
+                setText3(getTextFromProjectionDTO(projectionDTO, text), projectionType, projectionData);
+                return;
+            }
+        }
+        setText3(text, projectionType, projectionData);
     }
 
     private static String getWholeWithFocusedText(List<SongVerseProjectionDTO> songVerseProjectionDTOS, boolean guideView, boolean focusOnSongPart) {
@@ -582,10 +674,22 @@ public class ProjectionScreenController {
         if (!projectionType.isCountdownTimer() && !isLock) {
             countDownTimerRunning = false;
         }
-        this.setTextCounter++;
-        Platform.runLater(() -> {
-            --this.setTextCounter;
-            if (this.setTextCounter > 0) {
+        incSetTextCounter();
+        Platform.runLater(() -> onMainThread_setText(newText, projectionType, projectionData));
+    }
+
+    private synchronized void incSetTextCounter() {
+        ++this.setTextCounter;
+    }
+
+    private synchronized boolean decAndCheckSetTextCounter() {
+        --this.setTextCounter;
+        return this.setTextCounter > 0;
+    }
+
+    private void onMainThread_setText(String newText, ProjectionType projectionType, ProjectionData projectionData) {
+        try {
+            if (decAndCheckSetTextCounter()) {
                 return;
             }
             hideImageIfNotImageType(projectionType);
@@ -629,7 +733,9 @@ public class ProjectionScreenController {
             alignX();
             textFlow1.setText2("", 0, height);
             onViewChanged();
-        });
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
     }
 
     private Song getSong() {
@@ -740,6 +846,10 @@ public class ProjectionScreenController {
         boolean visible = projectionType == ProjectionType.SONG && song != null && projectionScreenSettings.isProgressBar() && settings.isShowProgressLine();
         if (visible) {
             List<SongVersePartTextFlow> songVersePartTextFlows = projectionData.getSongVersePartTextFlows();
+            if (songVersePartTextFlows == null || songVersePartTextFlows.isEmpty()) {
+                setVisibility(progressBarHBox, false);
+                return;
+            }
             int n = songVersePartTextFlows.size();
             progressBarHBox.setPrefWidth(paneForPadding.getWidth());
             double width = paneForPadding.getWidth() / n;
@@ -778,6 +888,10 @@ public class ProjectionScreenController {
             pane.setClip(new Rectangle(currentSongVerseWidth, height));
             progressBarHBoxChildren.add(pane);
             List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+            if (songVersePartTextFlows == null || songVersePartTextFlows.isEmpty()) {
+                ++i;
+                continue;
+            }
             ObservableList<Node> stackPaneChildren = stackPane.getChildren();
 
             createProgressBarBackgroundPane(songVersePartTextFlows, currentSongVerseWidth, width, stackPaneChildren);
@@ -803,6 +917,9 @@ public class ProjectionScreenController {
             return null;
         }
         List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolder.getSongVersePartTextFlows();
+        if (songVersePartTextFlows == null || songVersePartTextFlows.isEmpty()) {
+            return null;
+        }
         return getFromList(songVersePartTextFlows, songVersePartTextFlows.size() - 1);
     }
 
@@ -936,16 +1053,16 @@ public class ProjectionScreenController {
                 return true;
             }
             case CLEAR -> {
-                clear();
+                clear(ProjectionType.CLEAR);
                 return true;
             }
         }
         return false;
     }
 
-    private void clear() {
+    private void clear(ProjectionType projectionType) {
         activeText = "";
-        projectionType = ProjectionType.CLEAR;
+        this.projectionType = projectionType;
         textFlow.setText2("", 0, 10);
         textFlow1.setText2("", 0, 10);
         progressLine.setVisible(false);
@@ -955,11 +1072,11 @@ public class ProjectionScreenController {
         stopCountDownTimer();
     }
 
-    public void clearAll() {
+    public void clearAll(ProjectionType projectionType) {
         if (isLock) {
             return;
         }
-        clear();
+        clear(projectionType);
     }
 
     private void hideImageIfNotImageType(ProjectionType projectionType) {
@@ -1017,6 +1134,7 @@ public class ProjectionScreenController {
                 root2 = loader2.load();
 
                 doubleProjectionScreenController = loader2.getController();
+                doubleProjectionScreenController.setScreen(screen);
                 ProjectionScreensUtil.getInstance().addDoubleProjectionScreenController(doubleProjectionScreenController);
                 Scene scene2 = new Scene(root2, 400, 300);
                 setStyleFile(scene2);
@@ -1095,7 +1213,7 @@ public class ProjectionScreenController {
         }
     }
 
-    public ProjectionScreenController duplicate2() {
+    public ProjectionScreenController duplicate2(Screen screen) {
         FXMLLoader loader2 = new FXMLLoader();
         loader2.setLocation(MainDesktop.class.getResource("/view/ProjectionScreen.fxml"));
         try {
@@ -1103,6 +1221,7 @@ public class ProjectionScreenController {
             ProjectionScreenController doubleProjectionScreenController = loader2.getController();
             doubleProjectionScreenController.setRoot(root);
             ProjectionScreensUtil.getInstance().addAutomaticDoubleProjectionScreenController(doubleProjectionScreenController);
+            doubleProjectionScreenController.setScreen(screen);
             setSomeInitializationForDoubleProjectionScreenController(doubleProjectionScreenController);
             return doubleProjectionScreenController;
         } catch (IOException e) {
@@ -1114,7 +1233,36 @@ public class ProjectionScreenController {
     private void setSomeInitializationForDoubleProjectionScreenController(ProjectionScreenController doubleProjectionScreenController) {
         doubleProjectionScreenController.setBlank(isBlank);
         doubleProjectionScreenController.setParentProjectionScreenController(doubleProjectionScreenController);
-        doubleProjectionScreenController.setText(activeText, projectionType, projectionData);
+        doubleProjectionScreenController.initializeFromApplicationContext();
+    }
+
+    /**
+     * Initializes this controller from the application context state.
+     * This ensures newly created controllers have the latest projection state.
+     */
+    public void initializeFromApplicationContext() {
+        ProjectionScreensUtil util = ProjectionScreensUtil.getInstance();
+        String contextText = util.getText();
+        ProjectionType contextProjectionType = util.getProjectionType();
+        ProjectionData contextProjectionData = util.getProjectionData();
+        String contextFileImagePath = util.getFileImagePath();
+        Image contextLastImage = util.getLastImage();
+
+        // Initialize based on projection type
+        if (contextProjectionType == ProjectionType.IMAGE) {
+            if (contextFileImagePath != null) {
+                // Use fileImagePath if available
+                setImage(contextFileImagePath, contextProjectionType, null);
+            } else if (contextLastImage != null) {
+                // Use lastImage if available
+                drawImage(contextLastImage, contextProjectionType);
+            }
+        } else {
+            // For text-based projections
+            if (contextText != null && contextProjectionType != null) {
+                setText(contextText, contextProjectionType, contextProjectionData);
+            }
+        }
     }
 
     public void createCustomStageWithIterator(Iterator<CustomCanvas> iterator) {
@@ -1192,7 +1340,7 @@ public class ProjectionScreenController {
             });
             customCanvasClose(stage2, customCanvas, () -> onCloseCustomCanvasStage(customStageController));
             customStageController.setBlank(isBlank);
-            customStageController.setText(activeText, projectionType, projectionData);
+            customStageController.initializeFromApplicationContext();
             customCanvas.setStage(stage2);
             customStageController.createCustomStageWithIterator(iterator);
         } catch (IOException e) {
@@ -1286,7 +1434,7 @@ public class ProjectionScreenController {
             stage.show();
         }
         if (previewProjectionScreenController != null) {
-            previewProjectionScreenController.setText(activeText, projectionType, projectionData);
+            previewProjectionScreenController.initializeFromApplicationContext();
         }
     }
 
@@ -1343,7 +1491,23 @@ public class ProjectionScreenController {
             previewProjectionScreenController.onClose();
         }
         countDownTimerRunning = false;
-        getExecutorService().shutdown();
+        if (countDownTimerThread != null) {
+            countDownTimerThread.interrupt();
+        }
+        stopMediaPlayer(); // Stop and dispose MediaPlayer
+        // Shutdown executor service and wait for tasks to complete
+        if (executorService != null) {
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                    executorService.shutdownNow();
+                    executorService.awaitTermination(1, java.util.concurrent.TimeUnit.SECONDS);
+                }
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
         closeStage();
     }
 
@@ -1491,6 +1655,10 @@ public class ProjectionScreenController {
             projectionImageChangeListeners = new ArrayList<>();
         }
         projectionImageChangeListeners.add(projectionTextChangeListener);
+        // Send current image if one is displayed, similar to how text works
+        if (projectionType == ProjectionType.IMAGE && lastImage != null) {
+            projectionTextChangeListener.onImageChanged(lastImage, projectionType, projectionData);
+        }
     }
 
     public void removeProjectionTextChangeListener(ProjectionTextChangeListener projectionTextChangeListener) {
@@ -1763,6 +1931,8 @@ public class ProjectionScreenController {
                 String path = ProjectionScreenController.this.fileImagePath;
                 if (isMediaFile(path)) {
                     handleMediaFile(path);
+                } else if (isPdfFile(path)) {
+                    handlePdfFile(path);
                 } else {
                     handleImage(path);
                 }
@@ -1773,7 +1943,37 @@ public class ProjectionScreenController {
     }
 
     private void handleMediaFile(String path) {
-        playVideo(path);
+        // MediaPlayer operations must be on JavaFX Application Thread
+        Platform.runLater(() -> playVideo(path));
+    }
+
+    private void handlePdfFile(String filePath) {
+        try {
+            if (isLock) {
+                return;
+            }
+            // Calculate DPI based on screen size
+            // This ensures the PDF renders at high quality for projection
+            float dpi = getDpiByMaxScreenSize();
+            Image pdfImage = PdfService.getInstance().renderCurrentPageAsImage(filePath, dpi);
+            if (pdfImage != null) {
+                drawImageAndNotifyListeners(pdfImage);
+            }
+        } catch (Exception e) {
+            LOG.error("Error handling PDF file: {}", filePath, e);
+        }
+    }
+
+    private float getDpiByMaxScreenSize() {
+        float DEFAULT_DPI = 150.0f;
+        try {
+            ScaledSizes scaledSizes = getGetScaledSizes();
+            double TESTED_OUT_HEIGHT_VALUE = 1691;
+            return (float) (DEFAULT_DPI * scaledSizes.height() / TESTED_OUT_HEIGHT_VALUE);
+        } catch (Exception e) {
+            LOG.error("Error calculating DPI by max screen size", e);
+            return DEFAULT_DPI; // Default fallback on error
+        }
     }
 
     private void handleImage(String fileImagePath) {
@@ -1781,6 +1981,10 @@ public class ProjectionScreenController {
         if (isLock) {
             return; // load remains before this, to be eager
         }
+        drawImageAndNotifyListeners(image);
+    }
+
+    private void drawImageAndNotifyListeners(Image image) {
         drawAnImageOnCanvas(image);
         callOnImageListeners(image);
     }
@@ -1796,8 +2000,8 @@ public class ProjectionScreenController {
         }
     }
 
-    public void drawImage(Image image) {
-        this.projectionType = ProjectionType.IMAGE;
+    public void drawImage(Image image, ProjectionType projectionType) {
+        this.projectionType = projectionType;
         this.lastImage = image;
         this.fileImagePath = null;
         if (isLock) {
@@ -1817,6 +2021,7 @@ public class ProjectionScreenController {
         canvas.setHeight(height);
         clearCanvas(canvas);
         this.image = image; // if we need to make adjustments later
+        this.lastImage = image; // needed to add so newly connected over network would receive correctly the last image
         drawImageOnCanvasColorAdjustments(image, canvas);
         setImageComponentVisibility(true);
     }
@@ -1847,8 +2052,13 @@ public class ProjectionScreenController {
         mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
         mediaView.setMediaPlayer(mediaPlayer);
 
-        // Auto-play the video
-        mediaPlayer.play();
+        // Set volume based on whether this is the first projection screen
+        // Volume will be set by ProjectionScreensUtil when synchronizing, but we need to check here
+        // For now, mute by default - volume will be set via synchronization methods
+        mediaPlayer.setVolume(0.0);
+
+        // Don't auto-play - video will start when play button is pressed in VideoViewerController
+        // The playVideoOnAllScreens() method will be called to start playback
         setImageComponentVisibility(false);
     }
 
@@ -1858,7 +2068,7 @@ public class ProjectionScreenController {
         return mediaPlayer;
     }
 
-    private void stopMediaPlayer() {
+    public void stopMediaPlayer() {
         if (mediaPlayer != null) {
             try {
                 mediaPlayer.stop();
@@ -1867,6 +2077,96 @@ public class ProjectionScreenController {
             } catch (Exception e) {
                 LOG.error("Failed to stop", e);
             }
+        }
+    }
+
+    public void playVideoPlayer() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.play();
+            } catch (Exception e) {
+                LOG.error("Failed to play video", e);
+            }
+        }
+    }
+
+    public void pauseVideoPlayer() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.pause();
+            } catch (Exception e) {
+                LOG.error("Failed to pause video", e);
+            }
+        }
+    }
+
+    public void seekVideoPlayer(javafx.util.Duration time) {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.seek(time);
+            } catch (Exception e) {
+                LOG.error("Failed to seek video", e);
+            }
+        }
+    }
+
+    public void setVideoVolume(double volume) {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                mediaPlayer.setVolume(Math.max(0.0, Math.min(1.0, volume)));
+            } catch (Exception e) {
+                LOG.error("Failed to set video volume", e);
+            }
+        }
+    }
+
+    public javafx.util.Duration getVideoCurrentTime() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                javafx.util.Duration currentTime = mediaPlayer.getCurrentTime();
+                if (currentTime != null && !currentTime.isUnknown()) {
+                    return currentTime;
+                }
+            } catch (Exception e) {
+                LOG.error("Failed to get video current time", e);
+            }
+        }
+        return null;
+    }
+
+    public double getVideoVolume() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                return mediaPlayer.getVolume();
+            } catch (Exception e) {
+                LOG.error("Failed to get video volume", e);
+            }
+        }
+        return 0.0;
+    }
+
+    public MediaPlayer.Status getVideoStatus() {
+        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+            try {
+                return mediaPlayer.getStatus();
+            } catch (Exception e) {
+                LOG.error("Failed to get video status", e);
+            }
+        }
+        return null;
+    }
+
+    public void nextPdfPage() {
+        if (isPdfFile(fileImagePath)) {
+            PdfService.getInstance().nextPage(fileImagePath);
+            handlePdfFile(fileImagePath);
+        }
+    }
+
+    public void previousPdfPage() {
+        if (isPdfFile(fileImagePath)) {
+            PdfService.getInstance().previousPage(fileImagePath);
+            handlePdfFile(fileImagePath);
         }
     }
 

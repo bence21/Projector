@@ -1,0 +1,73 @@
+<mat-expansion-panel>
+  <mat-expansion-panel-header>
+    <mat-panel-title>
+      <mat-icon>list</mat-icon>
+      <span>Word List</span>
+    </mat-panel-title>
+    <mat-panel-description>
+      <span *ngIf="!loading">
+        Total: {{counts.total}} | 
+        <span *ngIf="counts.good > 0" style="color: green;">✓ {{counts.good}}</span>
+        <span *ngIf="counts.good > 0 && (counts.unreviewed > 0 || counts.banned > 0 || counts.rejected > 0)"> | </span>
+        <span *ngIf="counts.unreviewed > 0" style="color: orange;">⚠ {{counts.unreviewed}}</span>
+        <span *ngIf="counts.unreviewed > 0 && (counts.banned > 0 || counts.rejected > 0)"> | </span>
+        <span *ngIf="counts.banned > 0" style="color: red;">✗ {{counts.banned}}</span>
+        <span *ngIf="counts.banned > 0 && counts.rejected > 0"> | </span>
+        <span *ngIf="counts.rejected > 0" style="color: #ff9800;">⚠ {{counts.rejected}}</span>
+      </span>
+      <span *ngIf="loading">Loading...</span>
+      <button *ngIf="hasChanges && !loading" 
+              mat-icon-button 
+              (click)="onRefreshClick(); $event.stopPropagation()"
+              matTooltip="Refresh word list with current changes"
+              style="margin-left: 8px;">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </mat-panel-description>
+  </mat-expansion-panel-header>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="30"></mat-spinner>
+    <p>Loading word validation...</p>
+  </div>
+
+  <div *ngIf="!loading && words.length === 0" class="no-words">
+    <p>No words found in this song.</p>
+  </div>
+
+  <div *ngIf="!loading && words.length > 0">
+    <!-- Filter buttons -->
+    <div class="filter-buttons">
+      <button mat-button [class.active]="filterStatus === 'all'" (click)="filterStatus = 'all'">
+        All ({{counts.total}})
+      </button>
+      <button *ngIf="counts.good > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.REVIEWED_GOOD" (click)="filterStatus = ReviewedWordStatus.REVIEWED_GOOD">
+        <mat-icon class="filter-icon-good">check_circle</mat-icon>
+        Good ({{counts.good}})
+      </button>
+      <button *ngIf="counts.unreviewed > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.UNREVIEWED" (click)="filterStatus = ReviewedWordStatus.UNREVIEWED">
+        <mat-icon class="filter-icon-unreviewed">info</mat-icon>
+        Unreviewed ({{counts.unreviewed}})
+      </button>
+      <button *ngIf="counts.banned > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.BANNED" (click)="filterStatus = ReviewedWordStatus.BANNED">
+        <mat-icon class="filter-icon-banned">error</mat-icon>
+        Banned ({{counts.banned}})
+      </button>
+      <button *ngIf="counts.rejected > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.REJECTED" (click)="filterStatus = ReviewedWordStatus.REJECTED">
+        <mat-icon class="filter-icon-rejected">warning</mat-icon>
+        Rejected ({{counts.rejected}})
+      </button>
+    </div>
+
+    <!-- Word list -->
+    <app-word-list
+      [words]="getFilteredWords()"
+      [hasReviewerRole]="hasReviewerRole"
+      (goodClick)="markAsGood($event)"
+      (contextSpecificClick)="markAsContextSpecific($event)"
+      (acceptedClick)="markAsAccepted($event)"
+      (bannedClick)="markAsBanned($event)"
+      (rejectedClick)="markAsRejected($event)">
+    </app-word-list>
+  </div>
+</mat-expansion-panel>

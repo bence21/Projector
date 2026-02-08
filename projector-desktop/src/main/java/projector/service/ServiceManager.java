@@ -53,8 +53,12 @@ public class ServiceManager {
         return new SongCollectionServiceImpl();
     }
 
+    private static class BibleServiceSingletonHelper {
+        private static final BibleService INSTANCE = new BibleServiceImpl();
+    }
+
     public static BibleService getBibleService() {
-        return new BibleServiceImpl();
+        return BibleServiceSingletonHelper.INSTANCE;
     }
 
     public static BookService getBookService() {

@@ -8,13 +8,15 @@ import { MatDialog, MatIconRegistry } from "@angular/material";
 import { NewLanguageComponent } from "../new-language/new-language.component";
 import { DomSanitizer, SafeResourceUrl, Title } from "@angular/platform-browser";
 import { CdkDragDrop, moveItemInArray, copyArrayItem } from '@angular/cdk/drag-drop';
-import { addNewVerse_, calculateOrder_ } from '../../util/song.utils';
+import { addNewVerse_, calculateOrder_, validateWordsAndSave } from '../../util/song.utils';
 import { checkAuthenticationError } from '../../util/error-util';
 import { AuthService } from '../../services/auth.service';
 import { format } from '../../util/string-util';
 import { GuidelineDataService } from '../../services/guidelines-data.service';
 import { Guideline, YOU_TUBE_LINKING } from '../../models/guideline';
 import { debounceTime } from 'rxjs/operators';
+import { SongWordValidationService } from '../../services/song-word-validation.service';
+import { MatSnackBar } from '@angular/material';
 
 export function replace(value: string) {
   let newValue = replaceMatch(value, / /g, ' '); // NBSP - replaces non breaking space characters with space
@@ -98,7 +100,9 @@ export class NewSongComponent implements OnInit {
     iconRegistry: MatIconRegistry,
     public sanitizer: DomSanitizer,
     private guidelineDataService: GuidelineDataService,
-    private _changeDetectionRef: ChangeDetectorRef) {
+    private _changeDetectionRef: ChangeDetectorRef,
+    private songWordValidationService: SongWordValidationService,
+    private snackBar: MatSnackBar) {
     iconRegistry.addSvgIcon(
       'magic_tool',
       sanitizer.bypassSecurityTrustResourceUrl('assets/icons/magic_tool-icon.svg'));
@@ -354,6 +358,23 @@ export class NewSongComponent implements OnInit {
         this.song.youtubeUrl = youtubeUrl;
       }
     }
+    this.validateAndCreateSong();
+  }
+
+  private validateAndCreateSong() {
+    validateWordsAndSave({
+      song: this.song,
+      validationService: this.songWordValidationService,
+      dialog: this.dialog,
+      snackBar: this.snackBar,
+      language: this.selectedLanguage,
+      publish: this.publish,
+      onSave: () => this.createSong(),
+      isAdmin: !!this.isAdmin()
+    });
+  }
+
+  private createSong() {
     this.songService.createSong(this.song).subscribe(
       (song) => {
         this.updateUserWhenCreatedSong();

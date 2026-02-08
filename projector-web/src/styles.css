@@ -59,3 +59,19 @@
 .dark-theme .mat-paginator-navigation-button:hover {
   background-color: #424242;
 }
+
+/* Dark theme select dropdown text color */
+.dark-theme mat-form-field .mat-select-value,
+.dark-theme mat-form-field .mat-select-value *,
+.dark-theme mat-form-field .mat-select-value-text,
+.dark-theme mat-form-field .mat-select-value-text *,
+.dark-theme mat-form-field .mat-select-trigger,
+.dark-theme mat-form-field .mat-select-trigger *,
+.dark-theme mat-form-field .mat-form-field-infix,
+.dark-theme mat-form-field .mat-form-field-infix * {
+  color: white !important;
+}
+
+.dark-theme mat-form-field .mat-select-arrow {
+  color: rgba(255, 255, 255, 0.7) !important;
+}

@@ -1,5 +1,6 @@
 package projector.utils;
 
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
@@ -26,7 +27,13 @@ public class SceneUtils {
     private static void addOneIcon(Stage stage, Class<?> aClass, String name) {
         InputStream resourceAsStream = aClass.getResourceAsStream(name);
         if (resourceAsStream != null) {
-            stage.getIcons().add(new Image(resourceAsStream));
+            Image image = new Image(resourceAsStream);
+            stage.getIcons().add(image); // initial add
+            Platform.runLater(() -> {
+                stage.getIcons().add(image); // we add it again to make sure it is added
+            });
+        } else {
+            System.out.println("Not found name: " + name);
         }
     }
 
