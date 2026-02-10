@@ -122,19 +122,23 @@ public class NormalizedWordResource {
 
         Set<String> reviewedWords = getReviewedWordsSet(language);
         List<NormalizedWordBunch> allBunches = getAllWordBunchesForLanguage(language);
+        List<NormalizedWordBunch> unreviewed = filterUnreviewedBunches(allBunches, reviewedWords);
 
+        return new ResponseEntity<>(normalizedWordBunchAssembler.createDtoList(unreviewed), HttpStatus.ACCEPTED);
+    }
+
+    private List<NormalizedWordBunch> filterUnreviewedBunches(List<NormalizedWordBunch> allBunches, Set<String> reviewedWords) {
         List<NormalizedWordBunch> unreviewed = new ArrayList<>();
         for (NormalizedWordBunch nwb : allBunches) {
             Set<String> bunchWords = new HashSet<>();
-            for (com.bence.projector.server.utils.models.WordBunch wb : nwb.getWordBunches()) {
+            for (WordBunch wb : nwb.getWordBunches()) {
                 bunchWords.add(wb.getNormalizedWord());
             }
             if (Collections.disjoint(bunchWords, reviewedWords)) {
                 unreviewed.add(nwb);
             }
         }
-
-        return new ResponseEntity<>(normalizedWordBunchAssembler.createDtoList(unreviewed), HttpStatus.ACCEPTED);
+        return unreviewed;
     }
 
     private ResponseEntity<Object> getWordBunchesByStatus(String languageId, ReviewedWordStatus status) {
