@@ -31,7 +31,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +42,7 @@ import java.util.stream.Collectors;
 import static com.bence.projector.server.utils.SetLanguages.changeWordsInSongVerse;
 import static com.bence.projector.server.utils.SetLanguages.getNormalizedWordBunches;
 import static com.bence.projector.server.utils.SetLanguages.getSongWords;
+import static com.bence.projector.server.utils.UnreviewedWordFileUtil.filterUnreviewedBunches;
 
 @Controller
 public class NormalizedWordResource {
@@ -125,20 +125,6 @@ public class NormalizedWordResource {
         List<NormalizedWordBunch> unreviewed = filterUnreviewedBunches(allBunches, reviewedWords);
 
         return new ResponseEntity<>(normalizedWordBunchAssembler.createDtoList(unreviewed), HttpStatus.ACCEPTED);
-    }
-
-    private List<NormalizedWordBunch> filterUnreviewedBunches(List<NormalizedWordBunch> allBunches, Set<String> reviewedWords) {
-        List<NormalizedWordBunch> unreviewed = new ArrayList<>();
-        for (NormalizedWordBunch nwb : allBunches) {
-            Set<String> bunchWords = new HashSet<>();
-            for (WordBunch wb : nwb.getWordBunches()) {
-                bunchWords.add(wb.getNormalizedWord());
-            }
-            if (Collections.disjoint(bunchWords, reviewedWords)) {
-                unreviewed.add(nwb);
-            }
-        }
-        return unreviewed;
     }
 
     private ResponseEntity<Object> getWordBunchesByStatus(String languageId, ReviewedWordStatus status) {

@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -62,16 +61,7 @@ public class UnreviewedWordFileUtil {
                 .collect(Collectors.toSet());
 
         // Filter unreviewed word bunches
-        List<NormalizedWordBunch> unreviewed = new ArrayList<>();
-        for (NormalizedWordBunch nwb : allBunches) {
-            Set<String> bunchWords = new HashSet<>();
-            for (WordBunch wb : nwb.getWordBunches()) {
-                bunchWords.add(wb.getNormalizedWord());
-            }
-            if (Collections.disjoint(bunchWords, reviewedWords)) {
-                unreviewed.add(nwb);
-            }
-        }
+        List<NormalizedWordBunch> unreviewed = filterUnreviewedBunches(allBunches, reviewedWords);
 
         // Calculate the best word and ratio for each unreviewed bunch
         for (NormalizedWordBunch nwb : unreviewed) {
@@ -141,5 +131,36 @@ public class UnreviewedWordFileUtil {
                 writer.newLine();
             }
         }
+    }
+
+    /**
+     * Filters out normalized word bunches that contain any reviewed words.
+     * A bunch is considered unreviewed only if none of its words appear in the reviewed set.
+     *
+     * @param allBunches     All normalized word bunches
+     * @param reviewedWords  Set of normalized words that have been reviewed
+     * @return List of bunches where no word has been reviewed
+     */
+    public static List<NormalizedWordBunch> filterUnreviewedBunches(List<NormalizedWordBunch> allBunches, Set<String> reviewedWords) {
+        List<NormalizedWordBunch> unreviewed = new ArrayList<>();
+        for (NormalizedWordBunch nwb : allBunches) {
+            Set<String> bunchWords = new HashSet<>();
+            for (WordBunch wb : nwb.getWordBunches()) {
+                bunchWords.add(wb.getNormalizedWord());
+            }
+            if (!containsAnyReviewedWord(bunchWords, reviewedWords)) {
+                unreviewed.add(nwb);
+            }
+        }
+        return unreviewed;
+    }
+
+    private static boolean containsAnyReviewedWord(Set<String> bunchWords, Set<String> reviewedWords) {
+        for (String word : bunchWords) {
+            if (reviewedWords.contains(word)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
