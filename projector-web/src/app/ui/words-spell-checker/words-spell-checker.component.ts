@@ -130,7 +130,7 @@ export class WordsSpellCheckerComponent implements OnInit {
     this.initializePageEvent();
     // Load filterType from localStorage
     const savedFilterType = localStorage.getItem(WORDS_SPELL_CHECKER_FILTER_TYPE);
-    if (savedFilterType && ['all', 'problematic', 'banned', 'reviewed-good', 'context-specific', 'accepted', 'rejected', 'unreviewed'].includes(savedFilterType)) {
+    if (savedFilterType && ['all', 'problematic', 'banned', 'reviewed-good', 'context-specific', 'accepted', 'rejected', 'unreviewed', 'not-sure', 'auto-accepted-from-public'].includes(savedFilterType)) {
       this.filterType = savedFilterType;
     }
     this.languageDataService.getAll().subscribe(
@@ -297,6 +297,8 @@ export class WordsSpellCheckerComponent implements OnInit {
       return 'status-chip-rejected';
     } else if (statusLower.includes('context')) {
       return 'status-chip-context';
+    } else if (statusLower.includes('not_sure')) {
+      return 'status-chip-not-sure';
     }
     return 'status-chip-default';
   }

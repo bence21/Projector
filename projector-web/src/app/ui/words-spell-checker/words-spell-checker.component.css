@@ -392,6 +392,11 @@ button.mat-raised-button:hover {
   color: white !important;
 }
 
+.status-chip-not-sure {
+  background-color: #757575 !important; /* Neutral gray - matches mark-as-not-sure-button */
+  color: white !important;
+}
+
 .status-chip-default {
   background-color: #9e9e9e !important;
   color: white !important;
