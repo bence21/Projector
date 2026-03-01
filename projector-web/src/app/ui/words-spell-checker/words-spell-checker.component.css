@@ -11,6 +11,18 @@
   cursor: pointer;
 }
 
+.auto-cap-indicator {
+  display: inline-block;
+  font-size: 0.65em;
+  font-weight: 500;
+  padding: 2px 5px;
+  margin-right: 6px;
+  border-radius: 4px;
+  background-color: rgba(76, 175, 80, 0.35);
+  color: #a5d6a7;
+  letter-spacing: 0.02em;
+}
+
 .example-container {
   display: flex;
   flex-direction: column;

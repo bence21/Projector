@@ -31,6 +31,8 @@ public class WordBunchAssembler implements GeneralAssembler<WordBunch, WordBunch
             wordBunchDTO.setSong(songTitleAssembler.createDto(songs.get(0)));
         }
         wordBunchDTO.setProblematic(wordBunch.isProblematic());
+        wordBunchDTO.setAllOccurrencesAutoCapitalized(
+                wordBunch.getCapCount() > 0 && wordBunch.getCapCount() == wordBunch.getCount());
         return wordBunchDTO;
     }
 

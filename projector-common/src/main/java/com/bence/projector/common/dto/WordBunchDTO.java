@@ -6,6 +6,7 @@ public class WordBunchDTO {
     private int count;
     private SongTitleDTO song;
     private boolean problematic;
+    private Boolean allOccurrencesAutoCapitalized;
     private ReviewedWordDTO reviewedWord;
 
     public void setWord(String word) {
@@ -38,6 +39,14 @@ public class WordBunchDTO {
 
     public boolean isProblematic() {
         return problematic;
+    }
+
+    public Boolean getAllOccurrencesAutoCapitalized() {
+        return allOccurrencesAutoCapitalized;
+    }
+
+    public void setAllOccurrencesAutoCapitalized(Boolean allOccurrencesAutoCapitalized) {
+        this.allOccurrencesAutoCapitalized = allOccurrencesAutoCapitalized;
     }
 
     public void setReviewedWord(ReviewedWordDTO reviewedWord) {

@@ -541,6 +541,9 @@ public class SetLanguages {
             }
             wordBunch.incCount();
             wordBunch.addSong(song);
+            if (songWord.isFirstWordInLine() || songWord.isFirstWordInSentence()) {
+                wordBunch.incCapCount();
+            }
         }
     }
 

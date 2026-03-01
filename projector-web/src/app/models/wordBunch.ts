@@ -7,6 +7,7 @@ export class WordBunch {
   count = 0;
   song: Song;
   problematic: boolean;
+  allOccurrencesAutoCapitalized?: boolean;
   reviewedWord: ReviewedWord;
 
   constructor(values: Object = {}) {

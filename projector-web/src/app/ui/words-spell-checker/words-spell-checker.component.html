@@ -60,8 +60,9 @@
           <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{'Word'}}</mat-header-cell>
           <mat-cell *matCellDef="let row" class="example-cell">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span *ngIf="row.wordBunch.problematic" class="word-text clickable-copy" [class.copied]="lastCopiedWord === row.word" [style.color]="getRedIntensityColorString(row)" (click)="copyWord($event, row.word)">{{row.word}}</span>
-              <span *ngIf="!row.wordBunch.problematic" class="word-text clickable-copy" [class.copied]="lastCopiedWord === row.word" (click)="copyWord($event, row.word)">{{row.word}}</span>
+              <span *ngIf="WordWithStatus.isAutoCapped(getWordWithStatusForRow(row))" class="auto-cap-indicator clickable-copy" matTooltip="All occurrences are first-in-sentence or first-in-line" (click)="copyWordLowerFirst($event, row.word)">Cap</span>
+              <span *ngIf="row.wordBunch.problematic" class="word-text clickable-copy" [class.copied]="lastCopiedWord === row.word" [style.color]="getRedIntensityColorString(row)" (click)="copyWord($event, row)">{{row.word}}</span>
+              <span *ngIf="!row.wordBunch.problematic" class="word-text clickable-copy" [class.copied]="lastCopiedWord === row.word" (click)="copyWord($event, row)">{{row.word}}</span>
               <mat-chip *ngIf="row.wordBunch.reviewedWord && row.wordBunch.reviewedWord.status" 
                         [class]="getStatusChipClass(row.wordBunch.reviewedWord.status)"
                         class="status-chip">

@@ -14,6 +14,7 @@ public class WordBunch {
     private String normalizedWord;
     private String stripWord;
     private int count;
+    private int capCount;
     private List<Song> songs;
     private boolean problematic;
 
@@ -60,6 +61,14 @@ public class WordBunch {
 
     public void incCount() {
         ++this.count;
+    }
+
+    public void incCapCount() {
+        ++this.capCount;
+    }
+
+    public int getCapCount() {
+        return capCount;
     }
 
     public void addSong(Song song) {

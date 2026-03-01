@@ -53,7 +53,8 @@ class NormalizedWordBunchRow {
     return {
       word: this.word,
       status: (this.wordBunch.reviewedWord && this.wordBunch.reviewedWord.status) ? this.wordBunch.reviewedWord.status : ReviewedWordStatus.UNREVIEWED,
-      countInSong: this.count
+      countInSong: this.count,
+      allOccurrencesAutoCapitalized: this.wordBunch.allOccurrencesAutoCapitalized
     };
   }
 
@@ -116,6 +117,7 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
   /** Word text used for showing brief copy highlight; cleared after a short delay. */
   lastCopiedWord: string | null = null;
   private copyHighlightTimeout: number | null = null;
+  readonly WordWithStatus = WordWithStatus;
 
   constructor(
     private normalizedWordBunchDataService: NormalizedWordBunchDataService,
@@ -323,8 +325,16 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
       status: (row.wordBunch && row.wordBunch.reviewedWord && row.wordBunch.reviewedWord.status)
         ? row.wordBunch.reviewedWord.status
         : ReviewedWordStatus.UNREVIEWED,
-      countInSong: row.count
+      countInSong: row.count,
+      allOccurrencesAutoCapitalized: row.wordBunch && row.wordBunch.allOccurrencesAutoCapitalized
     };
+  }
+
+  private static lowerFirstChar(word: string): string {
+    if (word.length <= 1) {
+      return word.toLowerCase();
+    }
+    return word.charAt(0).toLowerCase() + word.slice(1);
   }
 
   private copyToClipboard(text: string): boolean {
@@ -346,10 +356,22 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
     }, 500);
   }
 
-  copyWord(event: Event, word: string): void {
+  copyWord(event: Event, row: NormalizedWordBunchRow): void {
     event.preventDefault();
     event.stopPropagation();
-    if (this.copyToClipboard(word)) {
+    const wordWithStatus = this.getWordWithStatusForRow(row);
+    const text = WordWithStatus.isAutoCapped(wordWithStatus)
+      ? WordsSpellCheckerComponent.lowerFirstChar(row.word)
+      : row.word;
+    if (this.copyToClipboard(text)) {
+      this.setCopyHighlight(row.word);
+    }
+  }
+
+  copyWordLowerFirst(event: Event, word: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.copyToClipboard(WordsSpellCheckerComponent.lowerFirstChar(word))) {
       this.setCopyHighlight(word);
     }
   }
