@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { WordWithStatus } from '../../models/wordWithStatus';
 import { ReviewedWordStatus } from '../../models/reviewedWord';
 import {
@@ -11,8 +11,18 @@ import {
   templateUrl: './word-list.component.html',
   styleUrls: ['./word-list.component.css']
 })
-export class WordListComponent {
+export class WordListComponent implements OnDestroy {
   @Input() words: WordWithStatus[] = [];
+  /** Word text used for showing brief copy highlight; cleared after a short delay. */
+  lastCopiedWord: string | null = null;
+  private copyHighlightTimeout: number | null = null;
+
+  ngOnDestroy(): void {
+    if (this.copyHighlightTimeout != null) {
+      clearTimeout(this.copyHighlightTimeout);
+    }
+  }
+
   @Input() hasReviewerRole: boolean = false;
   @Input() disabled: boolean = false;
   /** When true, "only in this song" is shown when countInSong === countInAllSongs. When false, that case is not treated as only-in-this-song (e.g. song not yet public). */
@@ -202,5 +212,72 @@ export class WordListComponent {
     }
     const filteredSuggestions = this.getFilteredSuggestions(wordWithStatus);
     return filteredSuggestions.length > 0;
+  }
+
+  /**
+   * Copy text to clipboard. Returns true if copy was performed.
+   */
+  private copyToClipboard(text: string): boolean {
+    if (text && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Shows brief highlight on the word span for the given word, then clears it after a short delay.
+   */
+  private setCopyHighlight(word: string): void {
+    if (this.copyHighlightTimeout != null) {
+      clearTimeout(this.copyHighlightTimeout);
+    }
+    this.lastCopiedWord = word;
+    this.copyHighlightTimeout = window.setTimeout(() => {
+      this.lastCopiedWord = null;
+      this.copyHighlightTimeout = null;
+    }, 500);
+  }
+
+  /**
+   * Handles click: stops propagation and copies the given text to clipboard.
+   * Returns true if copy was performed.
+   */
+  private copyOnClick(event: Event, text: string): boolean {
+    event.preventDefault();
+    event.stopPropagation();
+    return this.copyToClipboard(text);
+  }
+
+  /**
+   * Returns the word with the first character lowercased.
+   */
+  private static lowerFirstChar(word: string): string {
+    if (word.length <= 1) {
+      return word.toLowerCase();
+    }
+    return word.charAt(0).toLowerCase() + word.slice(1);
+  }
+
+  /**
+   * Copy the word to clipboard. If the word is auto-capped (inherited or all occurrences),
+   * copies the lower-first form; otherwise copies as displayed.
+   */
+  copyWord(event: Event, wordWithStatus: WordWithStatus): void {
+    const text = WordWithStatus.isAutoCapped(wordWithStatus)
+      ? WordListComponent.lowerFirstChar(wordWithStatus.word)
+      : wordWithStatus.word;
+    if (this.copyOnClick(event, text)) {
+      this.setCopyHighlight(wordWithStatus.word);
+    }
+  }
+
+  /**
+   * Copy the word to clipboard with first character lowercased (for auto-capped form).
+   */
+  copyWordLowerFirst(event: Event, word: string): void {
+    if (this.copyOnClick(event, WordListComponent.lowerFirstChar(word))) {
+      this.setCopyHighlight(word);
+    }
   }
 }

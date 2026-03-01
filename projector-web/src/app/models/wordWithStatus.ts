@@ -18,3 +18,13 @@ export interface WordWithStatus {
   /** True when every occurrence of this word in the song is in an auto-capitalized position (first in sentence or first in line). */
   allOccurrencesAutoCapitalized?: boolean;
 }
+
+export class WordWithStatus {
+  /**
+   * True when the word is shown in auto-capped form (inherited from capitalized review or all occurrences auto-capitalized).
+   */
+  public static isAutoCapped(wordWithStatus: WordWithStatus): boolean {
+    return wordWithStatus.inheritedFromCapitalizedReview === true ||
+      wordWithStatus.allOccurrencesAutoCapitalized === true;
+  }
+}

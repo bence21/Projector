@@ -1,3 +1,16 @@
+.word-text {
+  transition: background-color 0.15s ease-out;
+}
+
+.word-text.copied {
+  background-color: rgba(76, 175, 80, 0.35);
+  border-radius: 2px;
+}
+
+.clickable-copy {
+  cursor: pointer;
+}
+
 .example-container {
   display: flex;
   flex-direction: column;

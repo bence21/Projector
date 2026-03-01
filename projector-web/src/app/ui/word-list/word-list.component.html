@@ -8,19 +8,23 @@
       </mat-icon>
       <div class="word-info">
         <span *ngIf="wordWithStatus.inheritedFromCapitalizedReview" 
-              class="auto-cap-indicator"
-              [matTooltip]="'Treated as reviewed via capitalized form'">
+              class="auto-cap-indicator clickable-copy"
+              [matTooltip]="'Treated as reviewed via capitalized form'"
+              (click)="copyWordLowerFirst($event, wordWithStatus.word)">
           Cap
         </span>
         <span *ngIf="wordWithStatus.allOccurrencesAutoCapitalized && !wordWithStatus.inheritedFromCapitalizedReview" 
-              class="auto-cap-indicator"
-              [matTooltip]="'All occurrences in this song are first-in-sentence or first-in-line'">
+              class="auto-cap-indicator clickable-copy"
+              [matTooltip]="'All occurrences in this song are first-in-sentence or first-in-line'"
+              (click)="copyWordLowerFirst($event, wordWithStatus.word)">
           Cap
         </span>
-        <span class="word-text" [class.banned-word]="wordWithStatus.status === ReviewedWordStatus.BANNED"
+        <span class="word-text clickable-copy" [class.banned-word]="wordWithStatus.status === ReviewedWordStatus.BANNED"
               [class.rejected-word]="wordWithStatus.status === ReviewedWordStatus.REJECTED"
               [class.unreviewed-word]="wordWithStatus.status === ReviewedWordStatus.UNREVIEWED"
-              [class.good-word]="isGoodStatus(wordWithStatus.status)">
+              [class.good-word]="isGoodStatus(wordWithStatus.status)"
+              [class.copied]="lastCopiedWord === wordWithStatus.word"
+              (click)="copyWord($event, wordWithStatus)">
           {{wordWithStatus.word}}
         </span>
         <span *ngIf="wordWithStatus.countInSong != null && wordWithStatus.countInSong > 0" class="word-count" title="In this song">

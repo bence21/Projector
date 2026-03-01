@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { Observable } from 'rxjs/Observable';
 import { DataSource } from '@angular/cdk/table';
@@ -102,7 +102,7 @@ export class NormalizedWordBunchDataSource extends DataSource<any> {
   templateUrl: './words-spell-checker.component.html',
   styleUrls: ['./words-spell-checker.component.css']
 })
-export class WordsSpellCheckerComponent implements OnInit {
+export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
 
   displayedColumns = ['select', 'Nr', 'confidencePercentage', 'actionsLeft', 'word', 'actionsRight', 'correction', 'count', 'song'];
   dataSource: NormalizedWordBunchDataSource | null;
@@ -113,6 +113,9 @@ export class WordsSpellCheckerComponent implements OnInit {
   filterType: string = 'all'; // 'all', 'problematic', 'banned', 'reviewed-good', 'context-specific', 'accepted', 'rejected', 'auto-accepted-from-public', 'unreviewed'
   allSelected: boolean = false;
   someSelected: boolean = false;
+  /** Word text used for showing brief copy highlight; cleared after a short delay. */
+  lastCopiedWord: string | null = null;
+  private copyHighlightTimeout: number | null = null;
 
   constructor(
     private normalizedWordBunchDataService: NormalizedWordBunchDataService,
@@ -124,6 +127,12 @@ export class WordsSpellCheckerComponent implements OnInit {
     private reviewedWordDataService: ReviewedWordDataService,
     private wordReviewHelper: WordReviewHelperService,
   ) { }
+
+  ngOnDestroy(): void {
+    if (this.copyHighlightTimeout != null) {
+      clearTimeout(this.copyHighlightTimeout);
+    }
+  }
 
   ngOnInit() {
     this.titleService.setTitle('Words spell checker');
@@ -311,11 +320,38 @@ export class WordsSpellCheckerComponent implements OnInit {
     // Fallback: create WordWithStatus directly
     return {
       word: row.word,
-      status: (row.wordBunch && row.wordBunch.reviewedWord && row.wordBunch.reviewedWord.status) 
-        ? row.wordBunch.reviewedWord.status 
+      status: (row.wordBunch && row.wordBunch.reviewedWord && row.wordBunch.reviewedWord.status)
+        ? row.wordBunch.reviewedWord.status
         : ReviewedWordStatus.UNREVIEWED,
       countInSong: row.count
     };
+  }
+
+  private copyToClipboard(text: string): boolean {
+    if (text && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+      return true;
+    }
+    return false;
+  }
+
+  private setCopyHighlight(word: string): void {
+    if (this.copyHighlightTimeout != null) {
+      clearTimeout(this.copyHighlightTimeout);
+    }
+    this.lastCopiedWord = word;
+    this.copyHighlightTimeout = window.setTimeout(() => {
+      this.lastCopiedWord = null;
+      this.copyHighlightTimeout = null;
+    }, 500);
+  }
+
+  copyWord(event: Event, word: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.copyToClipboard(word)) {
+      this.setCopyHighlight(word);
+    }
   }
 
   changeAll(normalizedWordBunchRow: NormalizedWordBunchRow) {
