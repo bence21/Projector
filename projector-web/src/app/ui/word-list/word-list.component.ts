@@ -1,6 +1,10 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { WordWithStatus } from '../../models/wordWithStatus';
 import { ReviewedWordStatus } from '../../models/reviewedWord';
+import {
+  getStatusTooltip as buildStatusTooltip,
+  getSourceLanguageLabel as getSourceLanguageLabelFromUtil
+} from '../../util/word-with-status-tooltip.util';
 
 @Component({
   selector: 'app-word-list',
@@ -77,87 +81,11 @@ export class WordListComponent {
   }
 
   getStatusTooltip(wordWithStatus: WordWithStatus): string {
-    const status = wordWithStatus.status;
-    let tooltip = '';
-    
-    switch (status) {
-      case ReviewedWordStatus.REVIEWED_GOOD:
-        tooltip = 'Reviewed Good';
-        break;
-      case ReviewedWordStatus.CONTEXT_SPECIFIC:
-        tooltip = 'Context-Specific';
-        // Add context category, context description, and notes for context-specific words
-        if (wordWithStatus.contextCategory || wordWithStatus.contextDescription || wordWithStatus.notes) {
-          const parts: string[] = [tooltip];
-          if (wordWithStatus.contextCategory) {
-            parts.push(`\nCategory: ${wordWithStatus.contextCategory}`);
-          }
-          if (wordWithStatus.contextDescription) {
-            parts.push(`\nDescription: ${wordWithStatus.contextDescription}`);
-          }
-          if (wordWithStatus.notes) {
-            parts.push(`\nNotes: ${wordWithStatus.notes}`);
-          }
-          tooltip = parts.join('');
-        }
-        break;
-      case ReviewedWordStatus.ACCEPTED:
-        tooltip = 'Accepted';
-        // Add category, source language, foreign language type, and notes for accepted words
-        if (wordWithStatus.category || wordWithStatus.notes || wordWithStatus.sourceLanguage || wordWithStatus.foreignLanguageType) {
-          const parts: string[] = [tooltip];
-          if (wordWithStatus.category) {
-            parts.push(`\nCategory: ${wordWithStatus.category}`);
-          }
-          if (wordWithStatus.sourceLanguage) {
-            const langLabel = this.getSourceLanguageLabel(wordWithStatus.sourceLanguage);
-            parts.push(`\nSource language: ${langLabel}`);
-          }
-          if (wordWithStatus.foreignLanguageType !== undefined && wordWithStatus.foreignLanguageType !== null) {
-            const typeLabel = wordWithStatus.foreignLanguageType === 0 || wordWithStatus.foreignLanguageType === 'BORROWED'
-              ? 'Borrowed (written in song language style)'
-              : 'Foreign (OK in source language, not in song language)';
-            parts.push(`\nType: ${typeLabel}`);
-          }
-          if (wordWithStatus.notes) {
-            parts.push(`\nNotes: ${wordWithStatus.notes}`);
-          }
-          tooltip = parts.join('');
-        }
-        break;
-      case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
-        tooltip = 'Auto Accepted From Public';
-        break;
-      case ReviewedWordStatus.BANNED:
-        tooltip = 'Banned';
-        break;
-      case ReviewedWordStatus.REJECTED:
-        tooltip = 'Rejected';
-        break;
-      case ReviewedWordStatus.UNREVIEWED:
-        tooltip = 'Unreviewed';
-        break;
-      case ReviewedWordStatus.NOT_SURE:
-        tooltip = 'Not sure';
-        break;
-      default:
-        tooltip = 'Unknown Status';
-    }
-    
-    return tooltip;
+    return buildStatusTooltip(wordWithStatus);
   }
 
   getSourceLanguageLabel(sourceLanguage: { englishName?: string; nativeName?: string; printLanguage?: () => string }): string {
-    if (!sourceLanguage) {
-      return '';
-    }
-    if (typeof sourceLanguage.printLanguage === 'function') {
-      return sourceLanguage.printLanguage();
-    }
-    if (sourceLanguage.englishName && sourceLanguage.nativeName && sourceLanguage.englishName !== sourceLanguage.nativeName) {
-      return `${sourceLanguage.englishName} | ${sourceLanguage.nativeName}`;
-    }
-    return sourceLanguage.englishName || sourceLanguage.nativeName || '';
+    return getSourceLanguageLabelFromUtil(sourceLanguage);
   }
 
   private isCommonWord(count: number | null | undefined): boolean | null {

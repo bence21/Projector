@@ -13,6 +13,7 @@ import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.utils.NormalizedWordBunchMap;
 import com.bence.projector.server.utils.UnicodeTextNormalizer;
 import com.bence.projector.server.utils.models.NormalizedWordBunch;
+import com.bence.projector.server.utils.models.SongWord;
 import com.bence.projector.server.utils.models.WordBunch;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,7 +53,7 @@ public class SongWordValidationService {
         }
 
         Language language = song.getLanguage();
-        Collection<String> songWords = getSongWords(song);
+        Collection<SongWord> songWords = getSongWords(song);
         List<ReviewedWord> allReviewedWords = reviewedWordService.findAllByLanguage(language);
 
         Map<String, ReviewedWord> reviewedWordMap = buildReviewedWordMap(allReviewedWords);
@@ -95,31 +96,83 @@ public class SongWordValidationService {
         return map;
     }
 
-    private Map<String, Integer> buildCountInSongMap(Collection<String> songWords) {
+    private Map<String, Integer> buildCountInSongMap(Collection<SongWord> songWords) {
         Map<String, Integer> countInSong = new HashMap<>();
-        for (String word : songWords) {
-            countInSong.merge(word, 1, Integer::sum);
+        for (SongWord songWord : songWords) {
+            countInSong.merge(songWord.getWord(), 1, Integer::sum);
         }
         return countInSong;
     }
 
-    private WordCategories categorizeWords(Collection<String> songWords,
+    /**
+     * For each word, true iff every occurrence in songWords is auto-capitalized
+     * (first-in-sentence or first-in-line).
+     */
+    private Map<String, Boolean> buildAllOccurrencesAutoCapitalizedMap(Collection<SongWord> songWords) {
+        Map<String, Boolean> map = new HashMap<>();
+        for (SongWord songWord : songWords) {
+            map.merge(songWord.getWord(), songWord.isFirstWordInSentence() || songWord.isFirstWordInLine(), Boolean::logicalAnd);
+        }
+        return map;
+    }
+
+    private WordCategories categorizeWords(Collection<SongWord> songWords,
                                            Map<String, ReviewedWord> reviewedWordMap,
                                            NormalizedWordBunchMap normalizedWordBunchMap,
                                            List<ReviewedWord> allReviewedWords) {
         WordCategories categories = new WordCategories();
         Set<String> processedWords = new HashSet<>();
         Map<String, Integer> countInSongMap = buildCountInSongMap(songWords);
+        Map<String, Boolean> allOccurrencesAutoCapitalized = buildAllOccurrencesAutoCapitalizedMap(songWords);
 
-        for (String word : songWords) {
+        for (SongWord songWord : songWords) {
+            String word = songWord.getWord();
             if (!processedWords.contains(word)) {
                 processedWords.add(word);
-                categorizeWord(word, reviewedWordMap, normalizedWordBunchMap,
+                boolean allAutoCapitalized = Boolean.TRUE.equals(allOccurrencesAutoCapitalized.get(word));
+                categorizeWord(word, allAutoCapitalized, reviewedWordMap, normalizedWordBunchMap,
                         countInSongMap, allReviewedWords, categories);
             }
         }
 
         return categories;
+    }
+
+    /**
+     * Returns true if the word is in capitalized first-word form (only first character uppercase, rest lowercase).
+     * Used to treat e.g. "Hello" as reviewed when "hello" is already reviewed.
+     */
+    private boolean isCapitalizedFirstWordForm(String word) {
+        if (word == null || word.isEmpty()) {
+            return false;
+        }
+        return Character.isUpperCase(word.charAt(0))
+                && word.substring(1).equals(word.substring(1).toLowerCase());
+    }
+
+    /**
+     * If the word is in capitalized first-word form and its lowercase is already reviewed (non-blocking),
+     * adds it to wordsWithStatus with the lowercase's status and returns true. Otherwise, returns false.
+     */
+    private boolean tryTreatCapitalizedAsReviewed(String word,
+                                                   Map<String, ReviewedWord> reviewedWordMap,
+                                                   Integer countInSong,
+                                                   int countInAllSongs,
+                                                   WordCategories categories) {
+        if (!isCapitalizedFirstWordForm(word)) {
+            return false;
+        }
+        ReviewedWord reviewedWordLower = reviewedWordMap.get(word.toLowerCase());
+        if (reviewedWordLower == null) {
+            return false;
+        }
+        ReviewedWordStatus statusLower = reviewedWordLower.getStatus();
+        if (statusLower == ReviewedWordStatus.BANNED || statusLower == ReviewedWordStatus.REJECTED) {
+            return false;
+        }
+        WordWithStatus wordWithStatus = addWordWithStatusFromReviewedWord(word, reviewedWordLower, countInSong, countInAllSongs, categories, true);
+        wordWithStatus.setAllOccurrencesAutoCapitalized(true);
+        return true;
     }
 
     /**
@@ -137,6 +190,7 @@ public class SongWordValidationService {
     }
 
     private void categorizeWord(String word,
+                                boolean allOccurrencesAutoCapitalized,
                                 Map<String, ReviewedWord> reviewedWordMap,
                                 NormalizedWordBunchMap normalizedWordBunchMap,
                                 Map<String, Integer> countInSongMap,
@@ -147,50 +201,73 @@ public class SongWordValidationService {
         Integer countInSong = countInSongMap.get(word);
         int countInAllSongs = getCountInAllSongs(normalizedWordBunchMap, word);
 
+        WordWithStatus added;
         if (reviewedWord == null) {
+            if (allOccurrencesAutoCapitalized && tryTreatCapitalizedAsReviewed(word, reviewedWordMap, countInSong, countInAllSongs, categories)) {
+                return;
+            }
             categories.unreviewedWords.add(word);
-            // Generate suggestions for unreviewed words (similar to rejected words)
             RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
             List<String> suggestions = extractSuggestions(suggestion);
-            categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.UNREVIEWED, suggestions, countInSong, countInAllSongs));
+            added = new WordWithStatus(word, ReviewedWordStatusDTO.UNREVIEWED, suggestions, countInSong, countInAllSongs);
+            categories.wordsWithStatus.add(added);
         } else {
             com.bence.projector.server.backend.model.ReviewedWordStatus status = reviewedWord.getStatus();
             if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.BANNED) {
                 categories.bannedWords.add(word);
-                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.BANNED, null, countInSong, countInAllSongs));
+                added = new WordWithStatus(word, ReviewedWordStatusDTO.BANNED, null, countInSong, countInAllSongs);
+                categories.wordsWithStatus.add(added);
             } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.REJECTED) {
                 RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
                 categories.rejectedWords.add(suggestion);
                 List<String> suggestions = extractSuggestions(suggestion);
-                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs));
+                added = new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs);
+                categories.wordsWithStatus.add(added);
             } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.NOT_SURE) {
-                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.NOT_SURE, null, countInSong, countInAllSongs));
+                added = new WordWithStatus(word, ReviewedWordStatusDTO.NOT_SURE, null, countInSong, countInAllSongs);
+                categories.wordsWithStatus.add(added);
             } else {
-                // For accepted words, include category and notes; for "Foreign Language" include sourceLanguage and foreignLanguageType
-                // For context-specific words, include contextCategory, contextDescription, and notes
-                String category = null;
-                String notes = null;
-                String contextCategory = null;
-                String contextDescription = null;
-                LanguageDTO sourceLanguageDto = null;
-                Integer foreignLanguageTypeOrdinal = null;
-                if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.ACCEPTED) {
-                    category = reviewedWord.getCategory();
-                    notes = reviewedWord.getNotes();
-                    if (reviewedWord.getSourceLanguage() != null) {
-                        sourceLanguageDto = languageAssembler.createDto(reviewedWord.getSourceLanguage());
-                    }
-                    if (reviewedWord.getForeignLanguageType() != null) {
-                        foreignLanguageTypeOrdinal = reviewedWord.getForeignLanguageType().ordinal();
-                    }
-                } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.CONTEXT_SPECIFIC) {
-                    contextCategory = reviewedWord.getContextCategory();
-                    contextDescription = reviewedWord.getContextDescription();
-                    notes = reviewedWord.getNotes();
-                }
-                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.fromValue(status.name()), null, countInSong, countInAllSongs, category, notes, contextCategory, contextDescription, sourceLanguageDto, foreignLanguageTypeOrdinal));
+                added = addWordWithStatusFromReviewedWord(word, reviewedWord, countInSong, countInAllSongs, categories, false);
             }
         }
+        added.setAllOccurrencesAutoCapitalized(allOccurrencesAutoCapitalized);
+    }
+
+    /**
+     * Extracts category/notes/context metadata from a reviewed word (for ACCEPTED or CONTEXT_SPECIFIC)
+     * and adds a WordWithStatus to categories.
+     * @param inheritedFromCapitalizedReview true when the word is treated as reviewed only via the capitalized-word rule
+     * @return the created WordWithStatus (caller may set allOccurrencesAutoCapitalized)
+     */
+    private WordWithStatus addWordWithStatusFromReviewedWord(String word, ReviewedWord reviewedWord,
+                                                            Integer countInSong, int countInAllSongs,
+                                                            WordCategories categories,
+                                                            boolean inheritedFromCapitalizedReview) {
+        ReviewedWordStatus status = reviewedWord.getStatus();
+        String category = null;
+        String notes = null;
+        String contextCategory = null;
+        String contextDescription = null;
+        LanguageDTO sourceLanguageDto = null;
+        Integer foreignLanguageTypeOrdinal = null;
+        if (status == ReviewedWordStatus.ACCEPTED) {
+            category = reviewedWord.getCategory();
+            notes = reviewedWord.getNotes();
+            if (reviewedWord.getSourceLanguage() != null) {
+                sourceLanguageDto = languageAssembler.createDto(reviewedWord.getSourceLanguage());
+            }
+            if (reviewedWord.getForeignLanguageType() != null) {
+                foreignLanguageTypeOrdinal = reviewedWord.getForeignLanguageType().ordinal();
+            }
+        } else if (status == ReviewedWordStatus.CONTEXT_SPECIFIC) {
+            contextCategory = reviewedWord.getContextCategory();
+            contextDescription = reviewedWord.getContextDescription();
+            notes = reviewedWord.getNotes();
+        }
+        WordWithStatus wordWithStatus = new WordWithStatus(word, ReviewedWordStatusDTO.fromValue(status.name()), null, countInSong, countInAllSongs, category, notes, contextCategory, contextDescription, sourceLanguageDto, foreignLanguageTypeOrdinal);
+        wordWithStatus.setInheritedFromCapitalizedReview(inheritedFromCapitalizedReview);
+        categories.wordsWithStatus.add(wordWithStatus);
+        return wordWithStatus;
     }
 
     private static class WordCategories {

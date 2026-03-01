@@ -7,6 +7,16 @@
         {{getStatusIcon(wordWithStatus.status)}}
       </mat-icon>
       <div class="word-info">
+        <span *ngIf="wordWithStatus.inheritedFromCapitalizedReview" 
+              class="auto-cap-indicator"
+              [matTooltip]="'Treated as reviewed via capitalized form'">
+          Cap
+        </span>
+        <span *ngIf="wordWithStatus.allOccurrencesAutoCapitalized && !wordWithStatus.inheritedFromCapitalizedReview" 
+              class="auto-cap-indicator"
+              [matTooltip]="'All occurrences in this song are first-in-sentence or first-in-line'">
+          Cap
+        </span>
         <span class="word-text" [class.banned-word]="wordWithStatus.status === ReviewedWordStatus.BANNED"
               [class.rejected-word]="wordWithStatus.status === ReviewedWordStatus.REJECTED"
               [class.unreviewed-word]="wordWithStatus.status === ReviewedWordStatus.UNREVIEWED"

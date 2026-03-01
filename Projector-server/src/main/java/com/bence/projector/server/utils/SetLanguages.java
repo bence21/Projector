@@ -6,6 +6,7 @@ import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.utils.models.NormalizedWordBunch;
+import com.bence.projector.server.utils.models.SongWord;
 import com.bence.projector.server.utils.models.WordBunch;
 
 import java.io.BufferedReader;
@@ -276,8 +277,9 @@ public class SetLanguages {
                 if (!(song.isUploaded() && song.isDeleted() && !song.isBackUp() && !song.isReviewerErased())) {
                     continue;
                 }
-                List<String> words = new ArrayList<>();
-                addWordsInCollection(song, words);
+                List<SongWord> songWordsList = new ArrayList<>();
+                addWordsInCollection(song, songWordsList);
+                List<String> words = toWordStrings(songWordsList);
                 Map<Language, ContainsResult> countMap = new HashMap<>(languages.size());
                 for (Language language1 : languages) {
                     Collection<String> wordsByLanguage = languageMap.get(language1);
@@ -288,6 +290,14 @@ public class SetLanguages {
                 printDetailsToConsoleAndSetLanguage(songRepository, languages, languageMap, song, max, countMap);
             }
         }
+    }
+
+    private static List<String> toWordStrings(Collection<SongWord> songWords) {
+        List<String> words = new ArrayList<>(songWords.size());
+        for (SongWord sw : songWords) {
+            words.add(sw.getWord());
+        }
+        return words;
     }
 
     private static ContainsResult getContainsResult(List<String> words, Collection<String> wordsByLanguage) {
@@ -504,7 +514,13 @@ public class SetLanguages {
     private static void addWordByAlreadySetLanguage(Map<Language, Collection<String>> languageMap, Song song1) {
         Language language = song1.getLanguage();
         Collection<String> words = languageMap.get(language);
-        addWordsInCollection(song1, words);
+        addSongWordStringsTo(song1, words);
+    }
+
+    private static void addSongWordStringsTo(Song song, Collection<String> target) {
+        for (SongWord sw : getSongWords(song)) {
+            target.add(sw.getWord());
+        }
     }
 
     private static void addWordByAlreadySetLanguage_wordBunch(Map<Language, Map<String, WordBunch>> languageMap, Song song) {
@@ -514,8 +530,9 @@ public class SetLanguages {
     }
 
     private static void addWordsInCollection_wordBunch(Song song, Map<String, WordBunch> wordsBunch) {
-        Collection<String> wordsCollection = getSongWords(song);
-        for (String word : wordsCollection) {
+        Collection<SongWord> wordsCollection = getSongWords(song);
+        for (SongWord songWord : wordsCollection) {
+            String word = songWord.getWord();
             WordBunch wordBunch = wordsBunch.get(word);
             if (wordBunch == null) {
                 wordBunch = new WordBunch();
@@ -527,8 +544,8 @@ public class SetLanguages {
         }
     }
 
-    public static Collection<String> getSongWords(Song song) {
-        Collection<String> wordsCollection = new ArrayList<>();
+    public static Collection<SongWord> getSongWords(Song song) {
+        Collection<SongWord> wordsCollection = new ArrayList<>();
         addWordsInCollection(song, wordsCollection);
         return wordsCollection;
     }
@@ -572,17 +589,21 @@ public class SetLanguages {
         return Character.isWhitespace(currentChar) || currentChar == NON_BREAKING_SPACE;
     }
 
-    public static void addWordsInCollection(Song song, Collection<String> words) {
+    public static void addWordsInCollection(Song song, Collection<SongWord> words) {
         List<SongVerse> songVerses = song.getVerses();
         for (SongVerse songVerse : songVerses) {
             addWordsFromSongVerse(words, songVerse);
         }
     }
 
-    private static void addWordsFromSongVerse(Collection<String> words, SongVerse songVerse) {
+    private static final String SENTENCE_ENDERS = ".!?";
+
+    private static void addWordsFromSongVerse(Collection<SongWord> words, SongVerse songVerse) {
         List<String> split = splitOnWhitespace(songVerse.getText());
-        for (String word : split) {
-            char[] wordCharArray = word.toCharArray();
+        boolean nextWordIsFirstInSentence = true;
+        boolean nextWordIsFirstInLine = true;
+        for (String segment : split) {
+            char[] wordCharArray = segment.toCharArray();
             int start = 0;
             int end = wordCharArray.length - 1;
             // Find the first letter (skip leading non-letter characters)
@@ -596,9 +617,28 @@ public class SetLanguages {
             // If we found a valid range with at least one letter
             if (start <= end) {
                 String wordWithoutNonLetters = getWordWithoutNonLetters(wordCharArray, start, end);
-                words.add(wordWithoutNonLetters);
+                words.add(new SongWord(wordWithoutNonLetters, nextWordIsFirstInLine, nextWordIsFirstInSentence));
+                nextWordIsFirstInLine = false;
+                nextWordIsFirstInSentence = segmentEndsWithSentenceEnder(segment, end);
+            }
+            // After processing this segment: if it contained a newline, the next word will be first in a new line
+            if (segment.indexOf('\n') >= 0) {
+                nextWordIsFirstInLine = true;
             }
         }
+    }
+
+    private static boolean segmentEndsWithSentenceEnder(String segment, int lastLetterIndex) {
+        if (lastLetterIndex + 1 >= segment.length()) {
+            return false;
+        }
+        String afterLastLetter = segment.substring(lastLetterIndex + 1);
+        for (int i = 0; i < SENTENCE_ENDERS.length(); i++) {
+            if (afterLastLetter.indexOf(SENTENCE_ENDERS.charAt(i)) >= 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void changeWordsInSongVerse(SongVerse songVerse, String from, String to) {

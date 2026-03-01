@@ -16,6 +16,7 @@ import com.bence.projector.server.backend.service.NormalizedWordBunchCacheServic
 import com.bence.projector.server.backend.service.ReviewedWordService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.utils.models.NormalizedWordBunch;
+import com.bence.projector.server.utils.models.SongWord;
 import com.bence.projector.server.utils.models.WordBunch;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -316,9 +317,9 @@ public class NormalizedWordResource {
     }
 
     private static boolean containsInSong(Song song, String word) {
-        Collection<String> songWords = getSongWords(song);
-        for (String songWord : songWords) {
-            if (songWord.equals(word)) {
+        Collection<SongWord> songWords = getSongWords(song);
+        for (SongWord songWord : songWords) {
+            if (songWord.getWord().equals(word)) {
                 return true;
             }
         }
@@ -380,9 +381,9 @@ public class NormalizedWordResource {
     private static long getWordCountInSongs(List<Song> songs, String word) {
         long count = 0;
         for (Song song : songs) {
-            Collection<String> songWords = getSongWords(song);
-            for (String songWord : songWords) {
-                if (songWord.equals(word)) {
+            Collection<SongWord> songWords = getSongWords(song);
+            for (SongWord songWord : songWords) {
+                if (songWord.getWord().equals(word)) {
                     ++count;
                 }
             }

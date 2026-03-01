@@ -15,6 +15,10 @@ public class WordWithStatus {
     private String contextDescription;
     private LanguageDTO sourceLanguage;
     private Integer foreignLanguageType;
+    /** True when this word is treated as reviewed only because the lowercase form is reviewed (capitalized-word rule). */
+    private Boolean inheritedFromCapitalizedReview;
+    /** True when every occurrence of this word in the song is in an auto-capitalized position (first in sentence or first in line). */
+    private Boolean allOccurrencesAutoCapitalized;
 
     public WordWithStatus() {
     }
@@ -155,6 +159,22 @@ public class WordWithStatus {
 
     public void setForeignLanguageType(Integer foreignLanguageType) {
         this.foreignLanguageType = foreignLanguageType;
+    }
+
+    public Boolean getInheritedFromCapitalizedReview() {
+        return inheritedFromCapitalizedReview;
+    }
+
+    public void setInheritedFromCapitalizedReview(Boolean inheritedFromCapitalizedReview) {
+        this.inheritedFromCapitalizedReview = inheritedFromCapitalizedReview;
+    }
+
+    public Boolean getAllOccurrencesAutoCapitalized() {
+        return allOccurrencesAutoCapitalized;
+    }
+
+    public void setAllOccurrencesAutoCapitalized(Boolean allOccurrencesAutoCapitalized) {
+        this.allOccurrencesAutoCapitalized = allOccurrencesAutoCapitalized;
     }
 
     private String statusSymbol() {

@@ -6,6 +6,7 @@ import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ReviewedWordService;
 import com.bence.projector.server.backend.service.SongService;
+import com.bence.projector.server.utils.models.SongWord;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -134,8 +135,9 @@ public class AutoAcceptWordsFromPublicSongsUtil {
             Song song,
             ExistingReviewedWords existing,
             Map<String, Integer> wordCounts) {
-        Collection<String> songWords = getSongWords(song);
-        for (String word : songWords) {
+        Collection<SongWord> songWords = getSongWords(song);
+        for (SongWord songWord : songWords) {
+            String word = songWord.getWord();
             if (word == null || word.isEmpty()) {
                 continue;
             }

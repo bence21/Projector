@@ -1,6 +1,7 @@
 package com.bence.projector.server.backend.model;
 
 import com.bence.projector.server.utils.AppProperties;
+import com.bence.projector.server.utils.models.SongWord;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -16,6 +17,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.bence.projector.server.utils.MemoryUtil.getEmptyList;
 import static com.bence.projector.server.utils.SetLanguages.addWordsInCollection;
@@ -73,7 +75,7 @@ public class Song extends AbstractModel {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "song")
     private List<FavouriteSong> favouriteSongs;
     @Transient
-    private Collection<String> wordsCollection;
+    private Collection<SongWord> wordsCollection;
     @Transient
     private HashMap<String, Boolean> wordHashMap;
     @Transient
@@ -597,7 +599,7 @@ public class Song extends AbstractModel {
             this.wordsCollection = new ArrayList<>();
             addWordsInCollection(this, wordsCollection);
         }
-        return wordsCollection;
+        return wordsCollection.stream().map(SongWord::getWord).collect(Collectors.toList());
     }
 
     public HashMap<String, Boolean> getWordHashMap() {

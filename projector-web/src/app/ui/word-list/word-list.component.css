@@ -104,6 +104,18 @@
   color: #3f51b5;
 }
 
+.auto-cap-indicator {
+  display: inline-block;
+  font-size: 0.65em;
+  font-weight: 500;
+  padding: 2px 5px;
+  margin-right: 6px;
+  border-radius: 4px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  letter-spacing: 0.02em;
+}
+
 .good-word {
   color: #4caf50;
 }
