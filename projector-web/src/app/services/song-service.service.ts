@@ -154,6 +154,7 @@ export class Song extends BaseModel {
   verseOrderList: number[];
   createdByEmail: string;
   backUpSongId: string;
+  isBackUp?: boolean;
   lastModifiedByUserEmail: string;
   commonWordsCount = 0;
   commonCharacterCount = 0;

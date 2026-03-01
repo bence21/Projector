@@ -8,12 +8,14 @@
       <span *ngIf="!loading">
         Total: {{counts.total}} | 
         <span *ngIf="counts.good > 0" style="color: green;">✓ {{counts.good}}</span>
-        <span *ngIf="counts.good > 0 && (counts.unreviewed > 0 || counts.banned > 0 || counts.rejected > 0)"> | </span>
+        <span *ngIf="counts.good > 0 && (counts.unreviewed > 0 || counts.banned > 0 || counts.rejected > 0 || counts.notSure > 0)"> | </span>
         <span *ngIf="counts.unreviewed > 0" style="color: orange;">⚠ {{counts.unreviewed}}</span>
         <span *ngIf="counts.unreviewed > 0 && (counts.banned > 0 || counts.rejected > 0)"> | </span>
         <span *ngIf="counts.banned > 0" style="color: red;">✗ {{counts.banned}}</span>
         <span *ngIf="counts.banned > 0 && counts.rejected > 0"> | </span>
         <span *ngIf="counts.rejected > 0" style="color: #ff9800;">⚠ {{counts.rejected}}</span>
+        <span *ngIf="counts.notSure > 0 && (counts.good > 0 || counts.unreviewed > 0 || counts.banned > 0 || counts.rejected > 0)"> | </span>
+        <span *ngIf="counts.notSure > 0" style="color: #757575;">? {{counts.notSure}}</span>
       </span>
       <span *ngIf="loading">Loading...</span>
       <button *ngIf="hasChanges && !loading" 
@@ -57,17 +59,23 @@
         <mat-icon class="filter-icon-rejected">warning</mat-icon>
         Rejected ({{counts.rejected}})
       </button>
+      <button *ngIf="counts.notSure > 0" mat-button [class.active]="filterStatus === ReviewedWordStatus.NOT_SURE" (click)="filterStatus = ReviewedWordStatus.NOT_SURE">
+        <mat-icon class="filter-icon-unreviewed">info</mat-icon>
+        Not sure ({{counts.notSure}})
+      </button>
     </div>
 
     <!-- Word list -->
     <app-word-list
       [words]="getFilteredWords()"
       [hasReviewerRole]="hasReviewerRole"
+      [songIsPublic]="isCurrentSongPublic"
       (goodClick)="markAsGood($event)"
       (contextSpecificClick)="markAsContextSpecific($event)"
       (acceptedClick)="markAsAccepted($event)"
       (bannedClick)="markAsBanned($event)"
-      (rejectedClick)="markAsRejected($event)">
+      (rejectedClick)="markAsRejected($event)"
+      (notSureClick)="markAsNotSure($event)">
     </app-word-list>
   </div>
 </mat-expansion-panel>

@@ -8,7 +8,8 @@ export enum ReviewedWordStatus {
   ACCEPTED = 'ACCEPTED',
   REJECTED = 'REJECTED',
   BANNED = 'BANNED',
-  AUTO_ACCEPTED_FROM_PUBLIC = 'AUTO_ACCEPTED_FROM_PUBLIC'
+  AUTO_ACCEPTED_FROM_PUBLIC = 'AUTO_ACCEPTED_FROM_PUBLIC',
+  NOT_SURE = 'NOT_SURE'
 }
 
 export class ReviewedWord extends BaseModel {

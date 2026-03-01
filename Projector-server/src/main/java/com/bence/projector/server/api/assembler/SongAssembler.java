@@ -58,6 +58,7 @@ public class SongAssembler implements GeneralAssembler<Song, SongDTO> {
         } else {
             songDTO.setBackUpSongId(null);
         }
+        songDTO.setIsBackUp(song.isBackUp());
         User lastModifiedBy = song.getLastModifiedBy();
         if (lastModifiedBy != null) {
             songDTO.setLastModifiedByUserEmail(lastModifiedBy.getEmail());

@@ -31,11 +31,14 @@
         [words]="unreviewedWordsWithStatus"
         [hasReviewerRole]="hasReviewerRole"
         [disabled]="inputPaused"
+        [songIsPublic]="isCurrentSongPublic"
+        [showSuggestions]="false"
         (goodClick)="markAsGood($event)"
         (contextSpecificClick)="markAsContextSpecific($event)"
         (acceptedClick)="markAsAccepted($event)"
         (bannedClick)="markAsBanned($event)"
-        (rejectedClick)="markAsRejected($event)">
+        (rejectedClick)="markAsRejected($event)"
+        (notSureClick)="markAsNotSure($event)">
       </app-word-list>
     </div>
 
@@ -49,7 +52,9 @@
       <app-word-list
         [words]="bannedWordsWithStatus"
         [hasReviewerRole]="hasReviewerRole"
-        [disabled]="inputPaused">
+        [disabled]="inputPaused"
+        [songIsPublic]="isCurrentSongPublic"
+        [showSuggestions]="false">
       </app-word-list>
     </div>
 
@@ -64,11 +69,14 @@
         [words]="rejectedWordsWithStatus"
         [hasReviewerRole]="hasReviewerRole"
         [disabled]="inputPaused"
+        [songIsPublic]="isCurrentSongPublic"
+        [showSuggestions]="false"
         (goodClick)="markAsGood($event)"
         (contextSpecificClick)="markAsContextSpecific($event)"
         (acceptedClick)="markAsAccepted($event)"
         (bannedClick)="markAsBanned($event)"
-        (rejectedClick)="markAsRejected($event)">
+        (rejectedClick)="markAsRejected($event)"
+        (notSureClick)="markAsNotSure($event)">
       </app-word-list>
       <div *ngFor="let rejected of validationResult.rejectedWords" class="rejected-suggestion-selector" style="margin-top: 8px; margin-left: 16px;">
         <span *ngIf="rejected.primarySuggestion || (rejected.alternativeSuggestions && rejected.alternativeSuggestions.length > 0)">

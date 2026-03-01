@@ -87,6 +87,13 @@
   background-color: #ff9800;
 }
 
+.commonness-badge.only-in-this-song {
+  width: 12px;
+  height: 12px;
+  background-color: #d84315;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
 .source-language-badge {
   display: inline-block;
   font-size: 0.75em;

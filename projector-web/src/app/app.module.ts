@@ -119,6 +119,7 @@ import { MarkAsRejectedButtonComponent } from './ui/mark-as-rejected-button/mark
 import { MarkAsGoodButtonComponent } from './ui/mark-as-good-button/mark-as-good-button.component';
 import { MarkAsContextSpecificButtonComponent } from './ui/mark-as-context-specific-button/mark-as-context-specific-button.component';
 import { MarkAsAcceptedButtonComponent } from './ui/mark-as-accepted-button/mark-as-accepted-button.component';
+import { MarkAsNotSureButtonComponent } from './ui/mark-as-not-sure-button/mark-as-not-sure-button.component';
 import { ConfirmActionDialogComponent } from './ui/confirm-action-dialog/confirm-action-dialog.component';
 
 @NgModule({
@@ -224,6 +225,7 @@ export class PlunkerMaterialModule {
     MarkAsGoodButtonComponent,
     MarkAsContextSpecificButtonComponent,
     MarkAsAcceptedButtonComponent,
+    MarkAsNotSureButtonComponent,
     ConfirmActionDialogComponent,
   ],
   imports: [

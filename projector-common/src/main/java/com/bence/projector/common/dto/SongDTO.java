@@ -21,6 +21,7 @@ public class SongDTO extends BaseDTO {
     private String author;
     private List<Short> verseOrderList;
     private String backUpSongId;
+    private Boolean isBackUp;
     private String lastModifiedByUserEmail;
     private String verseOrder;
     private Boolean reviewerErased;
@@ -174,6 +175,14 @@ public class SongDTO extends BaseDTO {
 
     public void setBackUpSongId(String backUpSongId) {
         this.backUpSongId = backUpSongId;
+    }
+
+    public Boolean getIsBackUp() {
+        return isBackUp;
+    }
+
+    public void setIsBackUp(Boolean isBackUp) {
+        this.isBackUp = isBackUp;
     }
 
     public String getLastModifiedByUserEmail() {

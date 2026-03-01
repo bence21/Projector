@@ -10,6 +10,7 @@ import { WordReviewHelperService } from '../../services/word-review-helper.servi
 import { ReviewedWordStatus } from '../../models/reviewedWord';
 import { MatSnackBar } from '@angular/material';
 import { AuthService } from '../../services/auth.service';
+import { isSongPublic } from '../../util/song-public.util';
 
 @Component({
   selector: 'app-song-word-list-panel',
@@ -29,6 +30,11 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
   get song(): Song {
     return this._song;
   }
+
+  get isCurrentSongPublic(): boolean {
+    return this.song != null && isSongPublic(this.song);
+  }
+
   @Input() language: Language;
   @Input() hasChanges: boolean = false;
   @Output() refreshRequested = new EventEmitter<void>();
@@ -54,7 +60,8 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     good: 0,
     unreviewed: 0,
     banned: 0,
-    rejected: 0
+    rejected: 0,
+    notSure: 0
   };
 
   hasReviewerRole = false;
@@ -122,7 +129,8 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       good: this.words.filter(w => SongWordListPanelComponent.isGoodStatus(w.status)).length,
       unreviewed: this.words.filter(w => w.status === ReviewedWordStatus.UNREVIEWED).length,
       banned: this.words.filter(w => w.status === ReviewedWordStatus.BANNED).length,
-      rejected: this.words.filter(w => w.status === ReviewedWordStatus.REJECTED).length
+      rejected: this.words.filter(w => w.status === ReviewedWordStatus.REJECTED).length,
+      notSure: this.words.filter(w => w.status === ReviewedWordStatus.NOT_SURE).length
     };
 
     // Reset filter to 'all' if current filter has no items
@@ -136,6 +144,8 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
         currentCount = this.counts.banned;
       } else if (this.filterStatus === ReviewedWordStatus.REJECTED) {
         currentCount = this.counts.rejected;
+      } else if (this.filterStatus === ReviewedWordStatus.NOT_SURE) {
+        currentCount = this.counts.notSure;
       }
 
       if (currentCount === 0) {
@@ -149,8 +159,9 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       case ReviewedWordStatus.BANNED: return 0;
       case ReviewedWordStatus.REJECTED: return 1;
       case ReviewedWordStatus.UNREVIEWED: return 2;
+      case ReviewedWordStatus.NOT_SURE: return 3;
       default:
-        return SongWordListPanelComponent.isGoodStatus(status) ? 3 : 4;
+        return SongWordListPanelComponent.isGoodStatus(status) ? 4 : 5;
     }
   }
 
@@ -199,6 +210,14 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     });
   }
 
+  markAsNotSure(word: string) {
+    this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.NOT_SURE, {
+      language: this.language,
+      word: word,
+      onSuccess: () => this.loadWords()
+    });
+  }
+
   markAsGood(word: string) {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REVIEWED_GOOD, {
       language: this.language,
@@ -232,6 +251,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
         return 'verified';
       case ReviewedWordStatus.UNREVIEWED: return 'info';
+      case ReviewedWordStatus.NOT_SURE: return 'info';
       case ReviewedWordStatus.BANNED: return 'error';
       case ReviewedWordStatus.REJECTED: return 'warning';
       default: return 'help';
@@ -263,6 +283,8 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       case ReviewedWordStatus.REJECTED:
         return 'status-icon-rejected';
       case ReviewedWordStatus.UNREVIEWED:
+        return 'status-icon-unreviewed';
+      case ReviewedWordStatus.NOT_SURE:
         return 'status-icon-unreviewed';
       default:
         return '';
@@ -329,6 +351,9 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
         break;
       case ReviewedWordStatus.UNREVIEWED:
         tooltip = 'Unreviewed';
+        break;
+      case ReviewedWordStatus.NOT_SURE:
+        tooltip = 'Not sure';
         break;
       default:
         tooltip = 'Unknown Status';

@@ -11,6 +11,7 @@ import { AuthService } from '../../services/auth.service';
 import { ReviewedWordStatus } from '../../models/reviewedWord';
 import { Song } from '../../services/song-service.service';
 import { SongWordValidationService } from '../../services/song-word-validation.service';
+import { isSongPublic } from '../../util/song-public.util';
 
 @Component({
   selector: 'app-song-word-validation-dialog',
@@ -68,6 +69,10 @@ export class SongWordValidationDialogComponent implements OnInit {
   private updateHasReviewerRole(): void {
     const user = this.auth.getUser();
     this.hasReviewerRole = !!(user && this.language && user.hasReviewerRoleForLanguage(this.language));
+  }
+
+  get isCurrentSongPublic(): boolean {
+    return this.song != null && isSongPublic(this.song);
   }
 
   getWordWithStatus(word: string, status: ReviewedWordStatus, rejectedWord?: RejectedWordSuggestion): WordWithStatus {
@@ -206,6 +211,14 @@ export class SongWordValidationDialogComponent implements OnInit {
 
   markAsRejected(word: string) {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REJECTED, {
+      language: this.language,
+      word: word,
+      onSuccess: () => this.removeWordFromIssues(word)
+    });
+  }
+
+  markAsNotSure(word: string) {
+    this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.NOT_SURE, {
       language: this.language,
       word: word,
       onSuccess: () => this.removeWordFromIssues(word)

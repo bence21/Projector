@@ -441,7 +441,6 @@ export class EditSongComponent implements OnInit {
         i = i + 1;
       }
     }
-    this.song.deleted = false;
     let url = formValue.youtubeUrl;
     this.song.youtubeUrl = null;
     if (url) {
@@ -698,6 +697,7 @@ export class EditSongComponent implements OnInit {
   }
 
   private updateSong() {
+    this.song.deleted = false;
     const role = this.auth.getUser().getRolePath();
     this.songService.updateSong(role, this.song).subscribe(
       () => {

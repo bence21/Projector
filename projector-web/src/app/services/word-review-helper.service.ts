@@ -50,6 +50,8 @@ export class WordReviewHelperService {
         return 'accepted';
       case ReviewedWordStatus.CONTEXT_SPECIFIC:
         return 'context-specific';
+      case ReviewedWordStatus.NOT_SURE:
+        return 'not sure';
       default:
         return 'reviewed';
     }

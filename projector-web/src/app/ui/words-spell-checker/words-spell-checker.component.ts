@@ -397,6 +397,17 @@ export class WordsSpellCheckerComponent implements OnInit {
     });
   }
 
+  /**
+   * Marks a word as not sure (NOT_SURE status).
+   */
+  markAsNotSure(row: NormalizedWordBunchRow) {
+    this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.NOT_SURE, {
+      language: this.selectedLanguage,
+      word: row.word,
+      onSuccess: () => this.onFilterChange()
+    });
+  }
+
   private getFilterTypeFromString(filterTypeString: string): NormalizedWordBunchFilterType | null {
     switch (filterTypeString) {
       case 'banned':
@@ -413,6 +424,8 @@ export class WordsSpellCheckerComponent implements OnInit {
         return NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_PUBLIC;
       case 'unreviewed':
         return NormalizedWordBunchFilterType.UNREVIEWED;
+      case 'not-sure':
+        return NormalizedWordBunchFilterType.NOT_SURE;
       default:
         return null;
     }

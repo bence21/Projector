@@ -163,6 +163,8 @@ public class SongWordValidationService {
                 categories.rejectedWords.add(suggestion);
                 List<String> suggestions = extractSuggestions(suggestion);
                 categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs));
+            } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.NOT_SURE) {
+                categories.wordsWithStatus.add(new WordWithStatus(word, ReviewedWordStatusDTO.NOT_SURE, null, countInSong, countInAllSongs));
             } else {
                 // For accepted words, include category and notes; for "Foreign Language" include sourceLanguage and foreignLanguageType
                 // For context-specific words, include contextCategory, contextDescription, and notes
