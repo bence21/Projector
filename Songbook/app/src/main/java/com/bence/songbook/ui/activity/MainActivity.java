@@ -1520,7 +1520,12 @@ public class MainActivity extends BaseActivity
             return true;
         }
         List<SongCollectionElement> songCollectionElements = song.getSongCollectionElements();
-        for (SongCollectionElement songCollectionElement : songCollectionElements) {
+        if (songCollectionElements == null || songCollectionElements.isEmpty()) {
+            return false;
+        }
+        // Defensive copy to avoid ConcurrentModificationException when search runs on background thread
+        List<SongCollectionElement> snapshot = new ArrayList<>(songCollectionElements);
+        for (SongCollectionElement songCollectionElement : snapshot) {
             if (containsInSongCollectionElement(songCollectionElement, other, collectionName, ordinalNumber, ordinalNumberInt, strippedTitle)) {
                 return true;
             }

@@ -10,14 +10,15 @@ import com.bence.songbook.repository.dao.CustomDao;
 import com.bence.songbook.repository.exception.RepositoryException;
 
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 
 public class SongListElementRepositoryImpl extends BaseRepositoryImpl<SongListElement> implements SongListElementRepository {
     private static final String TAG = SongListElementRepositoryImpl.class.getSimpleName();
     /**
-     * Sentinel value for swap persistence; avoids unique constraint during reorder.
+     * ORMLite default table name for SongListElement (lowercase class name).
      */
-    private static final int SWAP_SENTINEL_NUMBER = -1;
+    private static final String TABLE_NAME = "songlistelement";
 
     private final CustomDao<SongListElement, Long> songListElementDao;
 
@@ -38,12 +39,16 @@ public class SongListElementRepositoryImpl extends BaseRepositoryImpl<SongListEl
     public void saveSwap(SongListElement first, SongListElement second, int firstNumber, int secondNumber) {
         try {
             songListElementDao.callBatchTasks((Callable<Void>) () -> {
-                first.setNumber(SWAP_SENTINEL_NUMBER);
-                songListElementDao.createOrUpdate(first);
-                second.setNumber(firstNumber);
-                songListElementDao.createOrUpdate(second);
-                first.setNumber(secondNumber);
-                songListElementDao.createOrUpdate(first);
+                // Atomic swap: update both rows in one statement to avoid UNIQUE constraint violations.
+                // IDs and numbers are from our model, not user input — safe to format.
+                String sql = String.format(Locale.US,
+                        "UPDATE %s SET number = CASE WHEN id = %d THEN %d WHEN id = %d THEN %d ELSE number END WHERE id IN (%d, %d)",
+                        TABLE_NAME,
+                        first.getId(), secondNumber,
+                        second.getId(), firstNumber,
+                        first.getId(), second.getId()
+                );
+                songListElementDao.executeRaw(sql);
                 return null;
             });
         } catch (Exception e) {
