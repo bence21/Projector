@@ -41,7 +41,7 @@ public class Updater {
     @SuppressWarnings("FieldCanBeLocal")
     private final int projectorVersionNumber = 99;
     private final Settings settings = Settings.getInstance();
-    private final String updaterPath = "data\\updater.zip";
+    private final String updaterPath = "data" + File.separator + "updater.zip";
 
     private Updater() {
     }
@@ -130,13 +130,12 @@ public class Updater {
                         });
                         return;
                     }
-                    FileOutputStream fos = new FileOutputStream("data\\update.zip");
+                    FileOutputStream fos = new FileOutputStream(new File("data", "update.zip"));
                     fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
                     fos.close();
                     if (downloadAndUnzipUpdater()) {
                         Platform.runLater(() -> {
                             alert2.close();
-                            try {
                                 MessageDialogController messageDialog = MessageDialogController.getMessageDialog(getClass(), "Update downloaded!");
                                 if (messageDialog == null) {
                                     return;
@@ -150,18 +149,26 @@ public class Updater {
                                     ApplicationUtil.getInstance().closeApplication();
                                     new Thread(() -> {
                                         try {
-                                            sleep(2000);
-                                            String command = "cmd /c updater.exe";
-                                            Runtime.getRuntime().exec(command);
+                                            Thread.sleep(2000);
+                                            boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+                                            
+                                            if (isWindows) {
+                                                Runtime.getRuntime().exec("cmd /c updater.exe");
+                                            } else {
+                                                File updaterFile = new File("updater");
+                                                if (updaterFile.exists()) {
+                                                    // Critical for Linux: set execution permission
+                                                    updaterFile.setExecutable(true);
+                                                    Runtime.getRuntime().exec("./updater");
+                                                } else {
+                                                    LOG.error("Updater binary not found at: " + updaterFile.getAbsolutePath());
+                                                }
+                                            }
                                         } catch (Exception e) {
                                             LOG.error(e.getMessage(), e);
                                         }
                                     }).start();
                                 });
-                                messageDialog.show();
-                            } catch (Exception e) {
-                                LOG.error(e.getMessage(), e);
-                            }
                         });
                     }
                 } catch (MalformedURLException | FileNotFoundException e) {

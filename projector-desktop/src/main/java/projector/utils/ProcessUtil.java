@@ -4,50 +4,46 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.File;
+import java.util.Optional;
 
 public class ProcessUtil {
     private static final Logger LOG = LoggerFactory.getLogger(ProcessUtil.class);
 
     public static boolean killOtherProcesses(boolean confirmBeforeKill) {
         try {
-            String processName = "Projector.exe";
+            // Determine the executable name based on OS
+            String os = System.getProperty("os.name").toLowerCase();
+            String processName = os.contains("win") ? "Projector.exe" : "Projector";
+            
             String targetFolder = System.getProperty("user.dir");
+            long currentPid = ProcessHandle.current().pid();
+            
+            // Define the full path we are looking for
+            // Using File to handle cross-platform separators (/ vs \)
+            String targetPath = new File(targetFolder, processName).getAbsolutePath();
 
-            // Get the current process ID
-            String currentPid = String.valueOf(ProcessHandle.current().pid());
-
-            // Step 1: Run the WMIC query
-            String query = "wmic process where \"name='" + processName + "'\" get ProcessId,ExecutablePath";
-            Process process = Runtime.getRuntime().exec(query);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            String line;
             boolean yesPressed = false;
-            // Step 2: Parse the output
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty() || line.startsWith("ExecutablePath") || line.startsWith("No Instance(s)")) {
-                    continue; // Skip headers and empty lines
-                }
 
-                // Split the line into ExecutablePath and ProcessId
-                String[] details = line.split("\\s{2,}"); // WMIC separates columns by multiple spaces
-                if (details.length == 2) {
-                    String executablePath = details[0];
-                    String pid = details[1];
+            // Step 1: Iterate through all processes natively
+            return ProcessHandle.allProcesses()
+                    .filter(ph -> ph.pid() != currentPid) // Don't kill ourselves
+                    .filter(ph -> ph.info().command().isPresent()) // Ensure we can see the path
+                    .filter(ph -> {
+                        String cmd = ph.info().command().get();
+                        // Check if the process path matches our target folder path
+                        return cmd.equalsIgnoreCase(targetPath);
+                    })
+                    .map(ph -> {
+                        long pid = ph.pid();
+                        String executablePath = ph.info().command().orElse("Unknown");
 
-                    // Step 3: Check if the process is from the target folder and not the current process
-                    if (executablePath.equalsIgnoreCase(targetFolder + "\\Projector.exe") && !pid.equals(currentPid)) {
-                        System.out.println("Found process in target folder: " + executablePath + " (PID: " + pid + ")");
-
-                        // Ask for confirmation if the flag is true
+                        // Step 2: Confirmation UI
                         if (confirmBeforeKill && !yesPressed) {
                             int response = JOptionPane.showConfirmDialog(
                                     null,
                                     "<html><body style='font-family: Arial; font-size: 12px;'>" +
-                                            "The application <b>Projector.exe</b> is already running in the current folder.<br>" +
+                                            "The application <b>" + processName + "</b> is already running in the current folder.<br>" +
                                             "<b>Details:</b><br>" +
                                             "Path: <i>" + executablePath + "</i><br>" +
                                             "Process ID (PID): <i>" + pid + "</i><br><br>" +
@@ -58,23 +54,22 @@ public class ProcessUtil {
                             );
 
                             if (response != JOptionPane.YES_OPTION) {
-                                return false;
-                            } else {
-                                yesPressed = true;
+                                return false; // User cancelled
                             }
                         }
 
-                        // Step 4: Terminate the process
-                        String killCommand = "taskkill /PID " + pid + " /F";
-                        Runtime.getRuntime().exec(killCommand);
-                        System.out.println("Terminated process: " + processName + " (PID: " + pid + ")");
-                    }
-                }
-            }
+                        // Step 3: Terminate the process
+                        boolean destroyed = ph.destroyForcibly();
+                        if (destroyed) {
+                            System.out.println("Terminated process: " + processName + " (PID: " + pid + ")");
+                        }
+                        return true;
+                    })
+                    .reduce(true, (acc, result) -> acc && result);
+
         } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
+            LOG.error("Failed to check or kill other processes: " + e.getMessage(), e);
         }
         return true;
     }
-
 }
