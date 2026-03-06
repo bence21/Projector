@@ -141,9 +141,17 @@
         <mat-row *matRowDef="let row; columns: displayedColumns;" class="example-row">
         </mat-row>
       </mat-table>
-      <mat-paginator [length]="totalRowCount" [pageSize]="pageE.pageSize"
-        [pageSizeOptions]="[5, 10, 25, 50, 100, 500]" [pageIndex]="pageE.pageIndex" (page)="pageEvent($event)">
-      </mat-paginator>
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <mat-paginator [length]="totalRowCount" [pageSize]="pageE.pageSize"
+          [pageSizeOptions]="[5, 10, 25, 50, 100, 500]" [pageIndex]="pageE.pageIndex" (page)="pageEvent($event)">
+        </mat-paginator>
+        <mat-form-field appearance="outline" style="max-width: 140px;" class="go-to-row-field">
+          <mat-label>Go to row</mat-label>
+          <input matInput type="number" [(ngModel)]="goToRowValue" min="1" [max]="totalRowCount"
+            placeholder="1–{{ totalRowCount }}" (keyup.enter)="goToRow()">
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="goToRow()" [disabled]="!totalRowCount">Go</button>
+      </div>
     </div>
 
   </mat-card-content>

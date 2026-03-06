@@ -119,6 +119,8 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
   lastCopiedWord: string | null = null;
   private copyHighlightTimeout: number | null = null;
   readonly WordWithStatus = WordWithStatus;
+  /** Row number (1-based) for "Go to row" input. */
+  goToRowValue: number | null = null;
 
   constructor(
     private normalizedWordBunchDataService: NormalizedWordBunchDataService,
@@ -251,6 +253,21 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
 
   pageEvent(pageEvent: PageEvent) {
     this.pageE = pageEvent;
+    this.loadCurrentPage();
+  }
+
+  /** Navigate to the page that contains the given 1-based row number. */
+  goToRow() {
+    if (this.totalRowCount === 0 || this.pageE == null) {
+      return;
+    }
+    const raw = this.goToRowValue;
+    if (raw == null || typeof raw !== 'number' || isNaN(raw)) {
+      return;
+    }
+    const clampedRow = Math.max(1, Math.min(Math.floor(raw), this.totalRowCount));
+    const newPageIndex = Math.floor((clampedRow - 1) / this.pageE.pageSize);
+    this.pageE.pageIndex = newPageIndex;
     this.loadCurrentPage();
   }
 
