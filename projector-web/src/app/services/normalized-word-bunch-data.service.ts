@@ -4,6 +4,7 @@ import { ApiService } from './api.service';
 import { Language } from '../models/language';
 import { NormalizedWordBunch } from '../models/normalizedWordBunch';
 import { ChangeWord } from '../models/changeWord';
+import { NormalizedWordBunchRowDTO } from '../models/normalized-word-bunch-row-dto';
 
 export enum NormalizedWordBunchFilterType {
   BANNED = 'BANNED',
@@ -56,6 +57,20 @@ export class NormalizedWordBunchDataService {
   getByFilter(language: Language, filterType: NormalizedWordBunchFilterType): Observable<NormalizedWordBunch[]> {
     const filterPath = getFilterPath(filterType);
     return this.api.getAll(NormalizedWordBunch, 'admin/api/normalizedWordBunches/' + language.uuid + '/' + filterPath);
+  }
+
+  /**
+   * Fetches a single page of spell checker rows (server-side pagination).
+   * filterType: 'all' | 'problematic' | 'banned' | 'reviewed-good' | etc.
+   */
+  getPage(
+    language: Language,
+    filterType: string,
+    pageIndex: number,
+    pageSize: number
+  ): Observable<{ content: NormalizedWordBunchRowDTO[]; totalElements: number }> {
+    const url = 'admin/api/normalizedWordBunches/' + language.uuid + '/page?page=' + pageIndex + '&size=' + pageSize + '&filter=' + encodeURIComponent(filterType);
+    return this.api.getPage(NormalizedWordBunchRowDTO, url);
   }
 
   clearCache(language: Language): Observable<any> {

@@ -141,7 +141,7 @@
         <mat-row *matRowDef="let row; columns: displayedColumns;" class="example-row">
         </mat-row>
       </mat-table>
-      <mat-paginator [length]="normalizedWordBunchRows.length" [pageSize]="pageE.pageSize"
+      <mat-paginator [length]="totalRowCount" [pageSize]="pageE.pageSize"
         [pageSizeOptions]="[5, 10, 25, 50, 100, 500]" [pageIndex]="pageE.pageIndex" (page)="pageEvent($event)">
       </mat-paginator>
     </div>

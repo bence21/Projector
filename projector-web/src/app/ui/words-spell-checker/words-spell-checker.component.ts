@@ -4,7 +4,7 @@ import { Observable } from 'rxjs/Observable';
 import { DataSource } from '@angular/cdk/table';
 import { MatDialog, MatSnackBar, PageEvent } from '@angular/material';
 import { NormalizedWordBunchDataService, NormalizedWordBunchFilterType } from '../../services/normalized-word-bunch-data.service';
-import { NormalizedWordBunch } from '../../models/normalizedWordBunch';
+import { NormalizedWordBunchRowDTO } from '../../models/normalized-word-bunch-row-dto';
 import { WordBunch } from '../../models/wordBunch';
 import { LanguageDataService } from '../../services/language-data.service';
 import { User } from '../../models/user';
@@ -109,6 +109,7 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
   dataSource: NormalizedWordBunchDataSource | null;
   pageE: PageEvent;
   normalizedWordBunchRows: NormalizedWordBunchRow[] = [];
+  totalRowCount: number = 0;
   languages: Language[] = [];
   selectedLanguage: Language;
   filterType: string = 'all'; // 'all', 'problematic', 'banned', 'reviewed-good', 'context-specific', 'accepted', 'rejected', 'auto-accepted-from-public', 'unreviewed'
@@ -169,76 +170,65 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Loads all word bunches for the selected language from the server.
-   * This method fetches fresh data and updates the table, including any reviewed word statuses.
-   * Called by onFilterChange() when no specific filter is active (filterType is 'all' or 'problematic').
+   * Loads the current page of spell checker rows from the server (server-side pagination).
+   * Called when filter/language changes or when user changes page/size.
    */
-  private loadData() {
+  private loadCurrentPage() {
+    if (!this.selectedLanguage) {
+      return;
+    }
     this.titleService.setTitle('Words spell checker - ' + this.selectedLanguage.nativeName);
-    this.normalizedWordBunchDataService.getAll(this.selectedLanguage).subscribe(
-      normalizedWordBunchs => {
-        this.normalizedWordBunchRows = this.getNormalizedWordBunchRows(normalizedWordBunchs);
-        if (this.filterType === 'problematic') {
-          this.normalizedWordBunchRows = this.normalizedWordBunchRows.filter(row => row.wordBunch.problematic);
+    this.normalizedWordBunchDataService.getPage(
+      this.selectedLanguage,
+      this.filterType,
+      this.pageE.pageIndex,
+      this.pageE.pageSize
+    ).subscribe(
+      result => {
+        this.normalizedWordBunchRows = result.content.map(dto => this.dtoToRow(dto));
+        this.totalRowCount = result.totalElements;
+        this.fillData(this.normalizedWordBunchRows);
+        this.updateSelectionState();
+        if (result.content.some((dto: NormalizedWordBunchRowDTO) => dto.correctionLengthMismatch)) {
+          this.snackBar.open(
+            'Source and target strings must have the same length; showing correction as-is. Tip: run WordCanonicalizationGenerator on the server (enable @Component then start the app) to canonicalize Unicode in words and songs.',
+            'Close',
+            { duration: 3000 }
+          );
         }
-        this.fillDataByPageEvent();
-      }, (err) => {
-        checkAuthenticationError(this.loadData, this, err, this.dialog);
-      });
+      },
+      (err) => {
+        checkAuthenticationError(this.loadCurrentPage, this, err, this.dialog);
+      }
+    );
+  }
+
+  /** Maps a paginated API row DTO to NormalizedWordBunchRow for the table. */
+  private dtoToRow(dto: NormalizedWordBunchRowDTO): NormalizedWordBunchRow {
+    const row = new NormalizedWordBunchRow();
+    row.nr = dto.nr;
+    row.confidencePercentage = dto.confidencePercentage;
+    row.word = dto.word;
+    row.count = dto.count;
+    row.correction = dto.correction;
+    row.song = dto.song ? new Song(dto.song) : null;
+    row.wordBunch = new WordBunch({
+      word: dto.word,
+      count: dto.count,
+      song: dto.song,
+      problematic: dto.problematic,
+      reviewedWord: dto.reviewedWord ? new ReviewedWord(dto.reviewedWord) : undefined,
+      allOccurrencesAutoCapitalized: dto.allOccurrencesAutoCapitalized
+    });
+    row.selected = false;
+    return row;
   }
 
   onLanguageChange(language: Language) {
     this.selectedLanguage = language;
     localStorage.setItem(SELECTED_LANGUGAGE, JSON.stringify(this.selectedLanguage));
-    this.loadData();
-  }
-
-  private applyCaseByReference(source: string, target: string): string {
-    if (source.length !== target.length) {
-      this.snackBar.open('Source and target strings must have the same length; showing correction as-is. Tip: run WordCanonicalizationGenerator on the server (enable @Component then start the app) to canonicalize Unicode in words and songs.', 'Close', {
-        duration: 3000
-      });
-      return target;
-    }
-
-    return target
-      .split('')
-      .map((char, index) => source[index] === source[index].toUpperCase()
-        ? char.toUpperCase()
-        : char.toLowerCase()
-      )
-      .join('');
-  }
-
-  private getNormalizedWordBunchRows(normalizedWordBunchs: NormalizedWordBunch[]): NormalizedWordBunchRow[] {
-    let normalizedWordBunchRows: NormalizedWordBunchRow[] = [];
-    let nr = 0;
-    for (const normalizedWordBunch of normalizedWordBunchs) {
-      for (const wordBunch of normalizedWordBunch.wordBunches) {
-        const normalizedWordBunchRow = new NormalizedWordBunchRow();
-        normalizedWordBunchRow.nr = ++nr;
-        normalizedWordBunchRow.confidencePercentage = normalizedWordBunch.ratio;
-        normalizedWordBunchRow.word = wordBunch.word;
-        normalizedWordBunchRow.count = wordBunch.count;
-        normalizedWordBunchRow.song = wordBunch.song;
-        normalizedWordBunchRow.wordBunch = wordBunch;
-        if (wordBunch.problematic) {
-          normalizedWordBunchRow.correction = this.applyCaseByReference(wordBunch.word, normalizedWordBunch.bestWord);
-        }
-        normalizedWordBunchRows.push(normalizedWordBunchRow);
-      }
-    }
-    return normalizedWordBunchRows;
-  }
-
-  private fillDataByPageEvent() {
-    const start = this.pageE.pageIndex * this.pageE.pageSize;
-    // sessionStorage.setItem(this.PAGE_INDEX, JSON.stringify(this.pageE.pageIndex));
-    // sessionStorage.setItem(this.PAGE_SIZE, JSON.stringify(this.pageE.pageSize));
-    const end = (this.pageE.pageIndex + 1) * this.pageE.pageSize;
-    const paginatedNormalizedWordBunchs = this.normalizedWordBunchRows.slice(start, end);
-    this.fillData(paginatedNormalizedWordBunchs);
-
+    this.pageE.pageIndex = 0;
+    this.loadCurrentPage();
   }
 
   private fillData(normalizedWordBunchs: NormalizedWordBunchRow[]) {
@@ -261,7 +251,7 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
 
   pageEvent(pageEvent: PageEvent) {
     this.pageE = pageEvent;
-    this.fillDataByPageEvent();
+    this.loadCurrentPage();
   }
 
   private toHex(value: number): string {
@@ -493,38 +483,12 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
 
   /**
    * Refreshes the data table based on the current filter.
-   * This method is called automatically after any mark operation (markAsGood, markAsAccepted, etc.)
-   * to ensure the table displays the latest data from the server, including updated status chips.
-   * 
-   * The refresh respects the current filter state:
-   * - If a filter is active (banned, reviewed-good, etc.), it calls loadWordsByFilter()
-   * - If no filter is active (all, problematic), it calls loadData()
+   * Resets to page 0 and loads the current page from the server (server-side pagination).
    */
   onFilterChange() {
     localStorage.setItem(WORDS_SPELL_CHECKER_FILTER_TYPE, this.filterType);
-    const filterTypeEnum = this.getFilterTypeFromString(this.filterType);
-    if (filterTypeEnum !== null) {
-      this.loadWordsByFilter(filterTypeEnum);
-    } else {
-      this.loadData();
-    }
-  }
-
-  /**
-   * Loads word bunches filtered by a specific status (banned, reviewed-good, context-specific, etc.) from the server.
-   * This method fetches fresh filtered data and updates the table with the latest reviewed word statuses.
-   * Called by onFilterChange() when a specific filter is active.
-   */
-  private loadWordsByFilter(filterType: NormalizedWordBunchFilterType) {
-    this.normalizedWordBunchDataService.getByFilter(this.selectedLanguage, filterType).subscribe(
-      normalizedWordBunchs => {
-        this.normalizedWordBunchRows = this.getNormalizedWordBunchRows(normalizedWordBunchs);
-        this.fillDataByPageEvent();
-      },
-      (err) => {
-        checkAuthenticationError(() => this.loadWordsByFilter(filterType), this, err, this.dialog);
-      }
-    );
+    this.pageE.pageIndex = 0;
+    this.loadCurrentPage();
   }
 
   toggleAllSelection() {

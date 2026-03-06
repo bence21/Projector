@@ -35,6 +35,21 @@ export class ApiService {
       .catch(ApiService.handleError);
   }
 
+  /**
+   * Fetches a paginated response: { content: T[], totalElements: number }.
+   * Content items are instantiated with the given class c.
+   */
+  public getPage<T>(c: new (data: any) => T, api_url: string): Observable<{ content: T[]; totalElements: number }> {
+    return this.http
+      .get(api_url)
+      .map(response => {
+        const json = response.json();
+        const content = (json.content || []).map((item: any) => new c(item));
+        return { content, totalElements: json.totalElements || 0 };
+      })
+      .catch(ApiService.handleError);
+  }
+
   public getAllByPost<T>(c: new (data) => T, api_url: string, t: T): Observable<T[]> {
     return this.http
       .post(api_url, t)

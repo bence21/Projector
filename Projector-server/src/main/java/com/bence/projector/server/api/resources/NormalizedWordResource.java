@@ -2,9 +2,12 @@ package com.bence.projector.server.api.resources;
 
 import com.bence.projector.common.dto.ChangeWordDTO;
 import com.bence.projector.common.dto.NormalizedWordBunchDTO;
+import com.bence.projector.common.dto.NormalizedWordBunchRowDTO;
+import com.bence.projector.common.dto.PageResponse;
 import com.bence.projector.common.dto.WordBunchDTO;
 import com.bence.projector.server.api.assembler.NormalizedWordBunchAssembler;
 import com.bence.projector.server.api.assembler.ReviewedWordAssembler;
+import com.bence.projector.server.api.assembler.SongTitleAssembler;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.ReviewedWord;
 import com.bence.projector.server.backend.model.ReviewedWordStatus;
@@ -55,6 +58,7 @@ public class NormalizedWordResource {
     private final ReviewedWordService reviewedWordService;
     private final ReviewedWordAssembler reviewedWordAssembler;
     private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
+    private final SongTitleAssembler songTitleAssembler;
 
     @Autowired
     public NormalizedWordResource(
@@ -64,7 +68,8 @@ public class NormalizedWordResource {
             NormalizedWordBunchAssembler normalizedWordBunchAssembler,
             ReviewedWordService reviewedWordService,
             ReviewedWordAssembler reviewedWordAssembler,
-            NormalizedWordBunchCacheService normalizedWordBunchCacheService
+            NormalizedWordBunchCacheService normalizedWordBunchCacheService,
+            SongTitleAssembler songTitleAssembler
     ) {
         this.songRepository = songRepository;
         this.songService = songService;
@@ -73,6 +78,7 @@ public class NormalizedWordResource {
         this.reviewedWordService = reviewedWordService;
         this.reviewedWordAssembler = reviewedWordAssembler;
         this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
+        this.songTitleAssembler = songTitleAssembler;
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}")
@@ -131,6 +137,163 @@ public class NormalizedWordResource {
         List<NormalizedWordBunch> unreviewed = filterUnreviewedBunches(allBunches, reviewedWords);
 
         return new ResponseEntity<>(normalizedWordBunchAssembler.createDtoList(unreviewed), HttpStatus.ACCEPTED);
+    }
+
+    /**
+     * Paginated endpoint for words spell checker. Returns a single page of flattened rows.
+     * Query params: page (0-based), size, filter (all | problematic | banned | reviewed-good | context-specific | accepted | rejected | not-sure | unreviewed | auto-accepted-from-public).
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/page")
+    public ResponseEntity<Object> getWordBunchesPage(
+            @PathVariable final String languageId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "50") int size,
+            @RequestParam(value = "filter", defaultValue = "all") String filter
+    ) {
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
+        }
+
+        List<NormalizedWordBunch> bunches = getFilteredBunchList(languageId, filter);
+        if (bunches == null) {
+            return new ResponseEntity<>("Invalid filter", HttpStatus.BAD_REQUEST);
+        }
+
+        List<SpellCheckerRowData> rows = flattenToRows(bunches);
+        if ("problematic".equalsIgnoreCase(filter)) {
+            rows = rows.stream().filter(r -> r.wb.isProblematic()).toList();
+        }
+
+        long totalElements = rows.size();
+        int from = page * size;
+        if (from >= totalElements) {
+            return new ResponseEntity<>(new PageResponse<>(new ArrayList<>(), totalElements), HttpStatus.ACCEPTED);
+        }
+        int to = (int) Math.min((long) (page + 1) * size, totalElements);
+        List<NormalizedWordBunchRowDTO> content = new ArrayList<>();
+        Map<String, ReviewedWord> reviewedWordMap = createReviewedWordMap(reviewedWordService.findAllByLanguage(language));
+        for (int i = from; i < to; i++) {
+            SpellCheckerRowData rowData = rows.get(i);
+            content.add(buildRowDto(i + 1, rowData, reviewedWordMap));
+        }
+
+        return new ResponseEntity<>(new PageResponse<>(content, totalElements), HttpStatus.ACCEPTED);
+    }
+
+    /**
+     * Returns flattened list of (NormalizedWordBunch, WordBunch) in display order.
+     */
+    private List<SpellCheckerRowData> flattenToRows(List<NormalizedWordBunch> bunches) {
+        List<SpellCheckerRowData> rows = new ArrayList<>();
+        for (NormalizedWordBunch nwb : bunches) {
+            for (WordBunch wb : nwb.getWordBunches()) {
+                rows.add(new SpellCheckerRowData(nwb, wb));
+            }
+        }
+        return rows;
+    }
+
+    private NormalizedWordBunchRowDTO buildRowDto(int nr, SpellCheckerRowData rowData, Map<String, ReviewedWord> reviewedWordMap) {
+        NormalizedWordBunch nwb = rowData.nwb;
+        WordBunch wb = rowData.wb;
+        NormalizedWordBunchRowDTO dto = new NormalizedWordBunchRowDTO();
+        dto.setNr(nr);
+        dto.setConfidencePercentage(nwb.getRatio());
+        dto.setWord(wb.getWord());
+        dto.setCount(wb.getCount());
+        dto.setProblematic(wb.isProblematic());
+        dto.setAllOccurrencesAutoCapitalized(wb.getCapCount() > 0 && wb.getCapCount() == wb.getCount());
+        if (wb.isProblematic() && nwb.getBestWord() != null) {
+            String source = wb.getWord();
+            String target = nwb.getBestWord();
+            if (source != null && target != null && source.length() != target.length()) {
+                dto.setCorrectionLengthMismatch(true);
+            }
+            dto.setCorrection(applyCaseByReference(source, target));
+        }
+        List<Song> songs = wb.getSongs();
+        if (songs != null && !songs.isEmpty()) {
+            dto.setSong(songTitleAssembler.createDto(songs.get(0)));
+        }
+        ReviewedWord rw = reviewedWordMap.get(wb.getWord());
+        if (rw != null) {
+            dto.setReviewedWord(reviewedWordAssembler.createDto(rw));
+        }
+        return dto;
+    }
+
+    private static String applyCaseByReference(String source, String target) {
+        if (source == null || target == null || source.length() != target.length()) {
+            return target;
+        }
+        StringBuilder sb = new StringBuilder(target.length());
+        for (int i = 0; i < source.length(); i++) {
+            char sc = source.charAt(i);
+            char tc = target.charAt(i);
+            sb.append(Character.isUpperCase(sc) ? Character.toUpperCase(tc) : Character.toLowerCase(tc));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Returns the list of NormalizedWordBunch for the given filter (same data as non-paginated endpoints).
+     */
+    private List<NormalizedWordBunch> getFilteredBunchList(String languageId, String filter) {
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return null;
+        }
+        if (filter == null) {
+            filter = "all";
+        }
+        switch (filter.toLowerCase()) {
+            case "all", "problematic":
+                return getAllWordBunchesForLanguage(language);
+            case "banned":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.BANNED);
+            case "reviewed-good":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.REVIEWED_GOOD);
+            case "context-specific":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.CONTEXT_SPECIFIC);
+            case "accepted":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.ACCEPTED);
+            case "rejected":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.REJECTED);
+            case "not-sure":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.NOT_SURE);
+            case "auto-accepted-from-public":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
+            case "unreviewed": {
+                Set<String> reviewedWords = getReviewedWordsSet(language);
+                List<NormalizedWordBunch> allBunches = getAllWordBunchesForLanguage(language);
+                return filterUnreviewedBunches(allBunches, reviewedWords);
+            }
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Returns list of NormalizedWordBunch for the given status (same logic as getWordBunchesByStatus but returns list only).
+     */
+    private List<NormalizedWordBunch> getBunchesByStatus(String languageId, ReviewedWordStatus status) {
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ArrayList<>();
+        }
+        List<ReviewedWord> reviewedWords = reviewedWordService.findAllByLanguageAndStatus(language, status);
+        Set<String> normalizedWords = getNormalizedWordsSet(reviewedWords);
+        if (normalizedWords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<NormalizedWordBunch> filtered = filterWordBunchesByNormalizedWords(language, normalizedWords);
+        Map<String, NormalizedWordBunch> normalizedWordToBunchMap = createNormalizedWordToBunchMap(filtered);
+        Set<String> exactWordsSet = createExactWordsSet(filtered);
+        for (ReviewedWord reviewedWord : reviewedWords) {
+            addReviewedWordToFiltered(filtered, reviewedWord, normalizedWordToBunchMap, exactWordsSet);
+        }
+        return filtered;
     }
 
     private ResponseEntity<Object> getWordBunchesByStatus(String languageId, ReviewedWordStatus status) {
@@ -532,5 +695,11 @@ public class NormalizedWordResource {
     public ResponseEntity<Object> clearCache(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
         clearCacheForLanguage(languageId);
         return new ResponseEntity<>("Cache cleared for language " + languageId, HttpStatus.ACCEPTED);
+    }
+
+    /**
+     * Holder for one flattened row before converting to DTO.
+     */
+    private record SpellCheckerRowData(NormalizedWordBunch nwb, WordBunch wb) {
     }
 }
