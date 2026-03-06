@@ -426,3 +426,59 @@ button.mat-raised-button:hover {
   background-color: #9e9e9e !important;
   color: white !important;
 }
+
+/* Paginator row: paginator + go-to-row inline, aligned to same baseline */
+.paginator-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-height: 56px;
+}
+
+.go-to-row-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -10px; /* pull up so input line matches paginator range label */
+}
+
+/* Compact form field so input aligns with paginator range label */
+.go-to-row-field {
+  max-width: 120px;
+}
+
+/* Shrink go-to-row mat-form-field to paginator row height so it aligns vertically */
+::ng-deep .paginator-row .go-to-row-field .mat-form-field-wrapper {
+  padding-bottom: 0;
+}
+
+::ng-deep .paginator-row .go-to-row-field .mat-form-field-flex {
+  align-items: center;
+}
+
+::ng-deep .paginator-row .go-to-row-field .mat-form-field-infix {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+
+::ng-deep .paginator-row .go-to-row-field .mat-form-field-subscript-wrapper {
+  display: none; /* no hint/error space so height matches paginator */
+}
+
+/* Go-to-row button: subtle, dark-theme friendly (only shown when input has value) */
+::ng-deep .go-to-row-btn.mat-stroked-button {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+::ng-deep .go-to-row-btn.mat-stroked-button:hover:not([disabled]) {
+  border-color: rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+::ng-deep .go-to-row-btn.mat-stroked-button[disabled] {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.4);
+}

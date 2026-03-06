@@ -141,16 +141,18 @@
         <mat-row *matRowDef="let row; columns: displayedColumns;" class="example-row">
         </mat-row>
       </mat-table>
-      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <div class="paginator-row">
         <mat-paginator [length]="totalRowCount" [pageSize]="pageE.pageSize"
           [pageSizeOptions]="[5, 10, 25, 50, 100, 500]" [pageIndex]="pageE.pageIndex" (page)="pageEvent($event)">
         </mat-paginator>
-        <mat-form-field appearance="outline" style="max-width: 140px;" class="go-to-row-field">
-          <mat-label>Go to row</mat-label>
-          <input matInput type="number" [(ngModel)]="goToRowValue" min="1" [max]="totalRowCount"
-            placeholder="1–{{ totalRowCount }}" (keyup.enter)="goToRow()">
-        </mat-form-field>
-        <button mat-raised-button color="primary" (click)="goToRow()" [disabled]="!totalRowCount">Go</button>
+        <div class="go-to-row-wrap">
+          <mat-form-field appearance="outline" class="go-to-row-field">
+            <mat-label>Go to row</mat-label>
+            <input matInput type="number" [(ngModel)]="goToRowValue" min="1" [max]="totalRowCount"
+              placeholder="1–{{ totalRowCount }}" (keyup.enter)="goToRow()">
+          </mat-form-field>
+          <button *ngIf="hasGoToRowValue" mat-stroked-button class="go-to-row-btn" (click)="goToRow()">Go</button>
+        </div>
       </div>
     </div>
 

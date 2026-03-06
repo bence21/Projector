@@ -122,6 +122,12 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
   /** Row number (1-based) for "Go to row" input. */
   goToRowValue: number | null = null;
 
+  /** True when the user has entered a value in the go-to-row input (button shown only then). */
+  get hasGoToRowValue(): boolean {
+    const v = this.goToRowValue;
+    return v != null && typeof v === 'number' && !isNaN(v) && v >= 1;
+  }
+
   constructor(
     private normalizedWordBunchDataService: NormalizedWordBunchDataService,
     private languageDataService: LanguageDataService,
