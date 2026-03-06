@@ -30,7 +30,7 @@ public class RequestValidationFilter implements Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
-        
+
         if (!(req instanceof HttpServletRequest request)) {
             chain.doFilter(req, res);
             return;
@@ -44,9 +44,9 @@ public class RequestValidationFilter implements Filter {
             // Log the issue but don't print stack trace to avoid noise
             String method = request.getMethod();
             String remoteAddr = request.getRemoteAddr();
-            System.out.println("WARN: Received request with null URI from " + remoteAddr + 
-                             " (method: " + (method != null ? method : "null") + ")");
-            
+            System.out.println("WARN: Received request with null URI from " + remoteAddr +
+                    " (method: " + (method != null ? method : "null") + ")");
+
             // Return a 400 Bad Request response
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             response.setContentType("text/plain");
@@ -54,13 +54,17 @@ public class RequestValidationFilter implements Filter {
             return;
         }
 
+        if (rejectSemicolonInUri(request, response, requestURI)) {
+            return;
+        }
+
         // Validate that the request method is not null
         String method = request.getMethod();
         if (method == null) {
             String remoteAddr = request.getRemoteAddr();
-            System.out.println("WARN: Received request with null method from " + remoteAddr + 
-                             " (URI: " + requestURI + ")");
-            
+            System.out.println("WARN: Received request with null method from " + remoteAddr +
+                    " (URI: " + requestURI + ")");
+
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             response.setContentType("text/plain");
             response.getWriter().write("Bad Request: Invalid HTTP method");
@@ -69,10 +73,10 @@ public class RequestValidationFilter implements Filter {
 
         // Reject WebDAV methods (PROPFIND, etc.) early to prevent Spring Security firewall exceptions
         // These are typically scanner probes and should be rejected silently
-        if ("PROPFIND".equals(method) || "PROPPATCH".equals(method) || 
-            "MKCOL".equals(method) || "COPY".equals(method) || 
-            "MOVE".equals(method) || "LOCK".equals(method) || 
-            "UNLOCK".equals(method)) {
+        if ("PROPFIND".equals(method) || "PROPPATCH".equals(method) ||
+                "MKCOL".equals(method) || "COPY".equals(method) ||
+                "MOVE".equals(method) || "LOCK".equals(method) ||
+                "UNLOCK".equals(method)) {
             response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             response.setContentType("text/plain");
             response.getWriter().write("Method Not Allowed");
@@ -81,6 +85,24 @@ public class RequestValidationFilter implements Filter {
 
         // Request is valid, continue with the filter chain
         chain.doFilter(req, res);
+    }
+
+    /**
+     * Rejects URLs containing semicolon (potentially malicious) before any response is committed.
+     *
+     * @return true if the request was rejected, false otherwise
+     */
+    private boolean rejectSemicolonInUri(HttpServletRequest request, HttpServletResponse response, String requestURI)
+            throws IOException {
+        if (!requestURI.contains(";")) {
+            return false;
+        }
+        String remoteAddr = request.getRemoteAddr();
+        System.out.println("WARN: Rejected request with semicolon in URI from " + remoteAddr + " (URI: " + requestURI + ")");
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        response.setContentType("text/plain");
+        response.getWriter().write("Bad Request: Invalid URL");
+        return true;
     }
 
 }

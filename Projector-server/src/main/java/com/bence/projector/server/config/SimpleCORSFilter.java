@@ -55,29 +55,34 @@ public class SimpleCORSFilter implements Filter {
         } catch (RequestRejectedException e) {
             String message = e.getMessage();
             // Suppress logging for PROPFIND and other WebDAV methods (scanner probes)
-            if (message != null && (message.contains("PROPFIND") || 
-                message.contains("PROPPATCH") || message.contains("MKCOL") ||
-                message.contains("COPY") || message.contains("MOVE") ||
-                message.contains("LOCK") || message.contains("UNLOCK"))) {
+            if (message != null && (message.contains("PROPFIND") ||
+                    message.contains("PROPPATCH") || message.contains("MKCOL") ||
+                    message.contains("COPY") || message.contains("MOVE") ||
+                    message.contains("LOCK") || message.contains("UNLOCK"))) {
                 // Silently reject WebDAV methods with HTTP 405 (Method Not Allowed)
                 response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            } else if (message != null && message.contains(";")) {
+                // Semicolon in URL: already rejected by RequestValidationFilter; avoid duplicate log
+                setStatusIfNotCommitted(response, HttpServletResponse.SC_BAD_REQUEST);
             } else {
                 // Log other RequestRejectedException errors
                 System.out.println("RequestRejectedException: " + message);
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                setStatusIfNotCommitted(response, HttpServletResponse.SC_BAD_REQUEST);
             }
         } catch (IllegalStateException e) {
             System.out.println("IllegalStateException: " + e.getMessage());
-            if (!response.isCommitted()) {
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            }
+            setStatusIfNotCommitted(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         } catch (NullPointerException e) {
             // Log with more context
-            System.out.println("NullPointerException in filter chain: " + e.getMessage() + 
-                             " (URI: " + requestURI + ", Method: " + request.getMethod() + ")");
-            if (!response.isCommitted()) {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            }
+            System.out.println("NullPointerException in filter chain: " + e.getMessage() +
+                    " (URI: " + requestURI + ", Method: " + request.getMethod() + ")");
+            setStatusIfNotCommitted(response, HttpServletResponse.SC_BAD_REQUEST);
+        }
+    }
+
+    private void setStatusIfNotCommitted(HttpServletResponse response, int status) {
+        if (!response.isCommitted()) {
+            response.setStatus(status);
         }
     }
 
