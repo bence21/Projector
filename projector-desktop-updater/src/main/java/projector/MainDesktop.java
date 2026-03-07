@@ -55,8 +55,20 @@ public class MainDesktop extends Application {
             stage.show();
             if (unzipUpdate(mainController)) {
                 stage.close();
-                String command = "cmd /c Projector.exe";
-                Runtime.getRuntime().exec(command);
+                boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+    
+                if (isWindows) {
+                    Runtime.getRuntime().exec("cmd /c Projector.exe");
+                } else {
+                    File projectorFile = new File("Projector");
+                    if (projectorFile.exists()) {
+                        // Ensure Linux binary is executable
+                        projectorFile.setExecutable(true);
+                        Runtime.getRuntime().exec("./Projector");
+                    } else {
+                        LOG.error("Projector binary not found at: " + projectorFile.getAbsolutePath());
+                    }
+                }
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);

@@ -20,6 +20,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +38,8 @@ public class FirstSetupController {
     private Listener listener;
 
     private static String replaceDirectorySeparator(String s) {
-        return s.replace("/", "\\");
+        // return s.replace("/", "\\");
+        return s;
     }
 
     private static void logErrorStream(int result, Process process) throws IOException {
@@ -112,7 +114,8 @@ public class FirstSetupController {
 
     private void tryToFindWantedFiles(List<WantedFile> wantedFiles, String directory) {
         for (WantedFile wantedFile : wantedFiles) {
-            File file = new File(directory + "/" + wantedFile.getFilePath());
+            // Use File constructor for OS-agnostic path joining
+            File file = new File(directory, wantedFile.getFilePath());
             wantedFile.setFound(file.exists());
         }
         if (allFilesFound(wantedFiles)) {
@@ -157,19 +160,19 @@ public class FirstSetupController {
             if (!wantedFile.isFound()) {
                 continue;
             }
-            String fromPath = directory + "/" + wantedFile.getFilePath();
-            String toPath = wantedFile.getFilePath();
-            fromPath = replaceDirectorySeparator(fromPath);
-            toPath = replaceDirectorySeparator(toPath);
-            String command = "cmd /c copy /Y " + fromPath + " " + toPath;
             try {
-                // with ProcessBuilder it was not good
-                Process process = Runtime.getRuntime().exec(command);
-                int result = process.waitFor();
-                logErrorStream(result, process);
-                wantedFile.setCopiedSuccessFully(result == 0);
-            } catch (IOException | InterruptedException e) {
-                LOG.error(e.getMessage(), e);
+                Path fromPath = Paths.get(directory, wantedFile.getFilePath());
+                Path toPath = Paths.get(wantedFile.getFilePath());
+                
+                // Ensure parent directories exist for the destination
+                ensureDirectory(toPath.getParent().toString());
+
+                // Native Java copy (Cross-platform)
+                Files.copy(fromPath, toPath, StandardCopyOption.REPLACE_EXISTING);
+                wantedFile.setCopiedSuccessFully(true);
+            } catch (IOException e) {
+                LOG.error("Failed to copy file: " + wantedFile.getFilePath(), e);
+                wantedFile.setCopiedSuccessFully(false);
             }
         }
         if (!warnIfNotAllFilesWasCopied(wantedFiles)) {
