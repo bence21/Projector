@@ -28,6 +28,16 @@ public class AppProperties {
         return osName.startsWith("Mac OS X") || osName.startsWith("Mac OS");
     }
 
+    public boolean isLinuxOs(){
+        String osName = System.getProperty("os.name");
+        return osName.startsWith("Linux");
+    }
+
+    public boolean isWindowsOs(){
+        String osName = System.getProperty("os.name");
+        return osName.startsWith("Windows");
+    }
+
     private String getDatabaseFolder_() {
         Object database = properties.get("database");
         if (database == null || ((String) database).isEmpty()) {
