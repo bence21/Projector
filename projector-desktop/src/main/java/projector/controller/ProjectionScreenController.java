@@ -33,6 +33,9 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaException;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -423,7 +426,8 @@ public class ProjectionScreenController {
             backgroundMediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
             backgroundMediaPlayer.setOnError(() -> {
                 if (backgroundMediaPlayer != null) {
-                    LOG.error("Background video error: {}", backgroundMediaPlayer.getError());
+                    MediaException error = backgroundMediaPlayer.getError();
+                    LOG.error("Background video error: {}", error != null ? error.getMessage() : "unknown");
                 }
                 Platform.runLater(() -> {
                     stopBackgroundMediaPlayer();
@@ -470,6 +474,32 @@ public class ProjectionScreenController {
         }
     }
 
+    private void pauseBackgroundMediaPlayer() {
+        try {
+            if (backgroundMediaPlayer != null) {
+                backgroundMediaPlayer.pause();
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to pause background media player", e);
+        }
+    }
+
+    private void resumeBackgroundMediaPlayer() {
+        try {
+            if (backgroundMediaPlayer == null) {
+                return;
+            }
+            MediaPlayer.Status status = backgroundMediaPlayer.getStatus();
+            if (status == MediaPlayer.Status.HALTED || status == MediaPlayer.Status.DISPOSED) {
+                LOG.warn("Cannot resume background media - invalid status: {}", status);
+                return;
+            }
+            backgroundMediaPlayer.play();
+        } catch (Exception e) {
+            LOG.error("Failed to resume background media player", e);
+        }
+    }
+
     public void setBlank(boolean isBlank) {
         setBlankLocally(isBlank);
     }
@@ -480,8 +510,26 @@ public class ProjectionScreenController {
         pane1.setVisible(!isBlank);
         blackCoverPane.setVisible(isBlank);
         setPaneBackground(Color.BLACK, blackCoverPane);
+        applyBlankToBackgroundVideo(isBlank);
+        if (previewProjectionScreenController != null) {
+            previewProjectionScreenController.setBlankLocally(isBlank);
+        }
         onViewChanged();
         onBlankChanged();
+    }
+
+    private void applyBlankToBackgroundVideo(boolean isBlank) {
+        if (isBlank) {
+            pauseBackgroundMediaPlayer();
+            hideBackgroundMediaView();
+        } else {
+            if (backgroundMediaPlayer != null) {
+                if (backgroundMediaView != null) {
+                    backgroundMediaView.setVisible(true);
+                }
+                resumeBackgroundMediaPlayer();
+            }
+        }
     }
 
     private void onBlankChanged() {
