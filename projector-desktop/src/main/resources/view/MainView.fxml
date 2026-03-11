@@ -47,6 +47,10 @@
                     <!--suppress JavaFxUnresolvedFxIdReference -->
                     <fx:include fx:id="utils" source="Utils.fxml"/>
                 </Tab>
+                <Tab fx:id="browserTab" closable="false" text="Browser">
+                    <!--suppress JavaFxUnresolvedFxIdReference -->
+                    <fx:include fx:id="browser" source="Browser.fxml"/>
+                </Tab>
                 <Tab fx:id="projectionScreensTab" closable="false" text="Projection screens">
                     <!--suppress JavaFxUnresolvedFxIdReference -->
                     <fx:include fx:id="projectionScreens" source="ProjectionScreens.fxml"/>

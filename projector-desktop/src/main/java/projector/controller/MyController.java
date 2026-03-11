@@ -70,6 +70,8 @@ public class MyController {
     @FXML
     private UtilsController utilsController;
     @FXML
+    private BrowserController browserController;
+    @FXML
     private ProjectionScreensController projectionScreensController;
     @SuppressWarnings("FieldCanBeLocal")
     @FXML
@@ -96,6 +98,8 @@ public class MyController {
     private Tab recentTab;
     @FXML
     private Tab galleryTab;
+    @FXML
+    private Tab browserTab;
     @FXML
     private Tab projectionScreensTab;
     private MainDesktop mainDesktop;
@@ -209,6 +213,8 @@ public class MyController {
                 projectionScreensController.lazyInitialize(projectionScreensTab);
             } else if (newValue.equals(galleryTab)) {
                 galleryController.onTabOpened();
+            } else if (newValue.equals(browserTab)) {
+                browserController.onTabOpened();
             }
         });
         tabPane.focusedProperty().addListener((observable, oldValue, newValue) -> {
