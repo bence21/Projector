@@ -2,11 +2,11 @@ package projector.controller.util;
 
 import javafx.application.Platform;
 import javafx.scene.image.Image;
-import javafx.scene.media.MediaPlayer;
 import projector.application.ProjectionType;
 import projector.controller.ProjectionScreenController;
 import projector.controller.ProjectionTextChangeListener;
 import projector.controller.listener.ProjectionScreenListener;
+import projector.controller.video.VideoPlayerStatus;
 import projector.model.Song;
 
 import java.util.ArrayList;
@@ -58,6 +58,10 @@ public class ProjectionScreensUtil {
 
     public List<ProjectionScreenHolder> getProjectionScreenHolders() {
         return projectionScreenHolders;
+    }
+
+    public ProjectionScreenHolder getProjectionScreenHolderWithSound() {
+        return projectionScreenHolders.isEmpty() ? null : projectionScreenHolders.get(0);
     }
 
     public ProjectionScreenHolder addProjectionScreenController(ProjectionScreenController projectionScreenController, String name) {
@@ -359,9 +363,54 @@ public class ProjectionScreensUtil {
     }
 
     public void pauseVideoOnAllScreens() {
+        if (projectionScreenHolders.isEmpty()) {
+            return;
+        }
+
+        if (!shouldSyncVideo()) {
+            pauseAllVideoPlayers();
+            return;
+        }
+
+        javafx.util.Duration masterTime = getMasterTimeFromScreenWithSound();
+        pauseAllVideoPlayers();
+
+        if (isValidMasterTime(masterTime)) {
+            synchronizeAllScreensToTime(masterTime);
+        }
+    }
+
+    private boolean shouldSyncVideo() {
+        return projector.controller.GalleryController.isMediaFile(fileImagePath);
+    }
+
+    private javafx.util.Duration getMasterTimeFromScreenWithSound() {
+        ProjectionScreenHolder holderWithSound = getProjectionScreenHolderWithSound();
+        if (holderWithSound == null) {
+            return null;
+        }
+
+        ProjectionScreenController controllerWithSound = holderWithSound.getProjectionScreenController();
+        if (controllerWithSound == null) {
+            return null;
+        }
+
+        return controllerWithSound.getVideoCurrentTime();
+    }
+
+    private void pauseAllVideoPlayers() {
         for (ProjectionScreenHolder projectionScreenHolder : projectionScreenHolders) {
             projectionScreenHolder.getProjectionScreenController().pauseVideoPlayer();
         }
+    }
+
+    private boolean isValidMasterTime(javafx.util.Duration masterTime) {
+        return masterTime != null && !masterTime.isUnknown();
+    }
+
+    private void synchronizeAllScreensToTime(javafx.util.Duration masterTime) {
+        final javafx.util.Duration finalMasterTime = masterTime;
+        Platform.runLater(() -> seekVideoOnAllScreens(finalMasterTime));
     }
 
     public void seekVideoOnAllScreens(javafx.util.Duration time) {
@@ -445,10 +494,10 @@ public class ProjectionScreensUtil {
         for (ProjectionScreenHolder holder : projectionScreenHolders) {
             ProjectionScreenController controller = holder.getProjectionScreenController();
             javafx.util.Duration currentTime = controller.getVideoCurrentTime();
-            MediaPlayer.Status status = controller.getVideoStatus();
+            VideoPlayerStatus status = controller.getVideoStatus();
 
             // Only consider playing screens
-            if (currentTime != null && status == MediaPlayer.Status.PLAYING) {
+            if (currentTime != null && status == VideoPlayerStatus.PLAYING) {
                 double volume = controller.getVideoVolume();
                 if (masterScreen == null) {
                     // First playing screen becomes master
@@ -480,10 +529,10 @@ public class ProjectionScreensUtil {
             }
 
             javafx.util.Duration currentTime = controller.getVideoCurrentTime();
-            MediaPlayer.Status status = controller.getVideoStatus();
+            VideoPlayerStatus status = controller.getVideoStatus();
 
             // Only sync screens that are playing
-            if (currentTime != null && status == MediaPlayer.Status.PLAYING) {
+            if (currentTime != null && status == VideoPlayerStatus.PLAYING) {
                 double timeDiff = Math.abs(currentTime.toSeconds() - finalMasterTime.toSeconds());
 
                 // If out of sync by more than threshold, resynchronize

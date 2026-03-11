@@ -3,6 +3,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Slider?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -12,7 +13,8 @@
             fx:controller="projector.controller.VideoViewerController">
     <center>
         <StackPane fx:id="mediaStackPane">
-            <MediaView fx:id="mediaView"/>
+            <!-- MediaView kept for backward compatibility, but videoNode will be added dynamically -->
+            <MediaView fx:id="mediaView" visible="false"/>
         </StackPane>
     </center>
     <bottom>
