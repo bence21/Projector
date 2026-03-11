@@ -33,8 +33,6 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -47,6 +45,7 @@ import javafx.stage.Popup;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.MainDesktop;
@@ -65,6 +64,9 @@ import projector.controller.util.PdfService;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreenHolder;
 import projector.controller.util.ProjectionScreensUtil;
+import projector.controller.video.VideoPlayerFactory;
+import projector.controller.video.VideoPlayerInterface;
+import projector.controller.video.VideoPlayerStatus;
 import projector.model.Bible;
 import projector.model.CustomCanvas;
 import projector.model.Song;
@@ -119,12 +121,12 @@ public class ProjectionScreenController {
     public BorderPane paneForMargins;
     public BorderPane contentPane;
     public StackPane paneForPadding;
-    public StackPane progressBarStackPane;
     public HBox nextSectionHBox;
     public HBox progressBarHBox;
     public BorderPane blackCoverPane;
     public BorderPane progressBarBackgroundBlack;
-    public MediaView mediaView;
+    public MediaView mediaView; // Keep for FXML compatibility, will be replaced by videoNode
+    private Node videoNode; // The actual video display node (ImageView for VLC, MediaView for JavaFX)
     public MediaView backgroundMediaView;
     private MediaPlayer backgroundMediaPlayer;
     private ExecutorService executorService = null;
@@ -177,7 +179,8 @@ public class ProjectionScreenController {
     private Image lastImage = null;
     private int setTextCounter = 0;
     private Monitor monitor;
-    private MediaPlayer mediaPlayer;
+    private VideoPlayerInterface videoPlayer;
+    private double currentVideoVolume = 0.0; // Track current volume for synchronization
     private Song nextScheduledSong;
 
     public static BackgroundImage getBackgroundImageByPath(String backgroundImagePath, int width, int height) {
@@ -234,11 +237,14 @@ public class ProjectionScreenController {
     }
 
     private ChangeListener<Number> getContentPaneSizeChangeListener() {
-        //noinspection CommentedOutCode
         return (observableValue, oldNumber, newNumber) -> {
             // if (false && !changedSignificantly(oldNumber, newNumber)) {
             //     return;
             // }
+            // Update video centering if a video is currently playing
+            if (videoPlayer != null && videoNode != null && videoNode.isVisible()) {
+                Platform.runLater(this::updateVideoCentering);
+            }
             repaint();
         };
     }
@@ -1169,7 +1175,12 @@ public class ProjectionScreenController {
 
     private void hideCanvas() {
         canvas.setVisible(false);
-        mediaView.setVisible(false);
+        if (videoNode != null) {
+            videoNode.setVisible(false);
+        }
+        if (mediaView != null) {
+            mediaView.setVisible(false);
+        }
         stopMediaPlayer();
     }
 
@@ -2111,9 +2122,11 @@ public class ProjectionScreenController {
 
     private void setImageComponentVisibility(boolean isCanvas) {
         canvas.setVisible(isCanvas);
-        mediaView.setVisible(!isCanvas);
-        if (!mediaView.isVisible()) {
-            stopMediaPlayer();
+        if (videoNode != null) {
+            videoNode.setVisible(!isCanvas);
+        }
+        if (mediaView != null) {
+            mediaView.setVisible(false); // Keep MediaView hidden, we use videoNode instead
         }
     }
 
@@ -2123,50 +2136,117 @@ public class ProjectionScreenController {
             return;
         }
         loadEmpty();
-        double width = contentPane.getWidth();
-        double height = contentPane.getHeight();
-        mediaView.setFitWidth(width);
-        mediaView.setFitHeight(height);
-        String videoURI = videoFile.toURI().toString();
 
-        Media media = new Media(videoURI);
+        // Stop and dispose existing player
+        stopMediaPlayer();
 
-        MediaPlayer mediaPlayer = getMediaPlayer(media);
-        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
-        mediaView.setMediaPlayer(mediaPlayer);
+        // Create new video player
+        videoPlayer = VideoPlayerFactory.createPlayer();
 
-        // Set volume based on whether this is the first projection screen
-        // Volume will be set by ProjectionScreensUtil when synchronizing, but we need to check here
-        // For now, mute by default - volume will be set via synchronization methods
-        mediaPlayer.setVolume(0.0);
+        // Get the video node and add it to the pane if not already added
+        videoNode = videoPlayer.getVideoNode();
+        if (videoNode != null && !pane.getChildren().contains(videoNode)) {
+            pane.getChildren().add(videoNode);
+        }
 
-        // Don't auto-play - video will start when play button is pressed in VideoViewerController
+        // Set up event listeners
+        videoPlayer.setOnReady(() -> Platform.runLater(this::updateVideoCentering));
+
+        videoPlayer.setOnError(() -> LOG.error("Video player error"));
+
+        // Set volume - will be set by ProjectionScreensUtil when synchronizing
+        videoPlayer.setVolume(0.0);
+        currentVideoVolume = 0.0;
+
+        // Load the video file
+        videoPlayer.load(path);
+
+        // Don't autoplay - video will start when play button is pressed in VideoViewerController
         // The playVideoOnAllScreens() method will be called to start playback
         setImageComponentVisibility(false);
     }
 
-    private MediaPlayer getMediaPlayer(Media media) {
-        stopMediaPlayer();
-        mediaPlayer = new MediaPlayer(media);
-        return mediaPlayer;
+    @SuppressWarnings("UnnecessaryLocalVariable")
+    private void updateVideoCentering() {
+        if (videoNode == null || contentPane == null) {
+            return;
+        }
+
+        // Get contentPane dimensions
+        double contentPaneWidth = contentPane.getWidth();
+        double contentPaneHeight = contentPane.getHeight();
+
+        // Handle cases where contentPane dimensions are invalid
+        if (contentPaneWidth <= 0 || contentPaneHeight <= 0) {
+            return;
+        }
+
+        // Get video dimensions from player
+        Duration duration = videoPlayer != null ? videoPlayer.getDuration() : null;
+        if (duration == null || duration.isUnknown()) {
+            // Fallback: use contentPane dimensions if video dimensions are unknown
+            if (videoNode instanceof MediaView mv) {
+                mv.setFitWidth(contentPaneWidth);
+                mv.setFitHeight(contentPaneHeight);
+            } else if (videoNode instanceof javafx.scene.image.ImageView iv) {
+                iv.setFitWidth(contentPaneWidth);
+                iv.setFitHeight(contentPaneHeight);
+            }
+            videoNode.setLayoutX(0);
+            videoNode.setLayoutY(0);
+            return;
+        }
+
+        // Try to get video dimensions - for VLC we may need to wait for video to load
+        // For now, use contentPane dimensions and let preserveRatio handle aspect ratio
+        // Default to 16:9
+        double scaledWidth = contentPaneWidth;
+        double scaledHeight = contentPaneHeight;
+
+        // Set fit dimensions
+        if (videoNode instanceof MediaView mv) {
+            mv.setFitWidth(scaledWidth);
+            mv.setFitHeight(scaledHeight);
+        } else if (videoNode instanceof javafx.scene.image.ImageView iv) {
+            iv.setFitWidth(scaledWidth);
+            iv.setFitHeight(scaledHeight);
+        }
+
+        // Center the video node
+        double x = (contentPaneWidth - scaledWidth) / 2;
+        double y = (contentPaneHeight - scaledHeight) / 2;
+        videoNode.setLayoutX(x);
+        videoNode.setLayoutY(y);
     }
 
     public void stopMediaPlayer() {
-        if (mediaPlayer != null) {
+        if (videoPlayer != null) {
             try {
-                mediaPlayer.stop();
-                mediaPlayer.dispose();
-                mediaPlayer = null;
+                // Clear callbacks first to prevent race conditions
+                videoPlayer.setOnReady(null);
+                videoPlayer.setOnError(null);
+                videoPlayer.setOnEndOfMedia(null);
+                videoPlayer.setOnTimeChanged(null);
+                videoPlayer.setOnStatusChanged(null);
+
+                // Then stop and dispose
+                videoPlayer.stop();
+                videoPlayer.dispose();
             } catch (Exception e) {
-                LOG.error("Failed to stop", e);
+                LOG.error("Failed to stop video player", e);
             }
+            videoPlayer = null;
         }
+        if (videoNode != null) {
+            pane.getChildren().remove(videoNode);
+        }
+        videoNode = null;
     }
 
     public void playVideoPlayer() {
-        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+        if (videoPlayer != null && isMediaFile(fileImagePath)) {
             try {
-                mediaPlayer.play();
+                videoPlayer.play();
             } catch (Exception e) {
                 LOG.error("Failed to play video", e);
             }
@@ -2174,9 +2254,9 @@ public class ProjectionScreenController {
     }
 
     public void pauseVideoPlayer() {
-        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+        if (videoPlayer != null && isMediaFile(fileImagePath)) {
             try {
-                mediaPlayer.pause();
+                videoPlayer.pause();
             } catch (Exception e) {
                 LOG.error("Failed to pause video", e);
             }
@@ -2184,9 +2264,9 @@ public class ProjectionScreenController {
     }
 
     public void seekVideoPlayer(javafx.util.Duration time) {
-        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+        if (videoPlayer != null && isMediaFile(fileImagePath)) {
             try {
-                mediaPlayer.seek(time);
+                videoPlayer.seek(time);
             } catch (Exception e) {
                 LOG.error("Failed to seek video", e);
             }
@@ -2194,9 +2274,11 @@ public class ProjectionScreenController {
     }
 
     public void setVideoVolume(double volume) {
-        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+        if (videoPlayer != null && isMediaFile(fileImagePath)) {
             try {
-                mediaPlayer.setVolume(Math.max(0.0, Math.min(1.0, volume)));
+                double clampedVolume = Math.max(0.0, Math.min(1.0, volume));
+                videoPlayer.setVolume(clampedVolume);
+                currentVideoVolume = clampedVolume;
             } catch (Exception e) {
                 LOG.error("Failed to set video volume", e);
             }
@@ -2204,9 +2286,9 @@ public class ProjectionScreenController {
     }
 
     public javafx.util.Duration getVideoCurrentTime() {
-        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+        if (videoPlayer != null && isMediaFile(fileImagePath)) {
             try {
-                javafx.util.Duration currentTime = mediaPlayer.getCurrentTime();
+                javafx.util.Duration currentTime = videoPlayer.getCurrentTime();
                 if (currentTime != null && !currentTime.isUnknown()) {
                     return currentTime;
                 }
@@ -2218,20 +2300,14 @@ public class ProjectionScreenController {
     }
 
     public double getVideoVolume() {
-        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
-            try {
-                return mediaPlayer.getVolume();
-            } catch (Exception e) {
-                LOG.error("Failed to get video volume", e);
-            }
-        }
-        return 0.0;
+        // Return the tracked volume value
+        return currentVideoVolume;
     }
 
-    public MediaPlayer.Status getVideoStatus() {
-        if (mediaPlayer != null && isMediaFile(fileImagePath)) {
+    public VideoPlayerStatus getVideoStatus() {
+        if (videoPlayer != null && isMediaFile(fileImagePath)) {
             try {
-                return mediaPlayer.getStatus();
+                return videoPlayer.getStatus();
             } catch (Exception e) {
                 LOG.error("Failed to get video status", e);
             }

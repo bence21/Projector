@@ -24,7 +24,8 @@
                                         <center>
                                             <Pane fx:id="pane" BorderPane.alignment="CENTER">
                                                 <MediaView fx:id="backgroundMediaView" fitWidth="800" fitHeight="600" visible="false"/>
-                                                <MediaView fx:id="mediaView" fitWidth="800" fitHeight="600"/>
+                                                <!-- MediaView kept for backward compatibility, but videoNode will be added dynamically -->
+                                                <MediaView fx:id="mediaView" fitWidth="800" fitHeight="600" visible="false"/>
                                                 <Line fx:id="progressLine" layoutY="1.0" stroke="#ffffffd0"/>
                                                 <MyTextFlow fx:id="textFlow" textAlignment="CENTER">
                                                 </MyTextFlow>

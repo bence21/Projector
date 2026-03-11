@@ -100,7 +100,10 @@ public class ImageCacheService {
     }
 
     private static boolean areParametersValidWithLog(int width, int height, String filePath) {
-        if (areDimensionsInValid(width, height) || filePath == null) {
+        if (areDimensionsInValid(width, height)) {
+            return false;
+        }
+        if (filePath == null) {
             LOG.warn("Invalid parameters for {}: width={}, height={}, filePath={}", "checkForImage", width, height, filePath);
             return false;
         }
