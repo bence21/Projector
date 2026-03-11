@@ -29,7 +29,9 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,11 +189,13 @@ public class SettingsController {
         }).start();
     }
 
-    public static void imageBrowseWithTextFieldResult(TextField imagePathTextField) {
+    public static void imageBrowseWithTextFieldResult(TextField imagePathTextField, Window owner) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle(Settings.getInstance().getResourceBundle().getString("Chose the image file"));
+        fileChooser.getExtensionFilters().add(new ExtensionFilter(
+                "Images and videos", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.mp4", "*.m4v", "*.webm", "*.mov", "*.flv"));
         fileChooser.setInitialDirectory(new File(new File(".").getAbsolutePath()));
-        File selectedFile = fileChooser.showOpenDialog(null);
+        File selectedFile = fileChooser.showOpenDialog(owner);
         if (selectedFile != null) {
             try {
                 imagePathTextField.setText(selectedFile.getCanonicalFile().toURI().toString());
@@ -534,7 +538,7 @@ public class SettingsController {
     }
 
     public void onImageBrowseButtonAction() {
-        imageBrowseWithTextFieldResult(imagePathTextField);
+        imageBrowseWithTextFieldResult(imagePathTextField, getStage());
     }
 
     synchronized void setProjectionScreenController(ProjectionScreenController projectionScreenController) {

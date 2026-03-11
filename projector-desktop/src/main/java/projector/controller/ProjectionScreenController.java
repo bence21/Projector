@@ -91,6 +91,7 @@ import static java.lang.Math.max;
 import static java.lang.Thread.sleep;
 import static projector.controller.BibleController.getBibleVerseWithReferenceText;
 import static projector.controller.GalleryController.clearCanvas;
+import static projector.controller.GalleryController.isBackgroundMediaFile;
 import static projector.controller.GalleryController.isMediaFile;
 import static projector.controller.MyController.calculateSizeByScale;
 import static projector.controller.ProjectionScreensController.getScreenScale;
@@ -124,6 +125,8 @@ public class ProjectionScreenController {
     public BorderPane blackCoverPane;
     public BorderPane progressBarBackgroundBlack;
     public MediaView mediaView;
+    public MediaView backgroundMediaView;
+    private MediaPlayer backgroundMediaPlayer;
     private ExecutorService executorService = null;
     @FXML
     private Canvas canvas;
@@ -220,6 +223,11 @@ public class ProjectionScreenController {
         initializeMargins();
         contentPane.widthProperty().addListener(getContentPaneSizeChangeListener());
         contentPane.heightProperty().addListener(getContentPaneSizeChangeListener());
+        if (backgroundMediaView != null) {
+            // backgroundMediaView.setPreserveRatio(false);
+            backgroundMediaView.fitWidthProperty().bind(contentPane.widthProperty());
+            backgroundMediaView.fitHeightProperty().bind(contentPane.heightProperty());
+        }
         setPaneBackground(Color.BLACK, paneForMargins);
         setPaneBackground(Color.BLACK, progressBarBackgroundBlack);
         setProgressBarHeight();
@@ -346,6 +354,8 @@ public class ProjectionScreenController {
 
     private void setBackgroundBySettings() {
         if (!projectionScreenSettings.isBackgroundImage()) {
+            stopBackgroundMediaPlayer();
+            hideBackgroundMediaView();
             Color backgroundColor = projectionScreenSettings.getBackgroundColor();
             setPanesBackground(backgroundColor);
         } else {
@@ -368,17 +378,89 @@ public class ProjectionScreenController {
         if (isLock) {
             return;
         }
-        if (projectionScreenSettings.isBackgroundImage()) {
+        if (!projectionScreenSettings.isBackgroundImage()) {
+            return;
+        }
+        String path = projectionScreenSettings.getBackgroundImagePath();
+        if (path == null || path.isBlank()) {
+            stopBackgroundMediaPlayer();
+            hideBackgroundMediaView();
+            return;
+        }
+        if (isBackgroundMediaFile(path)) {
+            playBackgroundVideo(path);
+        } else {
+            stopBackgroundMediaPlayer();
+            hideBackgroundMediaView();
             int w = 80;
             int h = 60;
             if (contentPane != null) {
                 w = (int) contentPane.getWidth();
                 h = (int) contentPane.getHeight();
             }
-            Background background = getBackgroundByPath(projectionScreenSettings.getBackgroundImagePath(), w, h);
+            Background background = getBackgroundByPath(path, w, h);
             if (background != null) {
                 contentPane.setBackground(background);
             }
+        }
+    }
+
+    private void playBackgroundVideo(String path) {
+        stopBackgroundMediaPlayer();
+        if (backgroundMediaView == null) {
+            return;
+        }
+        try {
+            Media media = new Media(path);
+            backgroundMediaPlayer = new MediaPlayer(media);
+            backgroundMediaPlayer.setMute(true);
+            backgroundMediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+            backgroundMediaPlayer.setOnError(() -> {
+                if (backgroundMediaPlayer != null) {
+                    LOG.error("Background video error: {}", backgroundMediaPlayer.getError());
+                }
+                Platform.runLater(() -> {
+                    stopBackgroundMediaPlayer();
+                    hideBackgroundMediaView();
+                    Background background = getBackgroundByPath(path, 80, 60);
+                    if (background != null) {
+                        contentPane.setBackground(background);
+                    }
+                });
+            });
+            backgroundMediaView.setMediaPlayer(backgroundMediaPlayer);
+            setPaneBackground(Color.BLACK, contentPane);
+            setPaneBackground(Color.BLACK, paneForMargins);
+            backgroundMediaView.setVisible(true);
+            backgroundMediaPlayer.play();
+        } catch (Exception e) {
+            LOG.error("Failed to play background video: {}", path, e);
+            hideBackgroundMediaView();
+            Background background = getBackgroundByPath(path, 80, 60);
+            if (background != null) {
+                contentPane.setBackground(background);
+            }
+        }
+    }
+
+    private void stopBackgroundMediaPlayer() {
+        if (backgroundMediaPlayer != null) {
+            try {
+                backgroundMediaPlayer.stop();
+                backgroundMediaPlayer.dispose();
+            } catch (Exception e) {
+                LOG.error("Failed to stop background media player", e);
+            }
+            backgroundMediaPlayer = null;
+        }
+        if (backgroundMediaView != null) {
+            backgroundMediaView.setMediaPlayer(null);
+        }
+    }
+
+    private void hideBackgroundMediaView() {
+        if (backgroundMediaView != null) {
+            backgroundMediaView.setVisible(false);
         }
     }
 
@@ -1495,6 +1577,7 @@ public class ProjectionScreenController {
             countDownTimerThread.interrupt();
         }
         stopMediaPlayer(); // Stop and dispose MediaPlayer
+        stopBackgroundMediaPlayer();
         // Shutdown executor service and wait for tasks to complete
         if (executorService != null) {
             executorService.shutdown();

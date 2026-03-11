@@ -120,7 +120,7 @@ public class ProjectionScreenSettingsController {
     private ProjectionScreenHolder projectionScreenHolder;
 
     public void onImageBrowseButtonAction() {
-        imageBrowseWithTextFieldResult(imagePathTextField);
+        imageBrowseWithTextFieldResult(imagePathTextField, stage);
     }
 
     public void onSaveButtonAction() {

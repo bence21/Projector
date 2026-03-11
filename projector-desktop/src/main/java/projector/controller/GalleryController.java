@@ -1229,6 +1229,19 @@ public class GalleryController {
         return path.toLowerCase().endsWith(".mp4");
     }
 
+    /**
+     * Returns true for video formats that can be used as background via MediaPlayer.
+     * GIF is excluded - it uses Image (first frame only) since JavaFX Media does not support GIF.
+     */
+    public static boolean isBackgroundMediaFile(String path) {
+        if (path == null) {
+            return false;
+        }
+        String lower = path.toLowerCase();
+        return lower.endsWith(".mp4") || lower.endsWith(".m4v") || lower.endsWith(".webm")
+                || lower.endsWith(".mov") || lower.endsWith(".flv");
+    }
+
     private String getFileNameFromPath(String path) {
         File file = new File(path);
         return file.getName();
