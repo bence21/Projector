@@ -138,6 +138,7 @@
     <string name="try_again_later">Try again later</string>
     <string name="password_or_email_incorrect">Password or email incorrect</string>
     <string name="create_account">Create account</string>
+    <string name="delete_account">Delete account</string>
     <string name="upload_song">Upload song</string>
     <string name="Couldnt_get_selected_language">Couldn\'t get selected language!</string>
     <string name="Are_you_sure_you_want_to_delete">Are you sure you want to delete?</string>

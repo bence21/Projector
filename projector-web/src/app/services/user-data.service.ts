@@ -43,6 +43,10 @@ export class UserDataService {
     return this.api.update(User, 'user/api/user/', user);
   }
 
+  deleteAccount(): Observable<null> {
+    return this.api.delete('/user/api/user');
+  }
+
   requireForgottenToken(email: string) {
     return this.api.post('/forgotten_password?email=' + email)
   }

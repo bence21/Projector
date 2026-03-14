@@ -4,9 +4,13 @@ import com.bence.projector.server.backend.model.FavouriteSong;
 import com.bence.projector.server.backend.model.User;
 import org.springframework.data.repository.CrudRepository;
 
+import javax.transaction.Transactional;
 import java.util.Date;
 import java.util.List;
 
 public interface FavouriteSongRepository extends CrudRepository<FavouriteSong, Long> {
     List<FavouriteSong> findAllByUserAndModifiedDateGreaterThan(User user, Date modifiedDate);
+
+    @Transactional
+    void deleteAllByUser(User user);
 }

@@ -134,6 +134,7 @@
     <string name="try_again_later">Încercați mai târziu</string>
     <string name="password_or_email_incorrect">Parola sau e-mailul e incorect</string>
     <string name="create_account">Creează cont</string>
+    <string name="delete_account">Șterge contul</string>
     <string name="upload_song">Încărcați cântarea</string>
     <string name="Couldnt_get_selected_language">Nu s-a putut obține limba selectată!</string>
     <string name="Are_you_sure_you_want_to_delete">Sigur dorești să ștergi?</string>

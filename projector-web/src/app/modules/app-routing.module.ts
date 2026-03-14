@@ -23,6 +23,7 @@ import { VersionLinkComponent } from '../ui/version-link/version-link.component'
 import { ActivateComponent } from '../ui/activate/activate.component';
 import { NewSongCollectionComponent } from '../ui/new-song-collection/new-song-collection.component';
 import { AccountComponent } from '../ui/account/account.component';
+import { DeleteAccountComponent } from '../ui/delete-account/delete-account.component';
 import { YoutubeVideoCheckerComponent } from '../ui/youtube-video-checker/youtube-video-checker.component';
 import { WordsSpellCheckerComponent } from '../ui/words-spell-checker/words-spell-checker.component';
 
@@ -70,6 +71,7 @@ export const appRoutes: Routes = [
   { path: 'forgottenPassword', component: ForgottenPasswordComponent },
   { path: 'changePasswordByToken', component: ChangePasswordByTokenComponent },
   { path: 'account', component: AccountComponent },
+  { path: 'delete-account', component: DeleteAccountComponent },
   { path: 'words-spell-checker', component: WordsSpellCheckerComponent },
   { path: '**', component: NotFoundComponent },
 ];

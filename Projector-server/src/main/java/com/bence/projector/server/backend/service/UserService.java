@@ -20,4 +20,6 @@ public interface UserService extends BaseService<User> {
     User findOneByUuid(String uuid);
 
     List<User> findAllByCreatedDateAfter(Date date);
+
+    void deleteUser(User user);
 }

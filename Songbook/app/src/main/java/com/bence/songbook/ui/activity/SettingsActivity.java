@@ -1,7 +1,10 @@
 package com.bence.songbook.ui.activity;
 
+import static com.bence.songbook.utils.BaseURL.BASE_URL;
+
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.View;
@@ -15,6 +18,7 @@ import com.bence.songbook.R;
 import com.bence.songbook.network.ProjectionTextChangeListener;
 import com.bence.songbook.network.TCPServer;
 import com.bence.songbook.ui.utils.Preferences;
+import com.bence.songbook.service.UserService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -128,6 +132,17 @@ public class SettingsActivity extends BaseActivity {
                 startActivity(intent);
             }
         });
+
+        Button deleteAccountButton = findViewById(R.id.deleteAccountButton);
+        if (UserService.getInstance().isLoggedIn(this)) {
+            deleteAccountButton.setVisibility(View.VISIBLE);
+            deleteAccountButton.setOnClickListener(v -> {
+                Uri uri = Uri.parse(BASE_URL + "#/delete-account");
+                startActivity(new Intent(Intent.ACTION_VIEW, uri));
+            });
+        } else {
+            deleteAccountButton.setVisibility(View.GONE);
+        }
     }
 
     @Override

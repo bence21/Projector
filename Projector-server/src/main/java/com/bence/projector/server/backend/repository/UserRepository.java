@@ -12,4 +12,6 @@ public interface UserRepository extends CrudRepository<User, Long> {
     User findOneByUuid(String uuid);
 
     List<User> findAllByCreatedDateAfter(Date date);
+
+    List<User> findAllByDeletedFalseOrDeletedIsNull();
 }

@@ -162,6 +162,17 @@ public class UserResource {
         return new ResponseEntity<>("Could not update", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @RequestMapping(method = RequestMethod.DELETE, value = "/user/api/user")
+    public ResponseEntity<Object> deleteAccount(Principal principal, HttpServletRequest httpServletRequest) {
+        saveStatistics(httpServletRequest, statisticsService);
+        User user = getUserFromPrincipalAndUserService(principal, userService);
+        if (user == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        userService.deleteUser(user);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
     private void sendActivationEmail(User user) {
         try {
             logger.info("Got email: " + user.getEmail());

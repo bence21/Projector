@@ -37,6 +37,14 @@
         <br>
       </form>
 
+      <div *ngIf="showForm" class="delete-account-section">
+        <h2>Delete account</h2>
+        <p>
+          You can permanently delete your account and its associated app data from the dedicated deletion page.
+        </p>
+        <a routerLink="/delete-account" class="btn btn-danger">Delete account</a>
+      </div>
+
     </mat-card-content>
   </mat-card>
 

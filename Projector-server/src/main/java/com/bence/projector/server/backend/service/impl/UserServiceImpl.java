@@ -3,12 +3,17 @@ package com.bence.projector.server.backend.service.impl;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.User;
+import com.bence.projector.server.backend.model.UserProperties;
+import com.bence.projector.server.backend.repository.FavouriteSongRepository;
+import com.bence.projector.server.backend.repository.NotificationByLanguageRepository;
 import com.bence.projector.server.backend.repository.UserRepository;
+import com.bence.projector.server.backend.repository.UserPropertiesRepository;
 import com.bence.projector.server.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -18,11 +23,23 @@ import java.util.List;
 public class UserServiceImpl extends BaseServiceImpl<User> implements UserService {
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private FavouriteSongRepository favouriteSongRepository;
+    @Autowired
+    private NotificationByLanguageRepository notificationByLanguageRepository;
+    @Autowired
+    private UserPropertiesRepository userPropertiesRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
     public User findByEmail(String email) {
-        return userRepository.findByEmail(email);
+        User user = userRepository.findByEmail(email);
+        return (user != null && user.isDeleted()) ? null : user;
+    }
+
+    @Override
+    public List<User> findAll() {
+        return userRepository.findAllByDeletedFalseOrDeletedIsNull();
     }
 
     @Override
@@ -111,5 +128,32 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
     @Override
     public List<User> findAllByCreatedDateAfter(Date date) {
         return userRepository.findAllByCreatedDateAfter(date);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(User user) {
+        if (user == null || user.getId() == null) {
+            return;
+        }
+        favouriteSongRepository.deleteAllByUser(user);
+        UserProperties userProperties = user.hasUserProperties() ? user.getUserProperties() : null;
+        user.setReviewLanguages(new ArrayList<>());
+        user.setUserProperties(null);
+        if (userProperties != null && userProperties.getId() != null) {
+            notificationByLanguageRepository.deleteAllByUserProperties(userProperties);
+            userPropertiesRepository.deleteById(userProperties.getId());
+        }
+        user.setDeleted(true);
+        System.out.println(user.getEmail() + " deleted");
+        user.setEmail("deleted-" + user.getUuid() + "@deleted.local");
+        user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+        user.setSurname(null);
+        user.setFirstName(null);
+        user.setActivationCode(null);
+        user.setToken(null);
+        user.setExpiryDate(null);
+        user.setPhone(null);
+        userRepository.save(user);
     }
 }
