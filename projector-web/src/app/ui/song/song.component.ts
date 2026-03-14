@@ -16,6 +16,7 @@ import { Suggestion } from '../../models/suggestion';
 import { SongCollectionElementComponent } from '../song-collection-element/song.collection.element';
 import { checkAuthenticationError, ErrorUtil, generalError, openAuthenticateDialog } from '../../util/error-util';
 import { YoutubeIdCheckResult, YoutubeIdCheckResultType } from '../youtube-id-check/youtube-id-check.component';
+import { extractYouTubeVideoId } from '../../util/youtube.util';
 
 @Component({
   selector: 'app-song',
@@ -429,20 +430,10 @@ export class SongComponent implements OnInit, OnDestroy {
 
   calculateUrlId(url: string) {
     this.youtubeId = null;
-    if (url == undefined) {
-      this.safeUrl = null;
-      return;
-    }
-    let youtubeUrl = url.replace("https://www.youtube.com/watch?v=", "");
-    youtubeUrl = youtubeUrl.replace("https://www.youtube.com/embed/", "");
-    youtubeUrl = youtubeUrl.replace("https://youtu.be/", "");
-    let indexOf = youtubeUrl.indexOf('?');
-    if (indexOf >= 0) {
-      youtubeUrl = youtubeUrl.substring(0, indexOf);
-    }
-    if (youtubeUrl.length < 21 && youtubeUrl.length > 9) {
-      this.youtubeId = youtubeUrl;
-      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeUrl);
+    const youtubeId = extractYouTubeVideoId(url);
+    if (youtubeId) {
+      this.youtubeId = youtubeId;
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeId);
       setTimeout(() => {
         this.youtubeIdChecked = true; // we give one second to check. If no response then it should try to show the youtube video
       }, 1000);

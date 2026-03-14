@@ -28,8 +28,12 @@
               (click)="onApplyLanguageButtonClick()">Apply</button>
             <mat-form-field class="example-full-width">
               <input type="text" id="youtubeUrl" formControlName="youtubeUrl" [value]="youtubeUrl" matInput
-                (change)="calculateUrlId()" placeholder="Youtube url">
+                (input)="calculateUrlId()" placeholder="Youtube url">
             </mat-form-field>
+            <mat-error *ngIf="formErrors.youtubeUrl">
+              <mat-icon class="material-icon">error</mat-icon>
+              {{formErrors.youtubeUrl}}
+            </mat-error>
             <iframe [class]="safeUrl!=null?'embeddedVideo':'hideEmbeddedVideo'" scrolling="no" [src]='safeUrl'
               frameborder="0" allowfullscreen></iframe>
             <app-edit-title [selectedLanguage]="selectedLanguage" [form]="form"></app-edit-title>

@@ -15,6 +15,7 @@ import { Language } from '../../models/language';
 import { debounceTime } from 'rxjs/operators';
 import { SongWordValidationService } from '../../services/song-word-validation.service';
 import { normalizeForPersistence } from '../../util/unicode-text-normalizer';
+import { extractYouTubeVideoId, getYouTubeUrlProblem } from '../../util/youtube.util';
 
 @Component({
   selector: 'app-edit-song',
@@ -25,6 +26,7 @@ export class EditSongComponent implements OnInit {
   form: FormGroup;
   formErrors = {
     'title': '',
+    'youtubeUrl': '',
     'verseOrder': ''
   };
 
@@ -32,6 +34,7 @@ export class EditSongComponent implements OnInit {
     'title': {
       'required': 'Required field',
     },
+    'youtubeUrl': {},
     'verseOrder': {}
   };
   verses: SongVerseUI[];
@@ -268,7 +271,10 @@ export class EditSongComponent implements OnInit {
         Validators.required,
       ]],
       'youtubeUrl': [this.youtubeUrl, [
-        Validators.maxLength(52),
+        (control: FormControl) => {
+          const youtubeUrlProblem = getYouTubeUrlProblem(control.value);
+          return youtubeUrlProblem ? { youtubeUrlInvalid: youtubeUrlProblem } : null;
+        }
       ]],
       'verseOrder': [this.song.verseOrder, []],
       'author': [this.song.author, []],
@@ -408,6 +414,10 @@ export class EditSongComponent implements OnInit {
         const control = form.get(field);
 
         if (control && control.dirty && !control.valid) {
+          if (field === 'youtubeUrl' && control.errors.youtubeUrlInvalid) {
+            this.formErrors[field] = control.errors.youtubeUrlInvalid;
+            continue;
+          }
           const messages = this.validationMessages[field];
           for (const key in control.errors) {
             if (control.errors.hasOwnProperty(key)) {
@@ -441,15 +451,10 @@ export class EditSongComponent implements OnInit {
         i = i + 1;
       }
     }
-    let url = formValue.youtubeUrl;
     this.song.youtubeUrl = null;
-    if (url) {
-      let youtubeUrl = url.replace("https://www.youtube.com/watch?v=", "");
-      youtubeUrl = youtubeUrl.replace("https://www.youtube.com/embed/", "");
-      youtubeUrl = youtubeUrl.replace("https://youtu.be/", "");
-      if (youtubeUrl.length < 21 && youtubeUrl.length > 9) {
-        this.song.youtubeUrl = youtubeUrl;
-      }
+    const youtubeId = extractYouTubeVideoId(formValue.youtubeUrl);
+    if (youtubeId) {
+      this.song.youtubeUrl = youtubeId;
     }
     this.setVerseOrderListFromSectionOrder();
     this.validateAndUpdateSong();
@@ -673,15 +678,10 @@ export class EditSongComponent implements OnInit {
   }
 
   calculateUrlId() {
-    let youtubeUrl = this.form.value.youtubeUrl.replace("https://www.youtube.com/watch?v=", "");
-    youtubeUrl = youtubeUrl.replace("https://www.youtube.com/embed/", "");
-    youtubeUrl = youtubeUrl.replace("https://youtu.be/", "");
-    let indexOf = youtubeUrl.indexOf('?');
-    if (indexOf >= 0) {
-      youtubeUrl = youtubeUrl.substring(0, indexOf);
-    }
-    if (youtubeUrl.length < 21 && youtubeUrl.length > 9) {
-      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeUrl);
+    const youtubeUrl = this.form && this.form.value ? this.form.value.youtubeUrl : null;
+    const youtubeId = extractYouTubeVideoId(youtubeUrl);
+    if (youtubeId) {
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeId);
     } else {
       this.safeUrl = null;
     }
