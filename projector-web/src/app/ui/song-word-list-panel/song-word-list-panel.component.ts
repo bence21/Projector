@@ -42,7 +42,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
   words: WordWithStatus[] = [];
   validationResult: SongWordValidationResult;
   loading = false;
-  private hasLoadedOnce = false;
+  hasLoadedOnce = false;
   filterStatus: 'all' | ReviewedWordStatus = 'all';
 
   readonly ReviewedWordStatus = ReviewedWordStatus;
