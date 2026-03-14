@@ -1,5 +1,6 @@
 package com.bence.projector.server.mailsending;
 
+import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.NotificationByLanguage;
 import com.bence.projector.server.backend.model.NotificationStatus;
@@ -14,6 +15,7 @@ import com.bence.projector.server.backend.repository.NotificationStatusRepositor
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.NotificationByLanguageService;
 import com.bence.projector.server.backend.service.SongService;
+import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.UserPropertiesService;
 import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.utils.AppProperties;
@@ -50,6 +52,8 @@ public class MailSenderService {
     private JavaMailSender sender;
     @Autowired
     private SongService songService;
+    @Autowired
+    private SongWordValidationService songWordValidationService;
     @Autowired
     private UserService userService;
     @Autowired
@@ -281,9 +285,40 @@ public class MailSenderService {
 
     private Map<String, Object> createPatternForSongs(List<Song> songs) {
         Map<String, Object> data = new HashMap<>();
-        data.put("songs", songs);
+        List<NewSongRow> songRows = new ArrayList<>(songs.size());
+        for (Song song : songs) {
+            songRows.add(createNewSongRow(song));
+        }
+        data.put("songRows", songRows);
         data.put("baseUrl", AppProperties.getInstance().baseUrl());
         return data;
+    }
+
+    private NewSongRow createNewSongRow(Song song) {
+        NewSongRow row = new NewSongRow();
+        Song songForEmail = getSongForEmail(song);
+        row.setSong(songForEmail);
+
+        SongWordValidationResult validationResult = songWordValidationService.validateWords(songForEmail);
+        int unreviewedWordCount = validationResult.getUnreviewedWords() == null ? 0 : validationResult.getUnreviewedWords().size();
+        int totalUniqueWordCount = validationResult.getWordsWithStatus() == null ? 0 : validationResult.getWordsWithStatus().size();
+
+        row.setUnreviewedWordCount(unreviewedWordCount);
+        row.setTotalUniqueWordCount(totalUniqueWordCount);
+        row.setHasUnreviewedWords(unreviewedWordCount > 0);
+        row.setUnreviewedWordRatio(unreviewedWordCount + "/" + totalUniqueWordCount);
+        return row;
+    }
+
+    private Song getSongForEmail(Song song) {
+        if (song == null) {
+            return null;
+        }
+        if (song.getUuid() == null) {
+            return song;
+        }
+        Song loadedSong = songService.findOneByUuid(song.getUuid());
+        return loadedSong != null ? loadedSong : song;
     }
 
     private Map<String, Object> createPattern(List<Suggestion> suggestions) {

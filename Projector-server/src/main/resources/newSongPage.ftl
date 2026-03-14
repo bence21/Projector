@@ -75,25 +75,30 @@
                               style="margin: 10px 0;color: #ffffff;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 15px;line-height: 150%;text-align: left;">
                               <div>
                                 <table style="color: #ffffff; border-spacing: 4px 20px; border-collapse: separate;">
-                                  <#list songs as song>
+                                  <#list songRows as songRow>
                                     <tr>
                                       <td>
-                                        <#if song.title??>
-                                          ${song.title}
+                                        <#if songRow.title??>
+                                          ${songRow.title}
+                                        </#if>
+                                        <#if songRow.hasUnreviewedWords>
+                                          <div style="color: #ffd166; font-size: 12px; margin-top: 4px;">
+                                            Unreviewed words: ${songRow.unreviewedWordRatio}
+                                          </div>
                                         </#if>
                                       </td>
                                       <td>
-                                        <a href="${baseUrl}/#/song/${song.uuid}" target="_blank"
+                                        <a href="${baseUrl}/#/song/${songRow.uuid}" target="_blank"
                                           style="color: #2BAADF;font-weight: normal;text-decoration: underline;">Open</a>
                                       </td>
                                       <td>
-                                        <#if song.createdByEmail??>
-                                          ${song.createdByEmail}
+                                        <#if songRow.createdByEmail??>
+                                          ${songRow.createdByEmail}
                                         </#if>
                                       </td>
-                                      <#if song.deleted>
-                                        <#if song.reviewerErased??>
-                                          <#if song.reviewerErased>
+                                      <#if songRow.deleted>
+                                        <#if songRow.reviewerErased??>
+                                          <#if songRow.reviewerErased>
                                             <td style="color: #b38900">Reviewer erased</td>
                                             <#else>
                                               <td style="color: #bfbfbf">In review</td>
