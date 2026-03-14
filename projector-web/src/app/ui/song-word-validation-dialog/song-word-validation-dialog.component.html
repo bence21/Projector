@@ -10,37 +10,21 @@
   </p>
 
   <div *ngIf="validationResult.hasIssues && !loading">
-    <div *ngIf="publish" class="publish-warning">
+    <div *ngIf="publish && hasBlockingIssues" class="publish-warning">
       <mat-icon class="error-icon">error</mat-icon>
       <p class="warning-text">
-        <strong>You cannot publish this song until all word issues are resolved.</strong> Please review and fix all issues below.
+        <strong>You cannot publish this song until banned and rejected word issues are resolved.</strong> Please review and fix those issues below.
+      </p>
+    </div>
+    <div *ngIf="publish && validationResult.hasIssues && !hasBlockingIssues" class="publish-warning">
+      <mat-icon class="warning-icon">info</mat-icon>
+      <p class="warning-text">
+        <strong>This song still has unreviewed words.</strong> You can publish it now, or review those words first.
       </p>
     </div>
     <p class="intro-text">
-      The following word issues were found in your song. Please review and fix them before publishing.
+      The following word issues were found in your song. Please review them below.
     </p>
-
-    <!-- Unreviewed Words Section -->
-    <div *ngIf="getUnreviewedCount() > 0" class="issue-section">
-      <h3>
-        <mat-icon class="warning-icon">info</mat-icon>
-        Unreviewed Words ({{getUnreviewedCount()}})
-      </h3>
-      <p class="section-description">These words have not been reviewed yet. Please review them to ensure they are correct.</p>
-      <app-word-list
-        [words]="unreviewedWordsWithStatus"
-        [hasReviewerRole]="hasReviewerRole"
-        [disabled]="inputPaused"
-        [songIsPublic]="isCurrentSongPublic"
-        [showSuggestions]="false"
-        (goodClick)="markAsGood($event)"
-        (contextSpecificClick)="markAsContextSpecific($event)"
-        (acceptedClick)="markAsAccepted($event)"
-        (bannedClick)="markAsBanned($event)"
-        (rejectedClick)="markAsRejected($event)"
-        (notSureClick)="markAsNotSure($event)">
-      </app-word-list>
-    </div>
 
     <!-- Banned Words Section -->
     <div *ngIf="getBannedCount() > 0" class="issue-section banned-section">
@@ -54,7 +38,13 @@
         [hasReviewerRole]="hasReviewerRole"
         [disabled]="inputPaused"
         [songIsPublic]="isCurrentSongPublic"
-        [showSuggestions]="false">
+        [showSuggestions]="false"
+        (goodClick)="markAsGood($event)"
+        (contextSpecificClick)="markAsContextSpecific($event)"
+        (acceptedClick)="markAsAccepted($event)"
+        (bannedClick)="markAsBanned($event)"
+        (rejectedClick)="markAsRejected($event)"
+        (notSureClick)="markAsNotSure($event)">
       </app-word-list>
     </div>
 
@@ -104,6 +94,28 @@
         </span>
       </div>
     </div>
+
+    <!-- Unreviewed Words Section -->
+    <div *ngIf="getUnreviewedCount() > 0" class="issue-section">
+      <h3>
+        <mat-icon class="warning-icon">info</mat-icon>
+        Unreviewed Words ({{getUnreviewedCount()}})
+      </h3>
+      <p class="section-description">These words have not been reviewed yet. Please review them to ensure they are correct.</p>
+      <app-word-list
+        [words]="unreviewedWordsWithStatus"
+        [hasReviewerRole]="hasReviewerRole"
+        [disabled]="inputPaused"
+        [songIsPublic]="isCurrentSongPublic"
+        [showSuggestions]="false"
+        (goodClick)="markAsGood($event)"
+        (contextSpecificClick)="markAsContextSpecific($event)"
+        (acceptedClick)="markAsAccepted($event)"
+        (bannedClick)="markAsBanned($event)"
+        (rejectedClick)="markAsRejected($event)"
+        (notSureClick)="markAsNotSure($event)">
+      </app-word-list>
+    </div>
   </div>
 </mat-dialog-content>
 <mat-dialog-actions>
@@ -112,8 +124,8 @@
     mat-button 
     color="primary" 
     (click)="onProceedAnyway()"
-    [disabled]="inputPaused || (publish && validationResult.hasIssues)"
+    [disabled]="inputPaused || (publish && hasBlockingIssues)"
     *ngIf="validationResult.hasIssues">
-    {{ publish ? 'Save as Draft' : 'Proceed Anyway' }}
+    {{ publish ? (hasBlockingIssues ? 'Save as Draft' : 'Publish') : 'Proceed Anyway' }}
   </button>
 </mat-dialog-actions>

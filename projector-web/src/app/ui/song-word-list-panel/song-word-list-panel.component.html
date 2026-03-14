@@ -1,11 +1,11 @@
-<mat-expansion-panel>
+<mat-expansion-panel (opened)="onPanelOpened()">
   <mat-expansion-panel-header>
     <mat-panel-title>
       <mat-icon>list</mat-icon>
       <span>Word List</span>
     </mat-panel-title>
     <mat-panel-description>
-      <span *ngIf="!loading">
+      <span *ngIf="!loading && hasLoadedOnce">
         Total: {{counts.total}} | 
         <span *ngIf="counts.good > 0" style="color: green;">✓ {{counts.good}}</span>
         <span *ngIf="counts.good > 0 && (counts.unreviewed > 0 || counts.banned > 0 || counts.rejected > 0 || counts.notSure > 0)"> | </span>

@@ -455,14 +455,6 @@ export class EditSongComponent implements OnInit {
     this.validateAndUpdateSong();
   }
 
-  private isAdmin(): Boolean {
-    const user = this.auth.getUser();
-    if (user == null) {
-      return false;
-    }
-    return user.isAdmin();
-  }
-
   private validateAndUpdateSong() {
     validateWordsAndSave({
       song: this.song,
@@ -471,8 +463,7 @@ export class EditSongComponent implements OnInit {
       snackBar: this.snackBar,
       language: this.selectedLanguage,
       publish: this.publish,
-      onSave: () => this.updateSong(),
-      isAdmin: !!this.isAdmin()
+      onSave: () => this.updateSong()
     });
   }
 

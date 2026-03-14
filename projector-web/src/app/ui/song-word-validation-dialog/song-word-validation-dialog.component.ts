@@ -177,6 +177,10 @@ export class SongWordValidationDialogComponent implements OnInit {
     return this.validationResult.rejectedWords ? this.validationResult.rejectedWords.length : 0;
   }
 
+  get hasBlockingIssues(): boolean {
+    return this.getBannedCount() > 0 || this.getRejectedCount() > 0;
+  }
+
   markAsGood(word: string) {
     this.wordReviewHelper.markWordWithStatus(ReviewedWordStatus.REVIEWED_GOOD, {
       language: this.language,
@@ -300,9 +304,9 @@ export class SongWordValidationDialogComponent implements OnInit {
   }
 
   onProceedAnyway() {
-    // If trying to publish and issues remain, don't allow proceeding
-    if (this.publish && this.validationResult.hasIssues) {
-      this.snackBar.open('Cannot publish with unresolved word issues. Please fix all issues first.', 'Close', {
+    // If trying to publish and blocking issues remain, don't allow proceeding
+    if (this.publish && this.hasBlockingIssues) {
+      this.snackBar.open('Cannot publish with banned or rejected words. Please fix those issues first.', 'Close', {
         duration: 4000
       });
       return;
@@ -310,6 +314,7 @@ export class SongWordValidationDialogComponent implements OnInit {
     // Return the validation result with any selected replacements
     const result = {
       proceed: true,
+      saveAsDraft: this.publish && this.hasBlockingIssues,
       selectedReplacements: Array.from(this.selectedRejections.entries()).map(([word, replacement]) => ({
         word: word,
         replacement: replacement
@@ -319,8 +324,8 @@ export class SongWordValidationDialogComponent implements OnInit {
   }
 
   canProceed(): boolean {
-    // Can only proceed if not publishing or if there are no issues
-    return !this.publish || !this.validationResult.hasIssues;
+    // Publishing is only blocked by banned or rejected words.
+    return !this.publish || !this.hasBlockingIssues;
   }
 
   onCancel() {

@@ -113,6 +113,17 @@
           <br>
           <br>
           <app-song-guidelines-checker [pGuidelines]="guidelines"></app-song-guidelines-checker>
+          <mat-card *ngIf="currentSongForWordList && selectedLanguage && auth.isLoggedIn">
+            <mat-card-content>
+              <app-song-word-list-panel
+                [song]="currentSongForWordList"
+                [language]="selectedLanguageCopy"
+                [hasChanges]="formHasChanges"
+                (refreshRequested)="onWordListRefresh()">
+              </app-song-word-list-panel>
+            </mat-card-content>
+          </mat-card>
+          <br>
           <div *ngIf="showWarning" class="error-message">
             <p>{{reasonForNotSubmitting()}}</p>
           </div>

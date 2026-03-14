@@ -57,7 +57,23 @@ export class NewSongComponent implements OnInit {
   verses: SongVerseUI[];
   verseControls: FormControl[];
   languages: Language[];
-  selectedLanguage = null;
+  private _selectedLanguage: Language;
+  set selectedLanguage(value: Language) {
+    this._selectedLanguage = value;
+    if (value) {
+      this.selectedLanguageCopy = new Language();
+      Object.assign(this.selectedLanguageCopy, value);
+    } else {
+      this.selectedLanguageCopy = null;
+    }
+    if (this.form) {
+      this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.getCurrentSongFromForm());
+    }
+  }
+  get selectedLanguage(): Language {
+    return this._selectedLanguage;
+  }
+  selectedLanguageCopy: Language;
   editorType = 'verse';
   song: Song;
   showSimilarities = false;
@@ -89,6 +105,9 @@ export class NewSongComponent implements OnInit {
   showWarning = false;
   guidelines: Guideline[] = [];
   publish = false;
+  formHasChanges = false;
+  private initialFormValue: string;
+  currentSongForWordList: Song;
 
   constructor(private fb: FormBuilder,
     private songService: SongService,
@@ -275,6 +294,23 @@ export class NewSongComponent implements OnInit {
     this.form.addControl('songText', this.songTextFormControl);
     this.form.valueChanges.subscribe(() => this.onValueChanged());
     this.onValueChanged();
+    this.initialFormValue = JSON.stringify(this.form.value);
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.song);
+    this.trackFormChanges();
+  }
+
+  private trackFormChanges() {
+    this.form.valueChanges.pipe(debounceTime(500)).subscribe(() => {
+      const currentFormValue = JSON.stringify(this.form.value);
+      this.formHasChanges = currentFormValue !== this.initialFormValue;
+    });
+  }
+
+  onWordListRefresh() {
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.getCurrentSongFromForm());
+    this.initialFormValue = JSON.stringify(this.form.value);
+    this.formHasChanges = false;
+    this._changeDetectionRef.detectChanges();
   }
 
   addNewVerse() {
@@ -314,40 +350,76 @@ export class NewSongComponent implements OnInit {
     }
   }
 
-  onSubmit() {
+  getCurrentSongFromForm(): Song {
     const formValue = this.form.value;
-    this.song.title = formValue.title;
-    this.song.verseOrder = null;
-    this.song.author = formValue.author;
-    this.song.songVerseDTOS = [];
-    this.song.languageDTO = this.selectedLanguage;
-    let i = 0;
-    for (const key in formValue) {
-      if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
-        const value = formValue[key];
-        const songVerseDTO = new SongVerseDTO();
-        songVerseDTO.text = value;
-        songVerseDTO.chorus = this.verses[i].chorus;
-        songVerseDTO.type = this.verses[i].type
-        this.song.songVerseDTOS.push(songVerseDTO);
-        i = i + 1;
+    const currentSong = new Song();
+    currentSong.title = formValue.title;
+    currentSong.verseOrder = null;
+    currentSong.author = formValue.author;
+    currentSong.songVerseDTOS = [];
+    currentSong.languageDTO = this.selectedLanguage;
+
+    if (this.editorType === 'raw') {
+      const songText = formValue.songText || '';
+      if (songText) {
+        for (const verseI of songText.split("\n\n")) {
+          const songVerse = new SongVerseDTO();
+          songVerse.type = SectionType.Verse;
+          let verse = verseI;
+          for (const sectionType of this.sectionTypes) {
+            const sectionString = "[" + sectionType.name + "]\n";
+            if (verse.toLowerCase().startsWith(sectionString.toLowerCase())) {
+              songVerse.type = sectionType.type;
+              verse = verseI.substring(sectionString.length, verseI.length);
+            }
+          }
+          songVerse.text = verse;
+          currentSong.songVerseDTOS.push(songVerse);
+        }
+      }
+    } else {
+      let i = 0;
+      for (const key in formValue) {
+        if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
+          const value = formValue[key];
+          const songVerseDTO = new SongVerseDTO();
+          songVerseDTO.text = value;
+          if (i < this.verses.length) {
+            songVerseDTO.chorus = this.verses[i].chorus;
+            songVerseDTO.type = this.verses[i].type;
+          }
+          currentSong.songVerseDTOS.push(songVerseDTO);
+          i = i + 1;
+        }
       }
     }
+
+    currentSong.verseOrderList = this.getVerseOrderListFromSectionOrder();
+    return currentSong;
+  }
+
+  onSubmit() {
+    this.song = this.getCurrentSongFromForm();
+    // Validate words first, then check for similar, then post
+    this.validateAndCreateSong(() => this.checkSimilarAndPost());
+  }
+
+  private checkSimilarAndPost() {
     this.similar = [];
-    this.setVerseOrderListFromSectionOrder();
+    this.showSimilarities = true;
+    this.receivedSimilar = false;
     this.songService.getSimilarByPost(this.song).subscribe((songs) => {
       this.similar = songs;
       if (songs.length > 0) {
         this.secondSong = this.similar[0];
       } else {
-        this.insertNewSong();
+        this.applyYoutubeUrlAndCreateSong();
       }
       this.receivedSimilar = true;
     });
-    this.showSimilarities = true;
   }
 
-  insertNewSong() {
+  private applyYoutubeUrlToSong() {
     let url = this.form.value.youtubeUrl;
     this.song.youtubeUrl = null;
     if (url) {
@@ -358,10 +430,19 @@ export class NewSongComponent implements OnInit {
         this.song.youtubeUrl = youtubeUrl;
       }
     }
+  }
+
+  private applyYoutubeUrlAndCreateSong() {
+    this.applyYoutubeUrlToSong();
+    this.createSong();
+  }
+
+  insertNewSong() {
+    this.applyYoutubeUrlToSong();
     this.validateAndCreateSong();
   }
 
-  private validateAndCreateSong() {
+  private validateAndCreateSong(onSave?: () => void) {
     validateWordsAndSave({
       song: this.song,
       validationService: this.songWordValidationService,
@@ -369,8 +450,7 @@ export class NewSongComponent implements OnInit {
       snackBar: this.snackBar,
       language: this.selectedLanguage,
       publish: this.publish,
-      onSave: () => this.createSong(),
-      isAdmin: !!this.isAdmin()
+      onSave: onSave || (() => this.createSong())
     });
   }
 

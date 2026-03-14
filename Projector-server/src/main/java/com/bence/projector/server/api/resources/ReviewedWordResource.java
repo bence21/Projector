@@ -62,13 +62,17 @@ public class ReviewedWordResource {
         this.bibleService = bibleService;
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/admin/api/reviewedWord/{languageId}")
+    @RequestMapping(method = RequestMethod.POST, value = {
+            "/admin/api/reviewedWord/{languageId}",
+            "/reviewer/api/reviewedWord/{languageId}",
+            "/user/api/reviewedWord/{languageId}"
+    })
     public ResponseEntity<Object> createOrUpdateReviewedWord(
             Principal principal,
             @PathVariable final String languageId,
             @RequestBody final ReviewedWordDTO reviewedWordDTO
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -79,18 +83,25 @@ public class ReviewedWordResource {
         if (reviewedWord == null) {
             return new ResponseEntity<>("Invalid data", HttpStatus.BAD_REQUEST);
         }
+        ResponseEntity<Object> permissionError = validateReviewedWordPermission(user, language, reviewedWord);
+        if (permissionError != null) {
+            return permissionError;
+        }
 
         reviewedWord.setLanguage(language);
         ReviewedWord saved = reviewedWordService.saveOrUpdate(reviewedWord, user);
         return new ResponseEntity<>(reviewedWordAssembler.createDto(saved), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/reviewedWord/{languageId}")
+    @RequestMapping(method = RequestMethod.GET, value = {
+            "/admin/api/reviewedWord/{languageId}",
+            "/reviewer/api/reviewedWord/{languageId}"
+    })
     public ResponseEntity<Object> getAllReviewedWords(
             Principal principal,
             @PathVariable final String languageId
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -100,13 +111,16 @@ public class ReviewedWordResource {
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(reviewedWords), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/reviewedWord/{languageId}/status/{status}")
+    @RequestMapping(method = RequestMethod.GET, value = {
+            "/admin/api/reviewedWord/{languageId}/status/{status}",
+            "/reviewer/api/reviewedWord/{languageId}/status/{status}"
+    })
     public ResponseEntity<Object> getReviewedWordsByStatus(
             Principal principal,
             @PathVariable final String languageId,
             @PathVariable final String status
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -123,7 +137,9 @@ public class ReviewedWordResource {
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(reviewedWords), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.DELETE, value = "/admin/api/reviewedWord/{wordId}")
+    @RequestMapping(method = RequestMethod.DELETE, value = {
+            "/admin/api/reviewedWord/{wordId}"
+    })
     public ResponseEntity<Object> deleteReviewedWord(
             Principal principal,
             @PathVariable final String wordId
@@ -146,13 +162,16 @@ public class ReviewedWordResource {
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/admin/api/reviewedWord/{languageId}/bulk")
+    @RequestMapping(method = RequestMethod.POST, value = {
+            "/admin/api/reviewedWord/{languageId}/bulk",
+            "/reviewer/api/reviewedWord/{languageId}/bulk"
+    })
     public ResponseEntity<Object> bulkUpdateReviewedWords(
             Principal principal,
             @PathVariable final String languageId,
             @RequestBody final List<ReviewedWordDTO> reviewedWordDTOs
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -167,6 +186,10 @@ public class ReviewedWordResource {
         for (ReviewedWordDTO dto : reviewedWordDTOs) {
             ReviewedWord reviewedWord = reviewedWordAssembler.createModel(dto);
             if (reviewedWord != null) {
+                ResponseEntity<Object> permissionError = validateReviewedWordPermission(user, language, reviewedWord);
+                if (permissionError != null) {
+                    return permissionError;
+                }
                 reviewedWord.setLanguage(language);
                 ReviewedWord saved = reviewedWordService.saveOrUpdate(reviewedWord, user);
                 savedWords.add(saved);
@@ -176,13 +199,17 @@ public class ReviewedWordResource {
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(savedWords), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/reviewedWord/detect-language")
+    @RequestMapping(method = RequestMethod.GET, value = {
+            "/admin/api/reviewedWord/detect-language",
+            "/reviewer/api/reviewedWord/detect-language",
+            "/user/api/reviewedWord/detect-language"
+    })
     public ResponseEntity<Object> detectSourceLanguages(
             Principal principal,
             @RequestParam("word") String word,
             @RequestParam("languageId") String languageId
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -202,7 +229,7 @@ public class ReviewedWordResource {
             @RequestParam(value = "minScore", required = false, defaultValue = "50") final long minScore,
             @RequestParam(value = "minOccurrences", required = false, defaultValue = "10") final int minOccurrences
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateReviewerUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -286,7 +313,7 @@ public class ReviewedWordResource {
         return null;
     }
 
-    private ResponseEntity<Object> validateUserAndLanguage(Principal principal, String languageId) {
+    private ResponseEntity<Object> validateAuthenticatedUserAndLanguage(Principal principal, String languageId) {
         User user = getUserFromPrincipalAndUserService(principal, userService);
         if (user == null) {
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
@@ -296,12 +323,38 @@ public class ReviewedWordResource {
         if (language == null) {
             return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
         }
+        return null;
+    }
 
+    private ResponseEntity<Object> validateReviewerUserAndLanguage(Principal principal, String languageId) {
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
+        if (validationError != null) {
+            return validationError;
+        }
+
+        User user = getUserFromPrincipalAndUserService(principal, userService);
+        Language language = languageService.findOneByUuid(languageId);
         if (lacksReviewerPermission(user, language)) {
             return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
         }
 
         return null;
+    }
+
+    private ResponseEntity<Object> validateReviewedWordPermission(User user, Language language, ReviewedWord reviewedWord) {
+        if (user == null || language == null || reviewedWord == null) {
+            return new ResponseEntity<>("Invalid data", HttpStatus.BAD_REQUEST);
+        }
+
+        if (requiresReviewerPermission(reviewedWord.getStatus()) && lacksReviewerPermission(user, language)) {
+            return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
+        }
+
+        return null;
+    }
+
+    private boolean requiresReviewerPermission(ReviewedWordStatus status) {
+        return status == ReviewedWordStatus.BANNED || status == ReviewedWordStatus.REJECTED;
     }
 
     private boolean lacksReviewerPermission(User user, Language language) {

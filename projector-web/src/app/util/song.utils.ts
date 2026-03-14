@@ -68,26 +68,23 @@ export interface WordValidationConfig {
   language: Language;
   publish: boolean;
   onSave: () => void;
-  isAdmin?: boolean;
 }
 
 export function validateWordsAndSave(config: WordValidationConfig): void {
-  const { song, validationService, dialog, snackBar, language, publish, onSave, isAdmin } = config;
-
-  // Skip validation if user is not an admin
-  if (!isAdmin) {
-    onSave();
-    return;
-  }
+  const { song, validationService, dialog, snackBar, language, publish, onSave } = config;
 
   // Check if song is currently public (before validation)
   const wasPublic = isSongPublic(song);
 
   validationService.validateWords(song).subscribe(
     (validationResult) => {
+      const hasBlockingIssues =
+        (validationResult.bannedWords && validationResult.bannedWords.length > 0) ||
+        (validationResult.rejectedWords && validationResult.rejectedWords.length > 0);
+
       if (validationResult.hasIssues) {
         // If song is already public and user is trying to publish, just ask for confirmation
-        if (publish && wasPublic) {
+        if (publish && wasPublic && !hasBlockingIssues) {
           const confirmDialogRef = dialog.open(ConfirmActionDialogComponent, {
             width: '500px',
             data: {
@@ -110,7 +107,10 @@ export function validateWordsAndSave(config: WordValidationConfig): void {
 
         // Show informative message when trying to publish
         if (publish) {
-          snackBar.open('Please review and resolve word issues before publishing. Opening validation dialog...', 'Close', {
+          const publishMessage = hasBlockingIssues
+            ? 'Please review and resolve banned or rejected word issues before publishing. Opening validation dialog...'
+            : 'Unreviewed words were found. You can still publish, or review them first. Opening validation dialog...';
+          snackBar.open(publishMessage, 'Close', {
             duration: 4000
           });
         }
@@ -122,8 +122,8 @@ export function validateWordsAndSave(config: WordValidationConfig): void {
 
         dialogRef.afterClosed().subscribe(result => {
           if (result && result.proceed) {
-            // User wants to proceed with issues - save as non-public
-            song.uploaded = false;
+            // Keep publish intent when only unreviewed words remain; otherwise fall back to draft.
+            song.uploaded = result.saveAsDraft ? false : publish;
             onSave();
           }
           // If user cancelled, do nothing

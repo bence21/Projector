@@ -18,7 +18,6 @@ export class GuidelineDataService {
     this.addGuideline(guidelines, 'Content Inclusion', 'Include only the lyrics of the song in the text. Exclude chords, tabs, or unrelated content like Bible verses.');
     const youTubeGuideline = this.addGuideline(guidelines, YOU_TUBE_LINKING, 'Ensure that the song lyrics accurately represent the sung words when linking to a YouTube video.');
     youTubeGuideline.enabled = false;
-    this.addGuideline(guidelines, 'Browser Spell Checker', 'Utilize the browser\'s spell checker if available to ensure accurate spelling and grammar in the song lyrics.');
     return guidelines;
   }
 
