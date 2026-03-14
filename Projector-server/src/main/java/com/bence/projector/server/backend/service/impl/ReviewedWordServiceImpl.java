@@ -75,9 +75,16 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
     @Override
     @Transactional
     public void saveBulkNewWords(List<String> words, Language language, User reviewedBy) {
+        saveBulkNewWords(words, language, reviewedBy, ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
+    }
+
+    @Override
+    @Transactional
+    public void saveBulkNewWords(List<String> words, Language language, User reviewedBy, ReviewedWordStatus status) {
         if (words == null || words.isEmpty() || language == null) {
             return;
         }
+        ReviewedWordStatus targetStatus = status != null ? status : ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC;
 
         List<ReviewedWord> reviewedWords = new ArrayList<>();
         Date reviewedDate = new Date();
@@ -90,7 +97,7 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
             ReviewedWord reviewedWord = new ReviewedWord();
             reviewedWord.setWord(word); // This automatically sets normalizedWord via setWord()
             reviewedWord.setLanguage(language);
-            reviewedWord.setStatus(ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
+            reviewedWord.setStatus(targetStatus);
             reviewedWord.setReviewedBy(reviewedBy);
             reviewedWord.setReviewedDate(reviewedDate);
             reviewedWords.add(reviewedWord);
@@ -115,7 +122,8 @@ public class ReviewedWordServiceImpl extends BaseServiceImpl<ReviewedWord> imple
             ReviewedWordStatus.REVIEWED_GOOD,
             ReviewedWordStatus.ACCEPTED,
             ReviewedWordStatus.CONTEXT_SPECIFIC,
-            ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC
+            ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC,
+            ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE
     );
 
     @Override

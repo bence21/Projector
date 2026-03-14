@@ -67,6 +67,9 @@ export function getStatusTooltip(wordWithStatus: WordWithStatus): string {
     case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
       tooltip = 'Auto Accepted From Public';
       break;
+    case ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE:
+      tooltip = 'Auto Accepted From Bible';
+      break;
     case ReviewedWordStatus.BANNED:
       tooltip = 'Banned';
       break;

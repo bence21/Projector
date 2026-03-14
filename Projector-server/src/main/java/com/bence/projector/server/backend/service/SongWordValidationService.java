@@ -374,7 +374,8 @@ public class SongWordValidationService {
                 ReviewedWordStatus.REVIEWED_GOOD,
                 ReviewedWordStatus.ACCEPTED,
                 ReviewedWordStatus.CONTEXT_SPECIFIC,
-                ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC
+                ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC,
+                ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE
         );
     }
 

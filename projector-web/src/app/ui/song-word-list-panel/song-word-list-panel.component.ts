@@ -52,7 +52,8 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     return status === ReviewedWordStatus.REVIEWED_GOOD ||
       status === ReviewedWordStatus.CONTEXT_SPECIFIC ||
       status === ReviewedWordStatus.ACCEPTED ||
-      status === ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC;
+      status === ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC ||
+      status === ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE;
   }
 
   counts = {
@@ -249,6 +250,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       case ReviewedWordStatus.ACCEPTED:
         return 'check_circle';
       case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
+      case ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE:
         return 'verified';
       case ReviewedWordStatus.UNREVIEWED: return 'info';
       case ReviewedWordStatus.NOT_SURE: return 'info';
@@ -277,6 +279,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       case ReviewedWordStatus.ACCEPTED:
         return 'status-icon-accepted';
       case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
+      case ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE:
         return 'status-icon-auto-accepted';
       case ReviewedWordStatus.BANNED:
         return 'status-icon-banned';

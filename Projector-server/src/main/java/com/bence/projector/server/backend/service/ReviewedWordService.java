@@ -19,6 +19,8 @@ public interface ReviewedWordService extends BaseService<ReviewedWord> {
 
     void saveBulkNewWords(List<String> words, Language language, User reviewedBy);
 
+    void saveBulkNewWords(List<String> words, Language language, User reviewedBy, ReviewedWordStatus status);
+
     void deleteReview(String uuid);
 
     /**

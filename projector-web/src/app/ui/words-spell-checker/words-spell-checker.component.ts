@@ -495,6 +495,8 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
         return NormalizedWordBunchFilterType.REJECTED;
       case 'auto-accepted-from-public':
         return NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_PUBLIC;
+      case 'auto-accepted-from-bible':
+        return NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_BIBLE;
       case 'unreviewed':
         return NormalizedWordBunchFilterType.UNREVIEWED;
       case 'not-sure':

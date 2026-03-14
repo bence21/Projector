@@ -4,15 +4,18 @@ import com.bence.projector.common.dto.LanguageDTO;
 import com.bence.projector.common.dto.ReviewedWordDTO;
 import com.bence.projector.server.api.assembler.LanguageAssembler;
 import com.bence.projector.server.api.assembler.ReviewedWordAssembler;
+import com.bence.projector.server.backend.model.Bible;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.ReviewedWord;
 import com.bence.projector.server.backend.model.ReviewedWordStatus;
 import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.User;
+import com.bence.projector.server.backend.service.BibleService;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ReviewedWordService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.UserService;
+import com.bence.projector.server.utils.AutoAcceptWordsFromBibleUtil;
 import com.bence.projector.server.utils.AutoAcceptWordsFromPublicSongsUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -38,6 +41,7 @@ public class ReviewedWordResource {
     private final LanguageAssembler languageAssembler;
     private final UserService userService;
     private final SongService songService;
+    private final BibleService bibleService;
 
     @Autowired
     public ReviewedWordResource(
@@ -46,7 +50,8 @@ public class ReviewedWordResource {
             LanguageService languageService,
             LanguageAssembler languageAssembler,
             UserService userService,
-            SongService songService
+            SongService songService,
+            BibleService bibleService
     ) {
         this.reviewedWordService = reviewedWordService;
         this.reviewedWordAssembler = reviewedWordAssembler;
@@ -54,6 +59,7 @@ public class ReviewedWordResource {
         this.languageAssembler = languageAssembler;
         this.userService = userService;
         this.songService = songService;
+        this.bibleService = bibleService;
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/admin/api/reviewedWord/{languageId}")
@@ -223,6 +229,61 @@ public class ReviewedWordResource {
         } catch (Exception e) {
             return new ResponseEntity<>("Error processing request: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @RequestMapping(method = {RequestMethod.GET}, value = "/admin/api/reviewedWord/{bibleId}/autoAcceptFromBible")
+    public ResponseEntity<Object> autoAcceptWordsFromBible(
+            Principal principal,
+            @PathVariable final String bibleId,
+            @RequestParam(value = "minOccurrences", required = false, defaultValue = "1") final int minOccurrences
+    ) {
+        ResponseEntity<Object> validationError = validateUserAndBible(principal, bibleId);
+        if (validationError != null) {
+            return validationError;
+        }
+
+        try {
+            AutoAcceptWordsFromBibleUtil.AutoAcceptResult result = AutoAcceptWordsFromBibleUtil
+                    .autoAcceptWordsFromBible(
+                            reviewedWordService,
+                            bibleService,
+                            bibleId,
+                            minOccurrences
+                    );
+
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("biblesProcessed", result.biblesProcessed());
+            response.put("minOccurrences", minOccurrences);
+
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error processing request: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private ResponseEntity<Object> validateUserAndBible(Principal principal, String bibleId) {
+        User user = getUserFromPrincipalAndUserService(principal, userService);
+        if (user == null) {
+            return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        }
+
+        Bible bible = bibleService.findOneByUuid(bibleId);
+        if (bible == null) {
+            return new ResponseEntity<>("Bible not found", HttpStatus.BAD_REQUEST);
+        }
+
+        Language language = bible.getLanguage();
+        if (language == null) {
+            return new ResponseEntity<>("Bible has no language", HttpStatus.BAD_REQUEST);
+        }
+
+        if (lacksReviewerPermission(user, language)) {
+            return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
+        }
+
+        return null;
     }
 
     private ResponseEntity<Object> validateUserAndLanguage(Principal principal, String languageId) {

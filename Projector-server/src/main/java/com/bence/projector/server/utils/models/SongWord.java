@@ -1,7 +1,8 @@
 package com.bence.projector.server.utils.models;
 
 /**
- * A word extracted from a song with context about its position in the text.
+ * A word extracted from text with context about its position in the text.
+ * Can be used for song lyrics, Bible verses, and other text sources.
  */
 public class SongWord {
 

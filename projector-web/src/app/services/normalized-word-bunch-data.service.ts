@@ -13,6 +13,7 @@ export enum NormalizedWordBunchFilterType {
   ACCEPTED = 'ACCEPTED',
   REJECTED = 'REJECTED',
   AUTO_ACCEPTED_FROM_PUBLIC = 'AUTO_ACCEPTED_FROM_PUBLIC',
+  AUTO_ACCEPTED_FROM_BIBLE = 'AUTO_ACCEPTED_FROM_BIBLE',
   UNREVIEWED = 'UNREVIEWED',
   NOT_SURE = 'NOT_SURE'
 }
@@ -31,6 +32,8 @@ function getFilterPath(filterType: NormalizedWordBunchFilterType): string {
       return 'rejected';
     case NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_PUBLIC:
       return 'auto-accepted-from-public';
+    case NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_BIBLE:
+      return 'auto-accepted-from-bible';
     case NormalizedWordBunchFilterType.UNREVIEWED:
       return 'unreviewed';
     case NormalizedWordBunchFilterType.NOT_SURE:

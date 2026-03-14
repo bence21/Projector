@@ -120,6 +120,11 @@ public class NormalizedWordResource {
         return getWordBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
     }
 
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/auto-accepted-from-bible")
+    public ResponseEntity<Object> getAutoAcceptedFromBibleWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+        return getWordBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE);
+    }
+
     @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/not-sure")
     public ResponseEntity<Object> getNotSureWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
         return getWordBunchesByStatus(languageId, ReviewedWordStatus.NOT_SURE);
@@ -141,7 +146,7 @@ public class NormalizedWordResource {
 
     /**
      * Paginated endpoint for words spell checker. Returns a single page of flattened rows.
-     * Query params: page (0-based), size, filter (all | problematic | banned | reviewed-good | context-specific | accepted | rejected | not-sure | unreviewed | auto-accepted-from-public).
+     * Query params: page (0-based), size, filter (all | problematic | banned | reviewed-good | context-specific | accepted | rejected | not-sure | unreviewed | auto-accepted-from-public | auto-accepted-from-bible).
      */
     @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/page")
     public ResponseEntity<Object> getWordBunchesPage(
@@ -264,6 +269,8 @@ public class NormalizedWordResource {
                 return getBunchesByStatus(languageId, ReviewedWordStatus.NOT_SURE);
             case "auto-accepted-from-public":
                 return getBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
+            case "auto-accepted-from-bible":
+                return getBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE);
             case "unreviewed": {
                 Set<String> reviewedWords = getReviewedWordsSet(language);
                 List<NormalizedWordBunch> allBunches = getAllWordBunchesForLanguage(language);

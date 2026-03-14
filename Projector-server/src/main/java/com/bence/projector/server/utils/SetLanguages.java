@@ -601,28 +601,61 @@ public class SetLanguages {
 
     private static final String SENTENCE_ENDERS = ".!?";
 
+    /**
+     * Extracts words (letters only) from text. Reusable for any text source (e.g. song verses, Bible verses).
+     *
+     * @param text the text to extract words from
+     * @return list of words found in the text
+     */
+    public static List<String> getWordsFromText(String text) {
+        if (text == null || text.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<SongWord> words = new ArrayList<>();
+        addWordsFromText(words, text);
+        return toWordStrings(words);
+    }
+
+    private static WordFromSegment getWordFromSegmentWithEnd(String segment) {
+        if (segment == null || segment.isEmpty()) {
+            return new WordFromSegment("", -1);
+        }
+        char[] wordCharArray = segment.toCharArray();
+        int start = 0;
+        int end = wordCharArray.length - 1;
+        // Find the first letter (skip leading non-letter characters)
+        while (start <= end && !Character.isLetter(wordCharArray[start])) {
+            start++;
+        }
+        // Find the last letter (skip trailing non-letter characters)
+        while (end >= start && !Character.isLetter(wordCharArray[end])) {
+            end--;
+        }
+        // If we found a valid range with at least one letter
+        if (start > end) {
+            return new WordFromSegment("", -1);
+        }
+        return new WordFromSegment(getWordWithoutNonLetters(wordCharArray, start, end), end);
+    }
+
+    private record WordFromSegment(String word, int lastLetterIndex) {
+    }
+
     private static void addWordsFromSongVerse(Collection<SongWord> words, SongVerse songVerse) {
-        List<String> split = splitOnWhitespace(songVerse.getText());
+        String text = songVerse.getText();
+        addWordsFromText(words, text);
+    }
+
+    private static void addWordsFromText(Collection<SongWord> words, String text) {
+        List<String> split = splitOnWhitespace(text);
         boolean nextWordIsFirstInSentence = true;
         boolean nextWordIsFirstInLine = true;
         for (String segment : split) {
-            char[] wordCharArray = segment.toCharArray();
-            int start = 0;
-            int end = wordCharArray.length - 1;
-            // Find the first letter (skip leading non-letter characters)
-            while (start <= end && !Character.isLetter(wordCharArray[start])) {
-                start++;
-            }
-            // Find the last letter (skip trailing non-letter characters)
-            while (end >= start && !Character.isLetter(wordCharArray[end])) {
-                end--;
-            }
-            // If we found a valid range with at least one letter
-            if (start <= end) {
-                String wordWithoutNonLetters = getWordWithoutNonLetters(wordCharArray, start, end);
-                words.add(new SongWord(wordWithoutNonLetters, nextWordIsFirstInLine, nextWordIsFirstInSentence));
+            WordFromSegment result = getWordFromSegmentWithEnd(segment);
+            if (!result.word.isEmpty()) {
+                words.add(new SongWord(result.word, nextWordIsFirstInLine, nextWordIsFirstInSentence));
                 nextWordIsFirstInLine = false;
-                nextWordIsFirstInSentence = segmentEndsWithSentenceEnder(segment, end);
+                nextWordIsFirstInSentence = segmentEndsWithSentenceEnder(segment, result.lastLetterIndex);
             }
             // After processing this segment: if it contained a newline, the next word will be first in a new line
             if (segment.indexOf('\n') >= 0) {

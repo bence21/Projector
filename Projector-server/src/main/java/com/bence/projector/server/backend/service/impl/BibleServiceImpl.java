@@ -4,6 +4,7 @@ import com.bence.projector.server.backend.model.Bible;
 import com.bence.projector.server.backend.model.BibleVerse;
 import com.bence.projector.server.backend.model.Book;
 import com.bence.projector.server.backend.model.Chapter;
+import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.VerseIndex;
 import com.bence.projector.server.backend.repository.BibleRepository;
 import com.bence.projector.server.backend.service.BibleService;
@@ -33,6 +34,11 @@ public class BibleServiceImpl extends BaseServiceImpl<Bible> implements BibleSer
     @Override
     public Bible findOneByUuid(String uuid) {
         return bibleRepository.findOneByUuid(uuid);
+    }
+
+    @Override
+    public List<Bible> findAllByLanguage(Language language) {
+        return bibleRepository.findAllByLanguage(language);
     }
 
     @Override
