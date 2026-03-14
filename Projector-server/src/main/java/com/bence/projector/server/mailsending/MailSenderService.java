@@ -162,6 +162,18 @@ public class MailSenderService {
         thread.start();
     }
 
+    private void sendNewUsersInThread(List<User> users) {
+        List<User> userList = new ArrayList<>(users.size());
+        userList.addAll(users);
+        List<User> admins = userService.findAllAdmins();
+        Thread thread = new Thread(() -> {
+            for (User admin : admins) {
+                sendNewUsers(userList, admin);
+            }
+        });
+        thread.start();
+    }
+
     private void sendSuggestions(List<Suggestion> suggestions, User user) {
         try {
             final String freemarkerName = FreemarkerConfiguration.NEW_SUGGESTION + ".ftl";
@@ -203,6 +215,37 @@ public class MailSenderService {
         }
         subject += addLanguageToSubject(songs, user);
         sendGeneralEmail(user, songs, FreemarkerConfiguration.NEW_SONG, subject);
+    }
+
+    private void sendNewUsers(List<User> users, User admin) {
+        try {
+            if (!AppProperties.getInstance().isProduction()) {
+                return;
+            }
+            final String freemarkerName = FreemarkerConfiguration.NEW_USERS_PAGE + ".ftl";
+            freemarker.template.Configuration config = ConfigurationUtil.getConfiguration();
+            config.setDefaultEncoding("UTF-8");
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(new InternetAddress(admin.getEmail()));
+            helper.setFrom(getNoReplyInternetAddress());
+            if (users.size() > 1) {
+                helper.setSubject("New users (" + users.size() + ")");
+            } else {
+                helper.setSubject("New user");
+            }
+
+            Template template = config.getTemplate(freemarkerName);
+
+            StringWriter writer = new StringWriter();
+            Map<String, Object> model = createPatternForUsers(users);
+            template.process(model, writer);
+
+            helper.getMimeMessage().setContent(writer.toString(), "text/html;charset=utf-8");
+            sender.send(message);
+        } catch (MessagingException | IOException | TemplateException e) {
+            e.printStackTrace();
+        }
     }
 
     private void sendGeneralEmail(User user, List<Song> songs, String ftlPage, String subject) {
@@ -290,6 +333,13 @@ public class MailSenderService {
             songRows.add(createNewSongRow(song));
         }
         data.put("songRows", songRows);
+        data.put("baseUrl", AppProperties.getInstance().baseUrl());
+        return data;
+    }
+
+    private Map<String, Object> createPatternForUsers(List<User> users) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("users", users);
         data.put("baseUrl", AppProperties.getInstance().baseUrl());
         return data;
     }
@@ -412,9 +462,29 @@ public class MailSenderService {
         saveEmptySongNotification();
     }
 
+    public void sendEmailNewUsers(List<User> users) {
+        if (users == null || users.isEmpty()) {
+            return;
+        }
+        Date oneDayBefore = getOneDayBefore();
+        List<NotificationStatus> notifications = notificationStatusRepository.findAllByNotificationTypeAndDateAfter(NotificationType.NEW_USER, oneDayBefore);
+        if (notifications != null && !notifications.isEmpty()) {
+            return;
+        }
+        sendNewUsersInThread(users);
+        saveNewUserNotification();
+    }
+
     private void saveEmptySongNotification() {
         NotificationStatus notificationStatus = new NotificationStatus();
         notificationStatus.setNotificationType(NotificationType.SONG_EMPTY);
+        notificationStatus.setDate(new Date());
+        notificationStatusRepository.save(notificationStatus);
+    }
+
+    private void saveNewUserNotification() {
+        NotificationStatus notificationStatus = new NotificationStatus();
+        notificationStatus.setNotificationType(NotificationType.NEW_USER);
         notificationStatus.setDate(new Date());
         notificationStatusRepository.save(notificationStatus);
     }

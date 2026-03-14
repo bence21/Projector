@@ -10,4 +10,6 @@ import java.util.List;
 public interface NotificationStatusRepository extends CrudRepository<NotificationStatus, Long> {
 
     List<NotificationStatus> findAllByNotificationTypeAndDateAfter(NotificationType notificationType, Date date);
+
+    NotificationStatus findFirstByNotificationTypeOrderByDateDesc(NotificationType notificationType);
 }

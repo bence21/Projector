@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -105,5 +106,10 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
     @Override
     public User findOneByUuid(String uuid) {
         return userRepository.findOneByUuid(uuid);
+    }
+
+    @Override
+    public List<User> findAllByCreatedDateAfter(Date date) {
+        return userRepository.findAllByCreatedDateAfter(date);
     }
 }
