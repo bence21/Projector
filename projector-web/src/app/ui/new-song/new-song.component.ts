@@ -339,7 +339,7 @@ export class NewSongComponent implements OnInit {
       if (this.formErrors.hasOwnProperty(field)) {
         this.formErrors[field] = '';
         const control = form.get(field);
-error test
+
         if (control && control.dirty && !control.valid) {
           if (field === 'youtubeUrl' && control.errors.youtubeUrlInvalid) {
             this.formErrors[field] = control.errors.youtubeUrlInvalid;
