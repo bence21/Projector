@@ -12,6 +12,7 @@ import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.service.BibleService;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.backend.service.NormalizedWordBunchCacheService;
 import com.bence.projector.server.backend.service.ReviewedWordService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.UserService;
@@ -42,6 +43,7 @@ public class ReviewedWordResource {
     private final UserService userService;
     private final SongService songService;
     private final BibleService bibleService;
+    private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
 
     @Autowired
     public ReviewedWordResource(
@@ -51,7 +53,8 @@ public class ReviewedWordResource {
             LanguageAssembler languageAssembler,
             UserService userService,
             SongService songService,
-            BibleService bibleService
+            BibleService bibleService,
+            NormalizedWordBunchCacheService normalizedWordBunchCacheService
     ) {
         this.reviewedWordService = reviewedWordService;
         this.reviewedWordAssembler = reviewedWordAssembler;
@@ -60,6 +63,7 @@ public class ReviewedWordResource {
         this.userService = userService;
         this.songService = songService;
         this.bibleService = bibleService;
+        this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
     }
 
     @RequestMapping(method = RequestMethod.POST, value = {
@@ -90,6 +94,9 @@ public class ReviewedWordResource {
 
         reviewedWord.setLanguage(language);
         ReviewedWord saved = reviewedWordService.saveOrUpdate(reviewedWord, user);
+        if (saved != null) {
+            normalizedWordBunchCacheService.addReviewedWordToCache(language, saved);
+        }
         return new ResponseEntity<>(reviewedWordAssembler.createDto(saved), HttpStatus.ACCEPTED);
     }
 
@@ -158,7 +165,11 @@ public class ReviewedWordResource {
             return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
         }
 
+        Language language = reviewedWord.getLanguage();
         reviewedWordService.deleteReview(wordId);
+        if (language != null) {
+            normalizedWordBunchCacheService.removeReviewedWordFromCache(language, reviewedWord);
+        }
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }
 
@@ -196,6 +207,11 @@ public class ReviewedWordResource {
             }
         }
 
+        for (ReviewedWord saved : savedWords) {
+            if (saved != null) {
+                normalizedWordBunchCacheService.addReviewedWordToCache(language, saved);
+            }
+        }
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(savedWords), HttpStatus.ACCEPTED);
     }
 

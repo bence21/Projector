@@ -3,7 +3,7 @@ import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { Observable } from 'rxjs/Observable';
 import { DataSource } from '@angular/cdk/table';
 import { MatDialog, MatSnackBar, PageEvent } from '@angular/material';
-import { NormalizedWordBunchDataService, NormalizedWordBunchFilterType } from '../../services/normalized-word-bunch-data.service';
+import { NormalizedWordBunchDataService } from '../../services/normalized-word-bunch-data.service';
 import { NormalizedWordBunchRowDTO } from '../../models/normalized-word-bunch-row-dto';
 import { WordBunch } from '../../models/wordBunch';
 import { LanguageDataService } from '../../services/language-data.service';
@@ -42,11 +42,11 @@ class NormalizedWordBunchRow {
   }
 
   getSongLink(): string {
-    return this.song.getLink();
+    return this.song ? this.song.getLink() : '';
   }
 
   getSongTitle(): string {
-    return this.song.title;
+    return this.song ? this.song.title : '—';
   }
 
   getWordWithStatus(): WordWithStatus {
@@ -479,31 +479,6 @@ export class WordsSpellCheckerComponent implements OnInit, OnDestroy {
       word: row.word,
       onSuccess: () => this.onFilterChange()
     });
-  }
-
-  private getFilterTypeFromString(filterTypeString: string): NormalizedWordBunchFilterType | null {
-    switch (filterTypeString) {
-      case 'banned':
-        return NormalizedWordBunchFilterType.BANNED;
-      case 'reviewed-good':
-        return NormalizedWordBunchFilterType.REVIEWED_GOOD;
-      case 'context-specific':
-        return NormalizedWordBunchFilterType.CONTEXT_SPECIFIC;
-      case 'accepted':
-        return NormalizedWordBunchFilterType.ACCEPTED;
-      case 'rejected':
-        return NormalizedWordBunchFilterType.REJECTED;
-      case 'auto-accepted-from-public':
-        return NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_PUBLIC;
-      case 'auto-accepted-from-bible':
-        return NormalizedWordBunchFilterType.AUTO_ACCEPTED_FROM_BIBLE;
-      case 'unreviewed':
-        return NormalizedWordBunchFilterType.UNREVIEWED;
-      case 'not-sure':
-        return NormalizedWordBunchFilterType.NOT_SURE;
-      default:
-        return null;
-    }
   }
 
   /**

@@ -1,11 +1,8 @@
 package com.bence.projector.server.api.resources;
 
 import com.bence.projector.common.dto.ChangeWordDTO;
-import com.bence.projector.common.dto.NormalizedWordBunchDTO;
 import com.bence.projector.common.dto.NormalizedWordBunchRowDTO;
 import com.bence.projector.common.dto.PageResponse;
-import com.bence.projector.common.dto.WordBunchDTO;
-import com.bence.projector.server.api.assembler.NormalizedWordBunchAssembler;
 import com.bence.projector.server.api.assembler.ReviewedWordAssembler;
 import com.bence.projector.server.api.assembler.SongTitleAssembler;
 import com.bence.projector.server.backend.model.Language;
@@ -54,7 +51,6 @@ public class NormalizedWordResource {
     private final SongRepository songRepository;
     private final SongService songService;
     private final LanguageService languageService;
-    private final NormalizedWordBunchAssembler normalizedWordBunchAssembler;
     private final ReviewedWordService reviewedWordService;
     private final ReviewedWordAssembler reviewedWordAssembler;
     private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
@@ -65,7 +61,6 @@ public class NormalizedWordResource {
             SongRepository songRepository,
             SongService songService,
             LanguageService languageService,
-            NormalizedWordBunchAssembler normalizedWordBunchAssembler,
             ReviewedWordService reviewedWordService,
             ReviewedWordAssembler reviewedWordAssembler,
             NormalizedWordBunchCacheService normalizedWordBunchCacheService,
@@ -74,74 +69,10 @@ public class NormalizedWordResource {
         this.songRepository = songRepository;
         this.songService = songService;
         this.languageService = languageService;
-        this.normalizedWordBunchAssembler = normalizedWordBunchAssembler;
         this.reviewedWordService = reviewedWordService;
         this.reviewedWordAssembler = reviewedWordAssembler;
         this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
         this.songTitleAssembler = songTitleAssembler;
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}")
-    public ResponseEntity<Object> getWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        Language language = languageService.findOneByUuid(languageId);
-        if (language == null) {
-            return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
-        }
-        return new ResponseEntity<>(normalizedWordBunchAssembler.createDtoList(getAllWordBunchesForLanguage(language)), HttpStatus.ACCEPTED);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/banned")
-    public ResponseEntity<Object> getBannedWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.BANNED);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/reviewed-good")
-    public ResponseEntity<Object> getReviewedGoodWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.REVIEWED_GOOD);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/context-specific")
-    public ResponseEntity<Object> getContextSpecificWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.CONTEXT_SPECIFIC);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/accepted")
-    public ResponseEntity<Object> getAcceptedWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.ACCEPTED);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/rejected")
-    public ResponseEntity<Object> getRejectedWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.REJECTED);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/auto-accepted-from-public")
-    public ResponseEntity<Object> getAutoAcceptedFromPublicWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/auto-accepted-from-bible")
-    public ResponseEntity<Object> getAutoAcceptedFromBibleWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/not-sure")
-    public ResponseEntity<Object> getNotSureWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        return getWordBunchesByStatus(languageId, ReviewedWordStatus.NOT_SURE);
-    }
-
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/normalizedWordBunches/{languageId}/unreviewed")
-    public ResponseEntity<Object> getUnreviewedWordBunches(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
-        Language language = languageService.findOneByUuid(languageId);
-        if (language == null) {
-            return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
-        }
-
-        Set<String> reviewedWords = getReviewedWordsSet(language);
-        List<NormalizedWordBunch> allBunches = getAllWordBunchesForLanguage(language);
-        List<NormalizedWordBunch> unreviewed = filterUnreviewedBunches(allBunches, reviewedWords);
-
-        return new ResponseEntity<>(normalizedWordBunchAssembler.createDtoList(unreviewed), HttpStatus.ACCEPTED);
     }
 
     /**
@@ -177,7 +108,7 @@ public class NormalizedWordResource {
         }
         int to = (int) Math.min((long) (page + 1) * size, totalElements);
         List<NormalizedWordBunchRowDTO> content = new ArrayList<>();
-        Map<String, ReviewedWord> reviewedWordMap = createReviewedWordMap(reviewedWordService.findAllByLanguage(language));
+        Map<String, ReviewedWord> reviewedWordMap = normalizedWordBunchCacheService.getReviewedWordMapForLanguage(language);
         for (int i = from; i < to; i++) {
             SpellCheckerRowData rowData = rows.get(i);
             content.add(buildRowDto(i + 1, rowData, reviewedWordMap));
@@ -303,47 +234,10 @@ public class NormalizedWordResource {
         return filtered;
     }
 
-    private ResponseEntity<Object> getWordBunchesByStatus(String languageId, ReviewedWordStatus status) {
-        Language language = languageService.findOneByUuid(languageId);
-        if (language == null) {
-            return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
-        }
-
-        List<ReviewedWord> reviewedWords = reviewedWordService.findAllByLanguageAndStatus(language, status);
-
-        Set<String> normalizedWords = getNormalizedWordsSet(reviewedWords);
-        if (normalizedWords.isEmpty()) {
-            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.ACCEPTED);
-        }
-
-        List<NormalizedWordBunch> filtered = filterWordBunchesByNormalizedWords(language, normalizedWords);
-
-        // Build maps for efficient lookup
-        Map<String, NormalizedWordBunch> normalizedWordToBunchMap = createNormalizedWordToBunchMap(filtered);
-        Set<String> exactWordsSet = createExactWordsSet(filtered);
-
-        // Add reviewed words that don't have exact matches
-        for (ReviewedWord reviewedWord : reviewedWords) {
-            addReviewedWordToFiltered(filtered, reviewedWord, normalizedWordToBunchMap, exactWordsSet);
-        }
-
-        List<NormalizedWordBunchDTO> dtoList = normalizedWordBunchAssembler.createDtoList(filtered);
-
-        Map<String, ReviewedWord> reviewedWordMap = createReviewedWordMap(reviewedWords);
-        populateReviewedWordsInDtos(dtoList, reviewedWordMap);
-
-        return new ResponseEntity<>(dtoList, HttpStatus.ACCEPTED);
-    }
-
     private Set<String> getNormalizedWordsSet(List<ReviewedWord> reviewedWords) {
         return reviewedWords.stream()
                 .map(ReviewedWord::getNormalizedWord)
                 .collect(Collectors.toSet());
-    }
-
-    private Map<String, ReviewedWord> createReviewedWordMap(List<ReviewedWord> reviewedWords) {
-        return reviewedWords.stream()
-                .collect(Collectors.toMap(ReviewedWord::getWord, rw -> rw, (existing, replacement) -> existing));
     }
 
     private List<NormalizedWordBunch> filterWordBunchesByNormalizedWords(Language language, Set<String> normalizedWords) {
@@ -352,32 +246,6 @@ public class NormalizedWordResource {
                 .filter(nwb -> nwb.getWordBunches().stream()
                         .anyMatch(wb -> normalizedWords.contains(wb.getNormalizedWord())))
                 .collect(Collectors.toList());
-    }
-
-    private void populateReviewedWordsInDtos(List<NormalizedWordBunchDTO> dtoList, Map<String, ReviewedWord> reviewedWordMap) {
-        for (NormalizedWordBunchDTO nwbDto : dtoList) {
-            populateReviewedWordInWordBunchList(nwbDto.getWordBunches(), reviewedWordMap);
-            populateReviewedWordInWordBunchDto(nwbDto.getMaxBunch(), reviewedWordMap);
-        }
-    }
-
-    private void populateReviewedWordInWordBunchList(List<WordBunchDTO> wordBunchDtos, Map<String, ReviewedWord> reviewedWordMap) {
-        if (wordBunchDtos == null) {
-            return;
-        }
-        for (WordBunchDTO wbDto : wordBunchDtos) {
-            populateReviewedWordInWordBunchDto(wbDto, reviewedWordMap);
-        }
-    }
-
-    private void populateReviewedWordInWordBunchDto(WordBunchDTO wbDto, Map<String, ReviewedWord> reviewedWordMap) {
-        if (wbDto == null || wbDto.getWord() == null) {
-            return;
-        }
-        ReviewedWord reviewedWord = reviewedWordMap.get(wbDto.getWord());
-        if (reviewedWord != null) {
-            wbDto.setReviewedWord(reviewedWordAssembler.createDto(reviewedWord));
-        }
     }
 
     private List<NormalizedWordBunch> getAllWordBunchesForLanguage(Language language) {
@@ -389,9 +257,7 @@ public class NormalizedWordResource {
     }
 
     private Set<String> getReviewedWordsSet(Language language) {
-        return reviewedWordService.findAllByLanguage(language).stream()
-                .map(ReviewedWord::getNormalizedWord)
-                .collect(Collectors.toSet());
+        return normalizedWordBunchCacheService.getReviewedWordsSetForLanguage(language);
     }
 
     private Set<String> createExactWordsSet(List<NormalizedWordBunch> filtered) {
