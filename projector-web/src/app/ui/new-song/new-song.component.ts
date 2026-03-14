@@ -112,6 +112,10 @@ export class NewSongComponent implements OnInit {
   private initialFormValue: string;
   currentSongForWordList: Song;
 
+  get isLoggedIn(): boolean {
+    return this.auth != null && this.auth.isLoggedIn;
+  }
+
   constructor(private fb: FormBuilder,
     private songService: SongService,
     private router: Router,

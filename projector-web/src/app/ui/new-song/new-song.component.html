@@ -117,7 +117,7 @@
           <br>
           <br>
           <app-song-guidelines-checker [pGuidelines]="guidelines"></app-song-guidelines-checker>
-          <mat-card *ngIf="currentSongForWordList && selectedLanguage && auth.isLoggedIn">
+          <mat-card *ngIf="currentSongForWordList && selectedLanguage && isLoggedIn">
             <mat-card-content>
               <app-song-word-list-panel
                 [song]="currentSongForWordList"
