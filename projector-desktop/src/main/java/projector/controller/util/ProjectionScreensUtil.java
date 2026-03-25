@@ -159,6 +159,32 @@ public class ProjectionScreensUtil {
                 projectionScreenHolder.setLock(lock);
             }
         }
+        if (!lock) {
+            reapplyCurrentProjectionAfterUnlock();
+        }
+    }
+
+    private void reapplyCurrentProjectionAfterUnlock() {
+        if (projectionType == null) {
+            return;
+        }
+        if (projectionType == ProjectionType.IMAGE) {
+            if (fileImagePath != null) {
+                setImage(fileImagePath, projectionType, null);
+            } else if (lastImage != null) {
+                drawImage(lastImage);
+            }
+            return;
+        }
+        if (projectionType == ProjectionType.CLEAR) {
+            clearAll();
+            return;
+        }
+        if (projectionType == ProjectionType.SONG_ENDING) {
+            songEnding();
+            return;
+        }
+        setText(text, projectionType, projectionData);
     }
 
     public void setBlank(boolean blank) {

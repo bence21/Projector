@@ -750,7 +750,14 @@ public class ProjectionScreenSettings {
             Path sourcePath = Paths.get(getFileName());
             Path destinationPath = Paths.get(getFileName(s));
             if (!Files.exists(destinationPath)) {
-                Files.copy(sourcePath, destinationPath);
+                if (!Files.exists(sourcePath)) {
+                    save();
+                }
+                if (Files.exists(sourcePath)) {
+                    Files.copy(sourcePath, destinationPath);
+                } else {
+                    LOG.warn("Cannot copy projection screen settings, source file missing: {}", sourcePath);
+                }
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -896,7 +903,7 @@ public class ProjectionScreenSettings {
     }
 
     public boolean hasSkippedBible() {
-        return getParallelBibleUuidSkipping().size() > 0;
+        return !getParallelBibleUuidSkipping().isEmpty();
     }
 
     public boolean isSkipped(Bible bible) {

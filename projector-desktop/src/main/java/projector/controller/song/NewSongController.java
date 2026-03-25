@@ -477,7 +477,7 @@ public class NewSongController {
 
     private boolean saveSong() {
         Language selectedLanguage = languageComboBoxForNewSong.getSelectionModel().getSelectedItem();
-        if (selectedLanguage == null) {
+        if (selectedLanguage == null && !languageComboBoxForNewSong.getItems().isEmpty()) {
             Alert alert = new Alert(AlertType.WARNING);
             alert.setTitle("Warning");
             alert.setHeaderText("No language!");
@@ -502,7 +502,9 @@ public class NewSongController {
         } else {
             newSong = new Song();
             newSong.setCreatedDate(createdDate);
-            selectedLanguage.getSongs().add(newSong);
+            if (selectedLanguage != null) {
+                selectedLanguage.getSongs().add(newSong);
+            }
         }
         newSong.setLanguage(selectedLanguage);
         newSong.setTitle(titleTextField.getText().trim());
