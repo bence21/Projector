@@ -125,7 +125,7 @@ public class MailSenderService {
         int suggestionStackSize = suggestionStack.size();
         if (suggestionStackSize > 0 && notificationByLanguage.isSuggestions()) {
             Date now = new Date();
-            if (suggestionStackSize > 49 || now.getTime() - notificationByLanguage.getSuggestionsDelay() > notificationByLanguage.getSuggestionsLastSentDate().getTime()) {
+            if (now.getTime() - notificationByLanguage.getSuggestionsDelay() > notificationByLanguage.getSuggestionsLastSentDate().getTime()) {
                 sendSuggestionsInThread(user, suggestionStack);
                 notificationByLanguage.setSuggestionsLastSentDate(now);
                 suggestionStack.clear();
@@ -136,7 +136,7 @@ public class MailSenderService {
         int newSongStackSize = newSongStack.size();
         if (newSongStackSize > 0 && notificationByLanguage.isNewSongs()) {
             Date now = new Date();
-            if (newSongStackSize > 49 || now.getTime() - notificationByLanguage.getNewSongsDelay() > notificationByLanguage.getNewSongsLastSentDate().getTime()) {
+            if (now.getTime() - notificationByLanguage.getNewSongsDelay() > notificationByLanguage.getNewSongsLastSentDate().getTime()) {
                 sendNewSongsInThread(user, newSongStack);
                 notificationByLanguage.setNewSongsLastSentDate(now);
                 newSongStack.clear();
