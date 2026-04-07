@@ -3,6 +3,7 @@ package com.bence.projector.server.backend.service;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.User;
 
+import java.util.Date;
 import java.util.List;
 
 public interface UserService extends BaseService<User> {
@@ -17,4 +18,8 @@ public interface UserService extends BaseService<User> {
     List<User> findAllAdmins();
 
     User findOneByUuid(String uuid);
+
+    List<User> findAllByCreatedDateAfter(Date date);
+
+    void deleteUser(User user);
 }

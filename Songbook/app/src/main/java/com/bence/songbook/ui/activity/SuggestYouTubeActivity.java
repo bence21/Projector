@@ -35,6 +35,7 @@ import com.bence.songbook.service.UserService;
 import com.bence.songbook.ui.utils.CheckSongForUpdate;
 import com.bence.songbook.ui.utils.CheckSongForUpdateListener;
 import com.bence.songbook.ui.utils.Preferences;
+import com.bence.songbook.utils.YouTubeUrlParser;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class SuggestYouTubeActivity extends BaseActivity {
@@ -74,12 +75,14 @@ public class SuggestYouTubeActivity extends BaseActivity {
             @Override
             public void afterTextChanged(Editable s) {
                 try {
-                    final String youtubeId = parseYoutubeUrl(String.valueOf(s));
-                    if (youtubeId.length() < 21 && youtubeId.length() > 9) {
+                    final String youtubeId = YouTubeUrlParser.parseYoutubeUrl(String.valueOf(s));
+                    if (!youtubeId.isEmpty()) {
                         youTubeView.setVisibility(View.VISIBLE);
                         if (youTubeView != null) {
                             setYouTubeIFrameToWebView(youTubeView, youtubeId, SuggestYouTubeActivity.this);
                         }
+                    } else if (youTubeView != null) {
+                        youTubeView.setVisibility(View.GONE);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -165,8 +168,8 @@ public class SuggestYouTubeActivity extends BaseActivity {
             Toast.makeText(this, R.string.no_change, Toast.LENGTH_SHORT).show();
             return;
         }
-        String youtubeId = parseYoutubeUrl(url);
-        if (youtubeId.length() < 21 && youtubeId.length() > 9) {
+        String youtubeId = YouTubeUrlParser.parseYoutubeUrl(url);
+        if (!youtubeId.isEmpty()) {
             suggestionDTO.setYoutubeUrl(youtubeId);
         } else {
             Toast.makeText(this, R.string.Cannot_parse_YouTube_Url, Toast.LENGTH_SHORT).show();
@@ -193,13 +196,6 @@ public class SuggestYouTubeActivity extends BaseActivity {
         finish();
     }
 
-    private String parseYoutubeUrl(String url) {
-        String youtubeUrl = url.replace("https://www.youtube.com/watch?v=", "");
-        youtubeUrl = youtubeUrl.replace("https://www.youtube.com/embed/", "");
-        youtubeUrl = youtubeUrl.replace("https://youtu.be/", "");
-        return youtubeUrl;
-    }
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int itemId = item.getItemId();
@@ -213,7 +209,7 @@ public class SuggestYouTubeActivity extends BaseActivity {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         if (clipboard != null) {
             try {
-                ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+                @SuppressWarnings("DataFlowIssue") ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
                 return item.getText();
             } catch (Exception ignored) {
             }

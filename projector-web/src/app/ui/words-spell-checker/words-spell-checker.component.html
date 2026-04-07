@@ -20,6 +20,7 @@
           <mat-option value="not-sure">Not sure</mat-option>
           <mat-option value="banned">Banned Words</mat-option>
           <mat-option value="auto-accepted-from-public">Auto Accepted From Public</mat-option>
+          <mat-option value="auto-accepted-from-bible">Auto Accepted From Bible</mat-option>
           <mat-option value="all">All</mat-option>
         </mat-select>
       </mat-form-field>
@@ -93,7 +94,8 @@
         <ng-container matColumnDef="song">
           <mat-header-cell *matHeaderCellDef class="example-header-cell" mat-sort-header>{{'Song'}}</mat-header-cell>
           <mat-cell *matCellDef="let row" class="example-cell">
-            <a [href]="row.getSongLink()" target="_blank">{{row.getSongTitle()}}</a>
+            <a *ngIf="row.song" [href]="row.getSongLink()" target="_blank">{{row.getSongTitle()}}</a>
+            <span *ngIf="!row.song">{{row.getSongTitle()}}</span>
           </mat-cell>
         </ng-container>
 

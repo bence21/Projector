@@ -11,6 +11,7 @@ public enum ReviewedWordStatusDTO {
     REJECTED("REJECTED"),
     BANNED("BANNED"),
     AUTO_ACCEPTED_FROM_PUBLIC("AUTO_ACCEPTED_FROM_PUBLIC"),
+    AUTO_ACCEPTED_FROM_BIBLE("AUTO_ACCEPTED_FROM_BIBLE"),
     NOT_SURE("NOT_SURE");
 
     private final String value;

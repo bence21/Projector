@@ -26,8 +26,12 @@
             </mat-form-field>
             <mat-form-field class="example-full-width">
               <input type="text" id="youtubeUrl" formControlName="youtubeUrl" [value]="youtubeUrl" matInput
-                (change)="calculateUrlId()" placeholder="Youtube url">
+                (input)="calculateUrlId()" placeholder="Youtube url">
             </mat-form-field>
+            <mat-error *ngIf="formErrors.youtubeUrl">
+              <mat-icon class="material-icon">error</mat-icon>
+              {{formErrors.youtubeUrl}}
+            </mat-error>
             <iframe [class]="safeUrl!=null?'embeddedVideo':'hideEmbeddedVideo'" scrolling="no" [src]='safeUrl'
               frameborder="0" allowfullscreen></iframe>
             <app-edit-title [selectedLanguage]="selectedLanguage" [form]="form"></app-edit-title>
@@ -113,6 +117,17 @@
           <br>
           <br>
           <app-song-guidelines-checker [pGuidelines]="guidelines"></app-song-guidelines-checker>
+          <mat-card *ngIf="currentSongForWordList && selectedLanguage && isLoggedIn">
+            <mat-card-content>
+              <app-song-word-list-panel
+                [song]="currentSongForWordList"
+                [language]="selectedLanguageCopy"
+                [hasChanges]="formHasChanges"
+                (refreshRequested)="onWordListRefresh()">
+              </app-song-word-list-panel>
+            </mat-card-content>
+          </mat-card>
+          <br>
           <div *ngIf="showWarning" class="error-message">
             <p>{{reasonForNotSubmitting()}}</p>
           </div>

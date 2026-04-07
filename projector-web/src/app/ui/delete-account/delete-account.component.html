@@ -1,0 +1,45 @@
+<div class="container">
+  <br>
+  <mat-card>
+    <mat-card-content>
+      <h1>Delete account</h1>
+
+      <div *ngIf="canDelete; else loginFirst">
+        <p>
+          This will permanently delete the account for <strong>{{email}}</strong> and remove associated app data.
+        </p>
+        <p>
+          Type <strong>DELETE</strong> to confirm.
+        </p>
+
+        <div class="form-group">
+          <label for="deleteConfirmation">Confirmation</label>
+          <input
+            type="text"
+            id="deleteConfirmation"
+            class="form-control"
+            [(ngModel)]="confirmationText"
+            autocomplete="off">
+        </div>
+
+        <div class="button-container">
+          <button
+            type="button"
+            class="btn btn-danger"
+            [disabled]="confirmationText !== 'DELETE' || deleting"
+            (click)="deleteAccount()">
+            Delete account
+          </button>
+          <a routerLink="/account" class="btn">Back to account</a>
+        </div>
+      </div>
+
+      <ng-template #loginFirst>
+        <p>
+          Log in to your account first, then return to this page to submit the deletion request.
+        </p>
+        <a routerLink="/login" class="btn btn-success">Go to login</a>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+</div>

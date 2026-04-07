@@ -18,7 +18,6 @@ import com.bence.projector.server.backend.model.Suggestion;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
-import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
@@ -413,40 +412,8 @@ public class SongResource {
         }
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/api/song/upload")
-    public ResponseEntity<Object> uploadSong(@RequestBody final SongDTO songDTO, HttpServletRequest httpServletRequest) {
-        saveStatistics(httpServletRequest, statisticsService);
-        final Song song = songAssembler.createModel(songDTO);
-        song.setOriginalId(songDTO.getUuid());
-        song.setDeleted(true);
-        song.setUploaded(true);
-        Song savedSong;
-        try {
-            savedSong = songService.save(song);
-        } catch (ServiceException e) {
-            return new ResponseEntity<>(e.getResponseMessage(), e.getHttpStatus());
-        }
-        if (savedSong != null) {
-            Thread thread = new Thread(() -> {
-                List<Song> songs = songService.findAllSongsLazy();
-                boolean deleted = false;
-                for (Song song1 : songs) {
-                    if (!savedSong.getUuid().equals(song.getUuid()) && songService.matches(savedSong, song1)) {
-                        songService.deleteByUuid(savedSong.getUuid());
-                        deleted = true;
-                        break;
-                    }
-                }
-                if (!deleted) {
-                    sendEmail(savedSong);
-                }
-            });
-            thread.start();
-            SongDTO dto = songAssembler.createDto(savedSong);
-            return new ResponseEntity<>(dto, HttpStatus.ACCEPTED);
-        }
-        return new ResponseEntity<>("Could not create", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    // @RequestMapping(method = RequestMethod.POST, value = "/api/song/upload")
+    // deleted
 
     @RequestMapping(method = RequestMethod.GET, value = "/api/songs/upload")
     public ResponseEntity<Object> uploadedSongs(HttpServletRequest httpServletRequest) {

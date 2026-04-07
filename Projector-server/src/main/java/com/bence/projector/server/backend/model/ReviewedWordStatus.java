@@ -7,5 +7,6 @@ public enum ReviewedWordStatus {
     REJECTED,
     BANNED,
     AUTO_ACCEPTED_FROM_PUBLIC,
+    AUTO_ACCEPTED_FROM_BIBLE,
     NOT_SURE
 }

@@ -118,7 +118,6 @@ public class ProjectionScreenController {
     public BorderPane paneForMargins;
     public BorderPane contentPane;
     public StackPane paneForPadding;
-    public StackPane progressBarStackPane;
     public HBox nextSectionHBox;
     public HBox progressBarHBox;
     public BorderPane blackCoverPane;
@@ -692,7 +691,7 @@ public class ProjectionScreenController {
             if (decAndCheckSetTextCounter()) {
                 return;
             }
-            hideImageIfNotImageType(projectionType);
+            hideImageIfNotImageTypeUnlessLocked(projectionType);
             this.projectionType = projectionType;
             activeText = newText;
             this.projectionData = projectionData;
@@ -812,11 +811,11 @@ public class ProjectionScreenController {
             }
         }
         if (lastSelectedSongVersePartTextFlow == null) { // then it's the title
-            if (songVerseHolders.size() == 0) {
+            if (songVerseHolders.isEmpty()) {
                 return null; // just range check
             }
             List<SongVersePartTextFlow> songVersePartTextFlows = songVerseHolders.get(0).getSongVersePartTextFlows();
-            if (songVersePartTextFlows.size() == 0) {
+            if (songVersePartTextFlows.isEmpty()) {
                 return null; // just range check
             }
             return songVersePartTextFlows.get(0);
@@ -1068,6 +1067,7 @@ public class ProjectionScreenController {
         progressLine.setVisible(false);
         progressBarHBox.setVisible(false);
         hideCanvas();
+        handleSongNextSection(projectionType);
         onViewChanged();
         stopCountDownTimer();
     }
@@ -1079,6 +1079,12 @@ public class ProjectionScreenController {
         clear(projectionType);
     }
 
+    private void hideImageIfNotImageTypeUnlessLocked(ProjectionType projectionType) {
+        if (!isLock) {
+            hideImageIfNotImageType(projectionType);
+        }
+    }
+
     private void hideImageIfNotImageType(ProjectionType projectionType) {
         if (projectionType != ProjectionType.IMAGE) {
             hideCanvas();
@@ -1086,6 +1092,9 @@ public class ProjectionScreenController {
     }
 
     private void hideCanvas() {
+        if (isLock) {
+            return;
+        }
         canvas.setVisible(false);
         mediaView.setVisible(false);
         stopMediaPlayer();
@@ -1501,6 +1510,7 @@ public class ProjectionScreenController {
             try {
                 if (!executorService.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
                     executorService.shutdownNow();
+                    //noinspection ResultOfMethodCallIgnored
                     executorService.awaitTermination(1, java.util.concurrent.TimeUnit.SECONDS);
                 }
             } catch (InterruptedException e) {
@@ -2027,6 +2037,9 @@ public class ProjectionScreenController {
     }
 
     private void setImageComponentVisibility(boolean isCanvas) {
+        if (isLock) {
+            return;
+        }
         canvas.setVisible(isCanvas);
         mediaView.setVisible(!isCanvas);
         if (!mediaView.isVisible()) {
@@ -2035,6 +2048,9 @@ public class ProjectionScreenController {
     }
 
     private void playVideo(String path) {
+        if (isLock) {
+            return;
+        }
         File videoFile = new File(path);
         if (!videoFile.exists()) {
             return;

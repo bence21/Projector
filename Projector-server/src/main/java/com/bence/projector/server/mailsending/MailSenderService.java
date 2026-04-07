@@ -1,5 +1,6 @@
 package com.bence.projector.server.mailsending;
 
+import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.NotificationByLanguage;
 import com.bence.projector.server.backend.model.NotificationStatus;
@@ -14,6 +15,7 @@ import com.bence.projector.server.backend.repository.NotificationStatusRepositor
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.NotificationByLanguageService;
 import com.bence.projector.server.backend.service.SongService;
+import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.UserPropertiesService;
 import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.utils.AppProperties;
@@ -50,6 +52,8 @@ public class MailSenderService {
     private JavaMailSender sender;
     @Autowired
     private SongService songService;
+    @Autowired
+    private SongWordValidationService songWordValidationService;
     @Autowired
     private UserService userService;
     @Autowired
@@ -121,7 +125,7 @@ public class MailSenderService {
         int suggestionStackSize = suggestionStack.size();
         if (suggestionStackSize > 0 && notificationByLanguage.isSuggestions()) {
             Date now = new Date();
-            if (suggestionStackSize > 49 || now.getTime() - notificationByLanguage.getSuggestionsDelay() > notificationByLanguage.getSuggestionsLastSentDate().getTime()) {
+            if (now.getTime() - notificationByLanguage.getSuggestionsDelay() > notificationByLanguage.getSuggestionsLastSentDate().getTime()) {
                 sendSuggestionsInThread(user, suggestionStack);
                 notificationByLanguage.setSuggestionsLastSentDate(now);
                 suggestionStack.clear();
@@ -132,7 +136,7 @@ public class MailSenderService {
         int newSongStackSize = newSongStack.size();
         if (newSongStackSize > 0 && notificationByLanguage.isNewSongs()) {
             Date now = new Date();
-            if (newSongStackSize > 49 || now.getTime() - notificationByLanguage.getNewSongsDelay() > notificationByLanguage.getNewSongsLastSentDate().getTime()) {
+            if (now.getTime() - notificationByLanguage.getNewSongsDelay() > notificationByLanguage.getNewSongsLastSentDate().getTime()) {
                 sendNewSongsInThread(user, newSongStack);
                 notificationByLanguage.setNewSongsLastSentDate(now);
                 newSongStack.clear();
@@ -155,6 +159,18 @@ public class MailSenderService {
         List<Song> songList = new ArrayList<>(songs.size());
         songList.addAll(songs);
         Thread thread = new Thread(() -> sendNewSongs(songList, user));
+        thread.start();
+    }
+
+    private void sendNewUsersInThread(List<User> users) {
+        List<User> userList = new ArrayList<>(users.size());
+        userList.addAll(users);
+        List<User> admins = userService.findAllAdmins();
+        Thread thread = new Thread(() -> {
+            for (User admin : admins) {
+                sendNewUsers(userList, admin);
+            }
+        });
         thread.start();
     }
 
@@ -199,6 +215,37 @@ public class MailSenderService {
         }
         subject += addLanguageToSubject(songs, user);
         sendGeneralEmail(user, songs, FreemarkerConfiguration.NEW_SONG, subject);
+    }
+
+    private void sendNewUsers(List<User> users, User admin) {
+        try {
+            if (!AppProperties.getInstance().isProduction()) {
+                return;
+            }
+            final String freemarkerName = FreemarkerConfiguration.NEW_USERS_PAGE + ".ftl";
+            freemarker.template.Configuration config = ConfigurationUtil.getConfiguration();
+            config.setDefaultEncoding("UTF-8");
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(new InternetAddress(admin.getEmail()));
+            helper.setFrom(getNoReplyInternetAddress());
+            if (users.size() > 1) {
+                helper.setSubject("New users (" + users.size() + ")");
+            } else {
+                helper.setSubject("New user");
+            }
+
+            Template template = config.getTemplate(freemarkerName);
+
+            StringWriter writer = new StringWriter();
+            Map<String, Object> model = createPatternForUsers(users);
+            template.process(model, writer);
+
+            helper.getMimeMessage().setContent(writer.toString(), "text/html;charset=utf-8");
+            sender.send(message);
+        } catch (MessagingException | IOException | TemplateException e) {
+            e.printStackTrace();
+        }
     }
 
     private void sendGeneralEmail(User user, List<Song> songs, String ftlPage, String subject) {
@@ -281,9 +328,47 @@ public class MailSenderService {
 
     private Map<String, Object> createPatternForSongs(List<Song> songs) {
         Map<String, Object> data = new HashMap<>();
-        data.put("songs", songs);
+        List<NewSongRow> songRows = new ArrayList<>(songs.size());
+        for (Song song : songs) {
+            songRows.add(createNewSongRow(song));
+        }
+        data.put("songRows", songRows);
         data.put("baseUrl", AppProperties.getInstance().baseUrl());
         return data;
+    }
+
+    private Map<String, Object> createPatternForUsers(List<User> users) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("users", users);
+        data.put("baseUrl", AppProperties.getInstance().baseUrl());
+        return data;
+    }
+
+    private NewSongRow createNewSongRow(Song song) {
+        NewSongRow row = new NewSongRow();
+        Song songForEmail = getSongForEmail(song);
+        row.setSong(songForEmail);
+
+        SongWordValidationResult validationResult = songWordValidationService.validateWords(songForEmail);
+        int unreviewedWordCount = validationResult.getUnreviewedWords() == null ? 0 : validationResult.getUnreviewedWords().size();
+        int totalUniqueWordCount = validationResult.getWordsWithStatus() == null ? 0 : validationResult.getWordsWithStatus().size();
+
+        row.setUnreviewedWordCount(unreviewedWordCount);
+        row.setTotalUniqueWordCount(totalUniqueWordCount);
+        row.setHasUnreviewedWords(unreviewedWordCount > 0);
+        row.setUnreviewedWordRatio(unreviewedWordCount + "/" + totalUniqueWordCount);
+        return row;
+    }
+
+    private Song getSongForEmail(Song song) {
+        if (song == null) {
+            return null;
+        }
+        if (song.getUuid() == null) {
+            return song;
+        }
+        Song loadedSong = songService.findOneByUuid(song.getUuid());
+        return loadedSong != null ? loadedSong : song;
     }
 
     private Map<String, Object> createPattern(List<Suggestion> suggestions) {
@@ -377,9 +462,29 @@ public class MailSenderService {
         saveEmptySongNotification();
     }
 
+    public void sendEmailNewUsers(List<User> users) {
+        if (users == null || users.isEmpty()) {
+            return;
+        }
+        Date oneDayBefore = getOneDayBefore();
+        List<NotificationStatus> notifications = notificationStatusRepository.findAllByNotificationTypeAndDateAfter(NotificationType.NEW_USER, oneDayBefore);
+        if (notifications != null && !notifications.isEmpty()) {
+            return;
+        }
+        sendNewUsersInThread(users);
+        saveNewUserNotification();
+    }
+
     private void saveEmptySongNotification() {
         NotificationStatus notificationStatus = new NotificationStatus();
         notificationStatus.setNotificationType(NotificationType.SONG_EMPTY);
+        notificationStatus.setDate(new Date());
+        notificationStatusRepository.save(notificationStatus);
+    }
+
+    private void saveNewUserNotification() {
+        NotificationStatus notificationStatus = new NotificationStatus();
+        notificationStatus.setNotificationType(NotificationType.NEW_USER);
         notificationStatus.setDate(new Date());
         notificationStatusRepository.save(notificationStatus);
     }

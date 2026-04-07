@@ -162,12 +162,22 @@ public class UserResource {
         return new ResponseEntity<>("Could not update", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @RequestMapping(method = RequestMethod.DELETE, value = "/user/api/user")
+    public ResponseEntity<Object> deleteAccount(Principal principal, HttpServletRequest httpServletRequest) {
+        saveStatistics(httpServletRequest, statisticsService);
+        User user = getUserFromPrincipalAndUserService(principal, userService);
+        if (user == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        userService.deleteUser(user);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
     private void sendActivationEmail(User user) {
         try {
             logger.info("Got email: " + user.getEmail());
             sendJustActivationEmail(user);
             logger.info("Mail sent!");
-            sendNewUserEmail(user);
         } catch (MessagingException | TemplateException | IOException | MailSendException e) {
             logger.error(e.getMessage());
             e.printStackTrace();
@@ -199,30 +209,6 @@ public class UserResource {
         } else {
             helper.setSubject("Activation");
         }
-        helper.getMimeMessage().setContent(writer.toString(), "text/html;charset=utf-8");
-        sender.send(message);
-    }
-
-    private void sendNewUserEmail(User user)
-            throws MessagingException, IOException, TemplateException, MailSendException {
-        final String freemarkerName = "newUser.html";
-        Configuration config = ConfigurationUtil.getConfiguration();
-        config.setDefaultEncoding("UTF-8");
-        Template template = config.getTemplate(freemarkerName);
-
-        StringWriter writer = new StringWriter();
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("email", user.getEmail());
-        data.put("surname", user.getSurname());
-        data.put("firstName", user.getFirstName());
-        template.process(data, writer);
-
-        MimeMessage message = sender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        mailSenderService.setToAdmin(helper);
-        helper.setFrom(mailSenderService.getNoReplyInternetAddress());
-        helper.setSubject("New user");
         helper.getMimeMessage().setContent(writer.toString(), "text/html;charset=utf-8");
         sender.send(message);
     }

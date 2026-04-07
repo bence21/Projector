@@ -25,11 +25,10 @@
                                   <td valign="top" style="padding: 18px;color: #ffffff;">
                                     <h1
                                       style="text-align: center;display: block;margin: 0;color: #ffffff;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 21px;font-style: normal;font-weight: bold;line-height: 125%;letter-spacing: normal;">
-                                      Songs</h1>
+                                      Users</h1>
                                     <p
                                       style="text-align: center;display: block;margin: 0;color: #ffffff;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 12px;font-style: normal;line-height: 225%;letter-spacing: normal;">
-                                      You have received this email to
-                                      review the newly added songs.
+                                      You have received this email to review newly registered users.
                                     </p>
                                   </td>
                                 </tr>
@@ -71,47 +70,35 @@
                         <tr>
                           <td valign="top"
                             style="padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;word-break: normal;color: #ffffff;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 15px;line-height: 150%;text-align: left;">
-                            <p
-                              style="margin: 10px 0;color: #ffffff;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 15px;line-height: 150%;text-align: left;">
-                              <div>
-                                <table style="color: #ffffff; border-spacing: 4px 20px; border-collapse: separate;">
-                                  <#list songRows as songRow>
-                                    <tr>
-                                      <td>
-                                        <#if songRow.title??>
-                                          ${songRow.title}
-                                        </#if>
-                                        <#if songRow.hasUnreviewedWords>
-                                          <div style="color: #ffd166; font-size: 12px; margin-top: 4px;">
-                                            Unreviewed words: ${songRow.unreviewedWordRatio}
-                                          </div>
-                                        </#if>
-                                      </td>
-                                      <td>
-                                        <a href="${baseUrl}/#/song/${songRow.uuid}" target="_blank"
-                                          style="color: #2BAADF;font-weight: normal;text-decoration: underline;">Open</a>
-                                      </td>
-                                      <td>
-                                        <#if songRow.createdByEmail??>
-                                          ${songRow.createdByEmail}
-                                        </#if>
-                                      </td>
-                                      <#if songRow.deleted>
-                                        <#if songRow.reviewerErased??>
-                                          <#if songRow.reviewerErased>
-                                            <td style="color: #b38900">Reviewer erased</td>
-                                            <#else>
-                                              <td style="color: #bfbfbf">In review</td>
-                                          </#if>
-                                          <#else>
-                                            <td style="color: #bfbfbf">In review</td>
-                                        </#if>
+                            <div>
+                              <table style="color: #ffffff; border-spacing: 4px 20px; border-collapse: separate;">
+                                <#list users as user>
+                                  <tr>
+                                    <td>
+                                      <#if user.email??>
+                                        ${user.email}
                                       </#if>
-                                    </tr>
-                                  </#list>
-                                </table>
-                              </div>
-                            </p>
+                                    </td>
+                                    <td>
+                                      <#if user.surname?? && user.surname?has_content>
+                                        ${user.surname}
+                                      </#if>
+                                      <#if user.firstName?? && user.firstName?has_content>
+                                        <#if user.surname?? && user.surname?has_content>
+                                          ,
+                                        </#if>
+                                        ${user.firstName}
+                                      </#if>
+                                    </td>
+                                    <td>
+                                      <#if user.createdDate??>
+                                        ${user.createdDate?string("yyyy/MM/dd HH:mm:ss")}
+                                      </#if>
+                                    </td>
+                                  </tr>
+                                </#list>
+                              </table>
+                            </div>
                           </td>
                         </tr>
                       </tbody>
@@ -147,9 +134,7 @@
                   <td valign="top">
                     <p
                       style="margin: 10px 0;color: #c9c9c9;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 11px;line-height: 150%;text-align: center;">
-                      Click here to <a href="${baseUrl}/#/user/notifications" target="_blank"
-                        style="color: #c9c9c9;font-weight: normal;text-decoration: underline;">unsubscribe</a>
-                      or manage your email preferences.
+                      Open the admin panel to review new registrations.
                     </p>
                   </td>
                 </tr>

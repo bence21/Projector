@@ -4,15 +4,19 @@ import com.bence.projector.common.dto.LanguageDTO;
 import com.bence.projector.common.dto.ReviewedWordDTO;
 import com.bence.projector.server.api.assembler.LanguageAssembler;
 import com.bence.projector.server.api.assembler.ReviewedWordAssembler;
+import com.bence.projector.server.backend.model.Bible;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.ReviewedWord;
 import com.bence.projector.server.backend.model.ReviewedWordStatus;
 import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.User;
+import com.bence.projector.server.backend.service.BibleService;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.backend.service.NormalizedWordBunchCacheService;
 import com.bence.projector.server.backend.service.ReviewedWordService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.UserService;
+import com.bence.projector.server.utils.AutoAcceptWordsFromBibleUtil;
 import com.bence.projector.server.utils.AutoAcceptWordsFromPublicSongsUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -38,6 +42,8 @@ public class ReviewedWordResource {
     private final LanguageAssembler languageAssembler;
     private final UserService userService;
     private final SongService songService;
+    private final BibleService bibleService;
+    private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
 
     @Autowired
     public ReviewedWordResource(
@@ -46,7 +52,9 @@ public class ReviewedWordResource {
             LanguageService languageService,
             LanguageAssembler languageAssembler,
             UserService userService,
-            SongService songService
+            SongService songService,
+            BibleService bibleService,
+            NormalizedWordBunchCacheService normalizedWordBunchCacheService
     ) {
         this.reviewedWordService = reviewedWordService;
         this.reviewedWordAssembler = reviewedWordAssembler;
@@ -54,15 +62,21 @@ public class ReviewedWordResource {
         this.languageAssembler = languageAssembler;
         this.userService = userService;
         this.songService = songService;
+        this.bibleService = bibleService;
+        this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/admin/api/reviewedWord/{languageId}")
+    @RequestMapping(method = RequestMethod.POST, value = {
+            "/admin/api/reviewedWord/{languageId}",
+            "/reviewer/api/reviewedWord/{languageId}",
+            "/user/api/reviewedWord/{languageId}"
+    })
     public ResponseEntity<Object> createOrUpdateReviewedWord(
             Principal principal,
             @PathVariable final String languageId,
             @RequestBody final ReviewedWordDTO reviewedWordDTO
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -73,18 +87,28 @@ public class ReviewedWordResource {
         if (reviewedWord == null) {
             return new ResponseEntity<>("Invalid data", HttpStatus.BAD_REQUEST);
         }
+        ResponseEntity<Object> permissionError = validateReviewedWordPermission(user, language, reviewedWord);
+        if (permissionError != null) {
+            return permissionError;
+        }
 
         reviewedWord.setLanguage(language);
         ReviewedWord saved = reviewedWordService.saveOrUpdate(reviewedWord, user);
+        if (saved != null) {
+            normalizedWordBunchCacheService.addReviewedWordToCache(language, saved);
+        }
         return new ResponseEntity<>(reviewedWordAssembler.createDto(saved), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/reviewedWord/{languageId}")
+    @RequestMapping(method = RequestMethod.GET, value = {
+            "/admin/api/reviewedWord/{languageId}",
+            "/reviewer/api/reviewedWord/{languageId}"
+    })
     public ResponseEntity<Object> getAllReviewedWords(
             Principal principal,
             @PathVariable final String languageId
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -94,13 +118,16 @@ public class ReviewedWordResource {
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(reviewedWords), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/reviewedWord/{languageId}/status/{status}")
+    @RequestMapping(method = RequestMethod.GET, value = {
+            "/admin/api/reviewedWord/{languageId}/status/{status}",
+            "/reviewer/api/reviewedWord/{languageId}/status/{status}"
+    })
     public ResponseEntity<Object> getReviewedWordsByStatus(
             Principal principal,
             @PathVariable final String languageId,
             @PathVariable final String status
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -117,7 +144,9 @@ public class ReviewedWordResource {
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(reviewedWords), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.DELETE, value = "/admin/api/reviewedWord/{wordId}")
+    @RequestMapping(method = RequestMethod.DELETE, value = {
+            "/admin/api/reviewedWord/{wordId}"
+    })
     public ResponseEntity<Object> deleteReviewedWord(
             Principal principal,
             @PathVariable final String wordId
@@ -136,17 +165,24 @@ public class ReviewedWordResource {
             return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
         }
 
+        Language language = reviewedWord.getLanguage();
         reviewedWordService.deleteReview(wordId);
+        if (language != null) {
+            normalizedWordBunchCacheService.removeReviewedWordFromCache(language, reviewedWord);
+        }
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/admin/api/reviewedWord/{languageId}/bulk")
+    @RequestMapping(method = RequestMethod.POST, value = {
+            "/admin/api/reviewedWord/{languageId}/bulk",
+            "/reviewer/api/reviewedWord/{languageId}/bulk"
+    })
     public ResponseEntity<Object> bulkUpdateReviewedWords(
             Principal principal,
             @PathVariable final String languageId,
             @RequestBody final List<ReviewedWordDTO> reviewedWordDTOs
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -161,22 +197,35 @@ public class ReviewedWordResource {
         for (ReviewedWordDTO dto : reviewedWordDTOs) {
             ReviewedWord reviewedWord = reviewedWordAssembler.createModel(dto);
             if (reviewedWord != null) {
+                ResponseEntity<Object> permissionError = validateReviewedWordPermission(user, language, reviewedWord);
+                if (permissionError != null) {
+                    return permissionError;
+                }
                 reviewedWord.setLanguage(language);
                 ReviewedWord saved = reviewedWordService.saveOrUpdate(reviewedWord, user);
                 savedWords.add(saved);
             }
         }
 
+        for (ReviewedWord saved : savedWords) {
+            if (saved != null) {
+                normalizedWordBunchCacheService.addReviewedWordToCache(language, saved);
+            }
+        }
         return new ResponseEntity<>(reviewedWordAssembler.createDtoList(savedWords), HttpStatus.ACCEPTED);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/admin/api/reviewedWord/detect-language")
+    @RequestMapping(method = RequestMethod.GET, value = {
+            "/admin/api/reviewedWord/detect-language",
+            "/reviewer/api/reviewedWord/detect-language",
+            "/user/api/reviewedWord/detect-language"
+    })
     public ResponseEntity<Object> detectSourceLanguages(
             Principal principal,
             @RequestParam("word") String word,
             @RequestParam("languageId") String languageId
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -196,7 +245,7 @@ public class ReviewedWordResource {
             @RequestParam(value = "minScore", required = false, defaultValue = "50") final long minScore,
             @RequestParam(value = "minOccurrences", required = false, defaultValue = "10") final int minOccurrences
     ) {
-        ResponseEntity<Object> validationError = validateUserAndLanguage(principal, languageId);
+        ResponseEntity<Object> validationError = validateReviewerUserAndLanguage(principal, languageId);
         if (validationError != null) {
             return validationError;
         }
@@ -225,7 +274,62 @@ public class ReviewedWordResource {
         }
     }
 
-    private ResponseEntity<Object> validateUserAndLanguage(Principal principal, String languageId) {
+    @RequestMapping(method = {RequestMethod.GET}, value = "/admin/api/reviewedWord/{bibleId}/autoAcceptFromBible")
+    public ResponseEntity<Object> autoAcceptWordsFromBible(
+            Principal principal,
+            @PathVariable final String bibleId,
+            @RequestParam(value = "minOccurrences", required = false, defaultValue = "1") final int minOccurrences
+    ) {
+        ResponseEntity<Object> validationError = validateUserAndBible(principal, bibleId);
+        if (validationError != null) {
+            return validationError;
+        }
+
+        try {
+            AutoAcceptWordsFromBibleUtil.AutoAcceptResult result = AutoAcceptWordsFromBibleUtil
+                    .autoAcceptWordsFromBible(
+                            reviewedWordService,
+                            bibleService,
+                            bibleId,
+                            minOccurrences
+                    );
+
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("biblesProcessed", result.biblesProcessed());
+            response.put("minOccurrences", minOccurrences);
+
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error processing request: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private ResponseEntity<Object> validateUserAndBible(Principal principal, String bibleId) {
+        User user = getUserFromPrincipalAndUserService(principal, userService);
+        if (user == null) {
+            return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        }
+
+        Bible bible = bibleService.findOneByUuid(bibleId);
+        if (bible == null) {
+            return new ResponseEntity<>("Bible not found", HttpStatus.BAD_REQUEST);
+        }
+
+        Language language = bible.getLanguage();
+        if (language == null) {
+            return new ResponseEntity<>("Bible has no language", HttpStatus.BAD_REQUEST);
+        }
+
+        if (lacksReviewerPermission(user, language)) {
+            return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
+        }
+
+        return null;
+    }
+
+    private ResponseEntity<Object> validateAuthenticatedUserAndLanguage(Principal principal, String languageId) {
         User user = getUserFromPrincipalAndUserService(principal, userService);
         if (user == null) {
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
@@ -235,12 +339,38 @@ public class ReviewedWordResource {
         if (language == null) {
             return new ResponseEntity<>("Language not found", HttpStatus.BAD_REQUEST);
         }
+        return null;
+    }
 
+    private ResponseEntity<Object> validateReviewerUserAndLanguage(Principal principal, String languageId) {
+        ResponseEntity<Object> validationError = validateAuthenticatedUserAndLanguage(principal, languageId);
+        if (validationError != null) {
+            return validationError;
+        }
+
+        User user = getUserFromPrincipalAndUserService(principal, userService);
+        Language language = languageService.findOneByUuid(languageId);
         if (lacksReviewerPermission(user, language)) {
             return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
         }
 
         return null;
+    }
+
+    private ResponseEntity<Object> validateReviewedWordPermission(User user, Language language, ReviewedWord reviewedWord) {
+        if (user == null || language == null || reviewedWord == null) {
+            return new ResponseEntity<>("Invalid data", HttpStatus.BAD_REQUEST);
+        }
+
+        if (requiresReviewerPermission(reviewedWord.getStatus()) && lacksReviewerPermission(user, language)) {
+            return new ResponseEntity<>("Forbidden - reviewer permission required", HttpStatus.FORBIDDEN);
+        }
+
+        return null;
+    }
+
+    private boolean requiresReviewerPermission(ReviewedWordStatus status) {
+        return status == ReviewedWordStatus.BANNED || status == ReviewedWordStatus.REJECTED;
     }
 
     private boolean lacksReviewerPermission(User user, Language language) {

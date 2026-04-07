@@ -34,15 +34,12 @@ public class SongWordValidationService {
 
     private static final int MAX_ALTERNATIVE_SUGGESTIONS = 5;
 
-    private final ReviewedWordService reviewedWordService;
     private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
     private final LanguageAssembler languageAssembler;
 
     @Autowired
-    public SongWordValidationService(ReviewedWordService reviewedWordService,
-                                     NormalizedWordBunchCacheService normalizedWordBunchCacheService,
+    public SongWordValidationService(NormalizedWordBunchCacheService normalizedWordBunchCacheService,
                                      LanguageAssembler languageAssembler) {
-        this.reviewedWordService = reviewedWordService;
         this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
         this.languageAssembler = languageAssembler;
     }
@@ -54,9 +51,8 @@ public class SongWordValidationService {
 
         Language language = song.getLanguage();
         Collection<SongWord> songWords = getSongWords(song);
-        List<ReviewedWord> allReviewedWords = reviewedWordService.findAllByLanguage(language);
-
-        Map<String, ReviewedWord> reviewedWordMap = buildReviewedWordMap(allReviewedWords);
+        Map<String, ReviewedWord> reviewedWordMap = normalizedWordBunchCacheService.getReviewedWordMapForLanguage(language);
+        List<ReviewedWord> allReviewedWords = new ArrayList<>(reviewedWordMap.values());
         NormalizedWordBunchMap normalizedWordBunchMap = buildNormalizedWordBunchMap(language);
 
         WordCategories categories = categorizeWords(songWords, reviewedWordMap, normalizedWordBunchMap, allReviewedWords);
@@ -76,17 +72,6 @@ public class SongWordValidationService {
 
     private SongWordValidationResult createEmptyValidationResult() {
         return new SongWordValidationResult(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), false, new ArrayList<>());
-    }
-
-    private Map<String, ReviewedWord> buildReviewedWordMap(List<ReviewedWord> allReviewedWords) {
-        Map<String, ReviewedWord> map = new HashMap<>();
-        for (ReviewedWord reviewedWord : allReviewedWords) {
-            String word = reviewedWord.getWord();
-            if (word != null) {
-                map.putIfAbsent(word, reviewedWord);
-            }
-        }
-        return map;
     }
 
     private NormalizedWordBunchMap buildNormalizedWordBunchMap(Language language) {
@@ -374,7 +359,8 @@ public class SongWordValidationService {
                 ReviewedWordStatus.REVIEWED_GOOD,
                 ReviewedWordStatus.ACCEPTED,
                 ReviewedWordStatus.CONTEXT_SPECIFIC,
-                ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC
+                ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC,
+                ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE
         );
     }
 

@@ -16,6 +16,7 @@ public class FreemarkerConfiguration implements WebMvcConfigurer {
     public static final String FREEMARKER_NAME_REGISTRATION = "registrationPage";
     public static final String TOKEN_LINK_PAGE = "tokenLinkPage";
     public static final String EMPTY_SONGS_PAGE = "emptySongsPage";
+    public static final String NEW_USERS_PAGE = "newUsersPage";
     private static final String[] CLASSPATH_RESOURCE_LOCATIONS = {"classpath:/resources/", "classpath:/static/",
             "classpath:/webapp/"};
 

@@ -134,6 +134,7 @@
     <string name="try_again_later">Próbáld újra később</string>
     <string name="password_or_email_incorrect">Nem jó a jelszó vagy az e-mail cím</string>
     <string name="create_account">Regisztráció</string>
+    <string name="delete_account">Fiók törlése</string>
     <string name="upload_song">Ének feltöltése</string>
     <string name="Couldnt_get_selected_language">Nem sikerült lekérni a kiválasztott nyelvet!</string>
     <string name="Are_you_sure_you_want_to_delete">Biztosan törölni szeretnéd?</string>

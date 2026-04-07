@@ -8,6 +8,7 @@ import { SuggestionDataService } from "../../services/suggestion-data.service";
 import { DomSanitizer, SafeResourceUrl, Title } from "@angular/platform-browser";
 import { MatDialog } from "@angular/material";
 import { checkAuthenticationError } from '../../util/error-util';
+import { extractYouTubeVideoId } from '../../util/youtube.util';
 
 @Component({
   selector: 'app-suggestion',
@@ -76,19 +77,9 @@ export class SuggestionComponent implements OnInit, OnDestroy {
   }
 
   calculateUrlId(url: string) {
-    if (url == undefined) {
-      this.safeUrl = null;
-      return;
-    }
-    let youtubeUrl = url.replace("https://www.youtube.com/watch?v=", "");
-    youtubeUrl = youtubeUrl.replace("https://www.youtube.com/embed/", "");
-    youtubeUrl = youtubeUrl.replace("https://youtu.be/", "");
-    let indexOf = youtubeUrl.indexOf('?');
-    if (indexOf >= 0) {
-      youtubeUrl = youtubeUrl.substring(0, indexOf);
-    }
-    if (youtubeUrl.length < 21 && youtubeUrl.length > 9) {
-      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeUrl);
+    const youtubeId = extractYouTubeVideoId(url);
+    if (youtubeId) {
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeId);
     } else {
       this.safeUrl = null;
     }

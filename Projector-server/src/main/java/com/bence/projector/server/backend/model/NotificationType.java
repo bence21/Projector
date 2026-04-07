@@ -1,5 +1,6 @@
 package com.bence.projector.server.backend.model;
 
 public enum NotificationType {
-    SONG_EMPTY
+    SONG_EMPTY,
+    NEW_USER
 }

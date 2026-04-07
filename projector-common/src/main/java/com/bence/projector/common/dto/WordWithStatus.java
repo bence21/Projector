@@ -184,6 +184,7 @@ public class WordWithStatus {
             case CONTEXT_SPECIFIC:
             case ACCEPTED:
             case AUTO_ACCEPTED_FROM_PUBLIC:
+            case AUTO_ACCEPTED_FROM_BIBLE:
                 return "✓";
             case UNREVIEWED:
                 return "?";

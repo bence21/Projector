@@ -17,6 +17,7 @@ import { Guideline, YOU_TUBE_LINKING } from '../../models/guideline';
 import { debounceTime } from 'rxjs/operators';
 import { SongWordValidationService } from '../../services/song-word-validation.service';
 import { MatSnackBar } from '@angular/material';
+import { extractYouTubeVideoId, getYouTubeUrlProblem } from '../../util/youtube.util';
 
 export function replace(value: string) {
   let newValue = replaceMatch(value, / /g, ' '); // NBSP - replaces non breaking space characters with space
@@ -45,6 +46,7 @@ export class NewSongComponent implements OnInit {
   form: FormGroup;
   formErrors = {
     'title': '',
+    'youtubeUrl': '',
     'verseOrder': ''
   };
 
@@ -52,12 +54,29 @@ export class NewSongComponent implements OnInit {
     'title': {
       'required': 'Required field',
     },
+    'youtubeUrl': {},
     'verseOrder': {}
   };
   verses: SongVerseUI[];
   verseControls: FormControl[];
   languages: Language[];
-  selectedLanguage = null;
+  private _selectedLanguage: Language;
+  set selectedLanguage(value: Language) {
+    this._selectedLanguage = value;
+    if (value) {
+      this.selectedLanguageCopy = new Language();
+      Object.assign(this.selectedLanguageCopy, value);
+    } else {
+      this.selectedLanguageCopy = null;
+    }
+    if (this.form) {
+      this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.getCurrentSongFromForm());
+    }
+  }
+  get selectedLanguage(): Language {
+    return this._selectedLanguage;
+  }
+  selectedLanguageCopy: Language;
   editorType = 'verse';
   song: Song;
   showSimilarities = false;
@@ -89,6 +108,13 @@ export class NewSongComponent implements OnInit {
   showWarning = false;
   guidelines: Guideline[] = [];
   publish = false;
+  formHasChanges = false;
+  private initialFormValue: string;
+  currentSongForWordList: Song;
+
+  get isLoggedIn(): boolean {
+    return this.auth != null && this.auth.isLoggedIn;
+  }
 
   constructor(private fb: FormBuilder,
     private songService: SongService,
@@ -264,7 +290,10 @@ export class NewSongComponent implements OnInit {
         Validators.required,
       ]],
       'youtubeUrl': [this.youtubeUrl, [
-        Validators.maxLength(52),
+        (control: FormControl) => {
+          const youtubeUrlProblem = getYouTubeUrlProblem(control.value);
+          return youtubeUrlProblem ? { youtubeUrlInvalid: youtubeUrlProblem } : null;
+        }
       ]],
       'verseOrder': [this.song.verseOrder, []],
       'author': [this.song.author, []],
@@ -275,6 +304,23 @@ export class NewSongComponent implements OnInit {
     this.form.addControl('songText', this.songTextFormControl);
     this.form.valueChanges.subscribe(() => this.onValueChanged());
     this.onValueChanged();
+    this.initialFormValue = JSON.stringify(this.form.value);
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.song);
+    this.trackFormChanges();
+  }
+
+  private trackFormChanges() {
+    this.form.valueChanges.pipe(debounceTime(500)).subscribe(() => {
+      const currentFormValue = JSON.stringify(this.form.value);
+      this.formHasChanges = currentFormValue !== this.initialFormValue;
+    });
+  }
+
+  onWordListRefresh() {
+    this.currentSongForWordList = this.songWordValidationService.createSimpleSongCopy(this.getCurrentSongFromForm());
+    this.initialFormValue = JSON.stringify(this.form.value);
+    this.formHasChanges = false;
+    this._changeDetectionRef.detectChanges();
   }
 
   addNewVerse() {
@@ -295,6 +341,10 @@ export class NewSongComponent implements OnInit {
         const control = form.get(field);
 
         if (control && control.dirty && !control.valid) {
+          if (field === 'youtubeUrl' && control.errors.youtubeUrlInvalid) {
+            this.formErrors[field] = control.errors.youtubeUrlInvalid;
+            continue;
+          }
           const messages = this.validationMessages[field];
           for (const key in control.errors) {
             if (control.errors.hasOwnProperty(key)) {
@@ -314,54 +364,94 @@ export class NewSongComponent implements OnInit {
     }
   }
 
-  onSubmit() {
+  getCurrentSongFromForm(): Song {
     const formValue = this.form.value;
-    this.song.title = formValue.title;
-    this.song.verseOrder = null;
-    this.song.author = formValue.author;
-    this.song.songVerseDTOS = [];
-    this.song.languageDTO = this.selectedLanguage;
-    let i = 0;
-    for (const key in formValue) {
-      if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
-        const value = formValue[key];
-        const songVerseDTO = new SongVerseDTO();
-        songVerseDTO.text = value;
-        songVerseDTO.chorus = this.verses[i].chorus;
-        songVerseDTO.type = this.verses[i].type
-        this.song.songVerseDTOS.push(songVerseDTO);
-        i = i + 1;
+    const currentSong = new Song();
+    currentSong.title = formValue.title;
+    currentSong.verseOrder = null;
+    currentSong.author = formValue.author;
+    currentSong.songVerseDTOS = [];
+    currentSong.languageDTO = this.selectedLanguage;
+
+    if (this.editorType === 'raw') {
+      const songText = formValue.songText || '';
+      if (songText) {
+        for (const verseI of songText.split("\n\n")) {
+          const songVerse = new SongVerseDTO();
+          songVerse.type = SectionType.Verse;
+          let verse = verseI;
+          for (const sectionType of this.sectionTypes) {
+            const sectionString = "[" + sectionType.name + "]\n";
+            if (verse.toLowerCase().startsWith(sectionString.toLowerCase())) {
+              songVerse.type = sectionType.type;
+              verse = verseI.substring(sectionString.length, verseI.length);
+            }
+          }
+          songVerse.text = verse;
+          currentSong.songVerseDTOS.push(songVerse);
+        }
+      }
+    } else {
+      let i = 0;
+      for (const key in formValue) {
+        if (formValue.hasOwnProperty(key) && key.startsWith('verse') && !key.startsWith('verseOrder')) {
+          const value = formValue[key];
+          const songVerseDTO = new SongVerseDTO();
+          songVerseDTO.text = value;
+          if (i < this.verses.length) {
+            songVerseDTO.chorus = this.verses[i].chorus;
+            songVerseDTO.type = this.verses[i].type;
+          }
+          currentSong.songVerseDTOS.push(songVerseDTO);
+          i = i + 1;
+        }
       }
     }
+
+    currentSong.verseOrderList = this.getVerseOrderListFromSectionOrder();
+    return currentSong;
+  }
+
+  onSubmit() {
+    this.song = this.getCurrentSongFromForm();
+    // Validate words first, then check for similar, then post
+    this.validateAndCreateSong(() => this.checkSimilarAndPost());
+  }
+
+  private checkSimilarAndPost() {
     this.similar = [];
-    this.setVerseOrderListFromSectionOrder();
+    this.showSimilarities = true;
+    this.receivedSimilar = false;
     this.songService.getSimilarByPost(this.song).subscribe((songs) => {
       this.similar = songs;
       if (songs.length > 0) {
         this.secondSong = this.similar[0];
       } else {
-        this.insertNewSong();
+        this.applyYoutubeUrlAndCreateSong();
       }
       this.receivedSimilar = true;
     });
-    this.showSimilarities = true;
+  }
+
+  private applyYoutubeUrlToSong() {
+    this.song.youtubeUrl = null;
+    const youtubeId = extractYouTubeVideoId(this.form.value.youtubeUrl);
+    if (youtubeId) {
+      this.song.youtubeUrl = youtubeId;
+    }
+  }
+
+  private applyYoutubeUrlAndCreateSong() {
+    this.applyYoutubeUrlToSong();
+    this.createSong();
   }
 
   insertNewSong() {
-    let url = this.form.value.youtubeUrl;
-    this.song.youtubeUrl = null;
-    if (url) {
-      let youtubeUrl = url.replace("https://www.youtube.com/watch?v=", "");
-      youtubeUrl = youtubeUrl.replace("https://www.youtube.com/embed/", "");
-      youtubeUrl = youtubeUrl.replace("https://youtu.be/", "");
-      if (youtubeUrl.length < 21 && youtubeUrl.length > 9) {
-        this.song.youtubeUrl = youtubeUrl;
-      }
-    }
+    this.applyYoutubeUrlToSong();
     this.validateAndCreateSong();
   }
 
-  private validateAndCreateSong() {
+  private validateAndCreateSong(onSave?: () => void) {
     validateWordsAndSave({
       song: this.song,
       validationService: this.songWordValidationService,
@@ -369,8 +459,7 @@ export class NewSongComponent implements OnInit {
       snackBar: this.snackBar,
       language: this.selectedLanguage,
       publish: this.publish,
-      onSave: () => this.createSong(),
-      isAdmin: !!this.isAdmin()
+      onSave: onSave || (() => this.createSong())
     });
   }
 
@@ -502,6 +591,10 @@ export class NewSongComponent implements OnInit {
     const title = formValue.title;
     if (title === undefined || title.trim() == "") {
       return "Please enter a title!";
+    }
+    const youtubeUrlControl = this.form.get('youtubeUrl');
+    if (youtubeUrlControl && youtubeUrlControl.errors && youtubeUrlControl.errors.youtubeUrlInvalid) {
+      return youtubeUrlControl.errors.youtubeUrlInvalid;
     }
     if (!this.form.valid) {
       return "Form is not valid!";
@@ -637,15 +730,10 @@ export class NewSongComponent implements OnInit {
   }
 
   calculateUrlId() {
-    let youtubeUrl = this.form.value.youtubeUrl.replace("https://www.youtube.com/watch?v=", "");
-    youtubeUrl = youtubeUrl.replace("https://www.youtube.com/embed/", "");
-    youtubeUrl = youtubeUrl.replace("https://youtu.be/", "");
-    let indexOf = youtubeUrl.indexOf('?');
-    if (indexOf >= 0) {
-      youtubeUrl = youtubeUrl.substring(0, indexOf);
-    }
-    if (youtubeUrl.length < 21 && youtubeUrl.length > 9) {
-      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeUrl);
+    const youtubeUrl = this.form && this.form.value ? this.form.value.youtubeUrl : null;
+    const youtubeId = extractYouTubeVideoId(youtubeUrl);
+    if (youtubeId) {
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/" + youtubeId);
     } else {
       this.safeUrl = null;
     }

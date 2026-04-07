@@ -12,7 +12,7 @@ export class WordBunch {
 
   constructor(values: Object = {}) {
     Object.assign(this, values);
-    this.song = new Song(this.song);
+    this.song = this.song ? new Song(this.song) : null;
     if (this.reviewedWord) {
       this.reviewedWord = new ReviewedWord(this.reviewedWord);
     }

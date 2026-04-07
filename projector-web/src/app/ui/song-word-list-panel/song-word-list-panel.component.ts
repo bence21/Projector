@@ -42,6 +42,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
   words: WordWithStatus[] = [];
   validationResult: SongWordValidationResult;
   loading = false;
+  hasLoadedOnce = false;
   filterStatus: 'all' | ReviewedWordStatus = 'all';
 
   readonly ReviewedWordStatus = ReviewedWordStatus;
@@ -52,7 +53,8 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     return status === ReviewedWordStatus.REVIEWED_GOOD ||
       status === ReviewedWordStatus.CONTEXT_SPECIFIC ||
       status === ReviewedWordStatus.ACCEPTED ||
-      status === ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC;
+      status === ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC ||
+      status === ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE;
   }
 
   counts = {
@@ -82,6 +84,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes.song || changes.language) {
+      this.hasLoadedOnce = false;
       this.updateHasReviewerRole();
       this.loadWords();
     }
@@ -93,14 +96,32 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
     this.hasReviewerRole = !!(user && this.language && user.hasReviewerRoleForLanguage(this.language));
   }
 
+  private songHasText(): boolean {
+    const verses = this.song.songVerseDTOS;
+    if (!verses || verses.length === 0) {
+      return false;
+    }
+    return verses.some(v => v.text && v.text.trim().length > 0);
+  }
+
   onRefreshClick() {
     // Emit event first - parent will update currentSongForWordList
     // ngOnChanges will detect the song change and call loadWords() with the updated song
     this.refreshRequested.emit();
   }
 
+  onPanelOpened() {
+    // Refresh only if there are form changes or we haven't fetched yet
+    if (this.hasChanges || !this.hasLoadedOnce) {
+      this.onRefreshClick();
+    }
+  }
+
   loadWords() {
     if (!this.song) {
+      return;
+    }
+    if (!this.songHasText()) {
       return;
     }
 
@@ -115,6 +136,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
         }
         this.calculateCounts();
         this.loading = false;
+        this.hasLoadedOnce = true;
       },
       (err) => {
         console.error('Error loading word validation:', err);
@@ -249,6 +271,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       case ReviewedWordStatus.ACCEPTED:
         return 'check_circle';
       case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
+      case ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE:
         return 'verified';
       case ReviewedWordStatus.UNREVIEWED: return 'info';
       case ReviewedWordStatus.NOT_SURE: return 'info';
@@ -277,6 +300,7 @@ export class SongWordListPanelComponent implements OnInit, OnChanges {
       case ReviewedWordStatus.ACCEPTED:
         return 'status-icon-accepted';
       case ReviewedWordStatus.AUTO_ACCEPTED_FROM_PUBLIC:
+      case ReviewedWordStatus.AUTO_ACCEPTED_FROM_BIBLE:
         return 'status-icon-auto-accepted';
       case ReviewedWordStatus.BANNED:
         return 'status-icon-banned';

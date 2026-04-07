@@ -136,5 +136,20 @@
             android:padding="5dp"
             android:text="@string/connect_to_shared"
             android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/deleteAccountButton"
+            style="@style/Base.Widget.AppCompat.Button.Borderless"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginLeft="6dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginStart="6dp"
+            android:gravity="start|center|end"
+            android:padding="5dp"
+            android:text="@string/delete_account"
+            android:textAllCaps="false"
+            android:visibility="gone"/>
     </LinearLayout>
 </ScrollView>

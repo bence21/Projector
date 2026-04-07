@@ -34,6 +34,7 @@ public class User extends AbstractModel {
     private Date modifiedDate;
     private Date createdDate;
     private Boolean hadUploadedSongs;
+    private Boolean deleted;
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "REVIEW_LANGUAGES")
     private List<Language> reviewLanguages;
@@ -265,5 +266,13 @@ public class User extends AbstractModel {
 
     public void setHadUploadedSongs(Boolean hadUploadedSongs) {
         this.hadUploadedSongs = hadUploadedSongs;
+    }
+
+    public boolean isDeleted() {
+        return deleted != null && deleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
     }
 }
