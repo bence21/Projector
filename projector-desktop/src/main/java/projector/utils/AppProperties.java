@@ -58,6 +58,10 @@ public class AppProperties {
                 return workDirectoryPath + macWorkDirectoryName + "/";
             }
         }
+        if (isLinuxOs()) {
+         String linuxWorkDirectoryName = System.getProperty("user.home") + "/.local/share/projector/";
+         return linuxWorkDirectoryName;
+        }
         return "./";
     }
 

@@ -56,6 +56,8 @@ public class FirstSetupController {
 
     public void onStartAsNew() {
         disableButtons();
+        ensureDirectory(AppProperties.getInstance().getWorkDirectory());
+
         if (listener != null) {
             listener.onStartAsNew();
         }
