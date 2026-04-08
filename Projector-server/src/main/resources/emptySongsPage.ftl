@@ -83,15 +83,15 @@
                               style="margin: 10px 0;color: #ffffff;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 15px;line-height: 150%;text-align: left;">
                               <div>
                                 <table style="color: #ffffff; border-spacing: 4px 20px; border-collapse: separate;">
-                                  <#list songs as song>
+                                  <#list songRows as songRow>
                                     <tr>
                                       <td>
-                                        <#if song.title??>
-                                          ${song.title}
+                                        <#if songRow.title??>
+                                          ${songRow.title}
                                         </#if>
                                       </td>
                                       <td>
-                                        <a href="${baseUrl}/#/song/${song.uuid}" target="_blank"
+                                        <a href="${baseUrl}/#/song/${songRow.uuid}" target="_blank"
                                           style="color: #2BAADF;font-weight: normal;text-decoration: underline;">Open</a>
                                       </td>
                                     </tr>
