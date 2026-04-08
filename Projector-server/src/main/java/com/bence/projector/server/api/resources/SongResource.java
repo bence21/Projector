@@ -25,6 +25,7 @@ import com.bence.projector.server.backend.service.StatisticsService;
 import com.bence.projector.server.backend.service.SuggestionService;
 import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.mailsending.MailSenderService;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -590,6 +591,7 @@ public class SongResource {
     }
 
     @Scheduled(fixedRate = 5 * 60 * 1000)
+    @SchedulerLock(name = "SongResource_checkEmptySongs", lockAtMostFor = "PT10M", lockAtLeastFor = "PT10S")
     public void checkEmptySongs_runEvery5Minute_() {
         List<Song> songsByVersesIsEmpty = getAllByVersesIsEmptyOrShort();
         int size = songsByVersesIsEmpty.size();
