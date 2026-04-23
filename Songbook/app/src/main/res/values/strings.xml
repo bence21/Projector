@@ -16,10 +16,13 @@
     <string name="language">Language</string>
     <string name="download_songs">Download songs</string>
     <string name="select_languages">Select song languages</string>
+    <string name="select_at_least_one_language">Select at least one language</string>
     <string name="downloading_songs">Downloading songs.</string>
     <string name="filter">Filter</string>
     <string name="sort">Sort</string>
     <string name="select">Select</string>
+    <string name="all_collections">ALL</string>
+    <string name="none_collections">NONE</string>
     <string name="modified_date">Modified date</string>
     <string name="ascending_by_title">Ascending by title</string>
     <string name="descending_by_title">Descending by title</string>
@@ -31,6 +34,7 @@
     <string name="light_theme">Light theme</string>
     <string name="maximum_size_of_text">Maximum size of text</string>
     <string name="collection">Collection</string>
+    <string name="collections">Collections</string>
     <string name="saving_songs">Saving songs</string>
     <string name="downloading_collections">Downloading collections</string>
     <string name="saving_collections">Saving collections</string>
