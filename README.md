@@ -5,11 +5,11 @@
 The entire API is documented according to the OpenAPI specification.
 The spec is auto-generated from the source code and is available on the following URLs:
 
-- **OpenAPI Spec (JSON)**: http://localhost:8080/openapi
-- **OpenAPI Spec (YAML)**: http://localhost:8080/openapi.yaml
+- **OpenAPI Spec (JSON)**: http://localhost:8081/openapi
+- **OpenAPI Spec (YAML)**: http://localhost:8081/openapi.yaml
    - This can be used to generate client SDKs
      _e.g.:_ [Rapini](https://github.com/rametta/rapini) (React Query SDK generator)
-- **Swagger UI (interactive API docs)**: http://localhost:8080/swagger-ui.html
+- **Swagger UI (interactive API docs)**: http://localhost:8081/swagger-ui.html
 
 ## Dev DB (Docker-Compose)
 

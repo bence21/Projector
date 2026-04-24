@@ -3,7 +3,7 @@
     <tr>
       <td>URL:</td>
       <td>
-        <input id="link" value="http://localhost:8080/song/{{data.uuid}}">
+        <input id="link" value="http://localhost:8081/song/{{data.uuid}}">
       </td>
       <td>
         <button mat-icon-button (click)="copyLink()">
@@ -14,7 +14,7 @@
     <tr>
       <td>Embedded:</td>
       <td>
-        <input id="embedded" value='<a href="http://localhost:8080/song/{{data.uuid}}">{{data.title}}</a>'>
+        <input id="embedded" value='<a href="http://localhost:8081/song/{{data.uuid}}">{{data.title}}</a>'>
       </td>
       <td>
         <button mat-icon-button (click)="copyEmbedded()">

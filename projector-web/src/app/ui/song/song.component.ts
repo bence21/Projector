@@ -168,7 +168,7 @@ export class SongComponent implements OnInit, OnDestroy {
 
   private setCanonicalUrl(songId) {
     try {
-      const s = 'http://localhost:8080/song/' + songId;
+      const s = 'http://localhost:8081/song/' + songId;
       this.meta.updateTag({ rel: 'canonical', href: s });
     } catch (error) {
       console.log(error);

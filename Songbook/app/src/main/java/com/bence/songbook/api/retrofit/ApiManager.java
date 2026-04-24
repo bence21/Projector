@@ -38,8 +38,8 @@ public class ApiManager {
     }
 
     public static Retrofit getClient() {
-        String BASE_URL = "http://192.168.1.134:8080";
-        String SECOND_BASE_URL = "http://192.168.100.119:8080";
+        String BASE_URL = "http://192.168.1.134:8081";
+        String SECOND_BASE_URL = "http://192.168.100.119:8081";
         HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
         httpLoggingInterceptor.setLevel(
                 BuildConfig.DEBUG ? HttpLoggingInterceptor.Level.BODY : HttpLoggingInterceptor.Level.BASIC);
