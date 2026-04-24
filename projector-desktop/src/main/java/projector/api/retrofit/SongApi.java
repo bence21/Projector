@@ -23,7 +23,7 @@ public interface SongApi {
     @GET("/api/songsAfterModifiedDate/{modifiedDate}")
     Call<List<SongDTO>> getSongsAfterModifiedDate(@Path("modifiedDate") Long modifiedDate);
 
-    @POST("/api/song/upload")
+    @POST("/user/api/song")
     Call<SongDTO> uploadSong(@Body SongDTO songDTO);
 
     @GET("/api/songs/language/{language}/modifiedDate/{modifiedDate}")

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BaseModel } from '../models/base-model';
-import { Http, Response } from '@angular/http';
+import { Headers, Http, RequestOptions, Response } from '@angular/http';
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
@@ -60,9 +60,10 @@ export class ApiService {
       .catch(ApiService.handleError);
   }
 
-  public create<T>(c: new (data) => T, api_url: string, t: T): Observable<T> {
+  public create<T>(c: new (data) => T, api_url: string, t: T, extraHeaders?: Headers): Observable<T> {
+    const options = extraHeaders ? new RequestOptions({headers: extraHeaders}) : undefined;
     return this.http
-      .post(api_url, t)
+      .post(api_url, t, options)
       .map(response => {
         return new c(response.json());
       })

@@ -9,6 +9,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.util.Callback;
 import projector.api.SongApiBean;
+import projector.api.SongApiBean.SongUploadFailureKind;
 import projector.api.SongCollectionApiBean;
 import projector.application.Settings;
 import projector.model.Language;
@@ -22,6 +23,7 @@ import projector.service.SongService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class UploadSongsController {
     private LanguageService languageService;
@@ -33,7 +35,7 @@ public class UploadSongsController {
     private ListView<Song> songListView;
     private SongService songService;
     private List<Song> publishingSongs;
-    private boolean allPublished = true;
+    private final AtomicBoolean uploadInProgress = new AtomicBoolean(false);
 
     public void initialize() {
         languageService = ServiceManager.getLanguageService();
@@ -52,15 +54,22 @@ public class UploadSongsController {
             uploadButton.setDisable(true);
         } else {
             uploadButton.setOnAction(event -> {
+                if (!uploadInProgress.compareAndSet(false, true)) {
+                    return;
+                }
+                uploadButton.setDisable(true);
                 Thread thread = new Thread(() -> {
                     SongApiBean songApi = new SongApiBean();
                     List<Song> publishedSongs = new ArrayList<>(publishingSongs.size());
-                    for (Song song : publishingSongs) {
+                    boolean[] allPublished = {true};
+                    SongUploadFailureKind[] dominantFailure = {null};
+                    for (Song song : new ArrayList<>(publishingSongs)) {
                         Language language = song.getLanguage();
                         if (language != null) {
                             song.setLanguage(languageService.findById(language.getId()));
                         }
-                        Song uploadedSong = songApi.uploadSong(song);
+                        SongApiBean.SongUploadResult uploadResult = songApi.uploadSong(song);
+                        Song uploadedSong = uploadResult.getSong();
                         if (uploadedSong != null) {
                             String uuid = song.getUuid();
                             if (uuid == null || uuid.trim().isEmpty()) {
@@ -70,19 +79,35 @@ public class UploadSongsController {
                             songService.update(song);
                             publishedSongs.add(song);
                         } else {
-                            allPublished = false;
+                            allPublished[0] = false;
+                            SongUploadFailureKind k = uploadResult.getFailureKind();
+                            if (dominantFailure[0] == null) {
+                                dominantFailure[0] = k;
+                            }
+                            if (k == SongUploadFailureKind.NEEDS_SIGN_IN
+                                    || k == SongUploadFailureKind.SESSION_NOT_REFRESHED) {
+                                dominantFailure[0] = k;
+                            }
                         }
                     }
+                    SongUploadFailureKind finalFailure = dominantFailure[0];
                     Platform.runLater(() -> {
                         publishingSongs.removeAll(publishedSongs);
                         songListViewItems.clear();
                         songListViewItems.addAll(publishingSongs);
-                        if (!allPublished) {
-                            noInternetMessage();
+                        if (!allPublished[0]) {
+                            if (finalFailure == SongUploadFailureKind.NEEDS_SIGN_IN
+                                    || finalFailure == SongUploadFailureKind.SESSION_NOT_REFRESHED) {
+                                uploadAuthMessage(finalFailure);
+                            } else {
+                                noInternetMessage();
+                            }
+                            uploadButton.setDisable(publishingSongs.isEmpty());
                         } else {
                             uploadButton.setDisable(true);
                             uploadingLabel.setText("Finished!");
                         }
+                        uploadInProgress.set(false);
                     });
                 });
                 thread.start();
@@ -121,6 +146,14 @@ public class UploadSongsController {
         final String no_internet_connection = resourceBundle.getString("No internet connection");
         final String try_again_later = resourceBundle.getString("Try again later");
         Platform.runLater(() -> uploadingLabel.setText(no_internet_connection + "! " + try_again_later + "!"));
+    }
+
+    private void uploadAuthMessage(SongUploadFailureKind kind) {
+        final ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
+        final String message = kind == SongUploadFailureKind.NEEDS_SIGN_IN
+                ? resourceBundle.getString("Upload needs sign in")
+                : resourceBundle.getString("Upload session expired");
+        uploadingLabel.setText(message);
     }
 
     private static class SongCell {

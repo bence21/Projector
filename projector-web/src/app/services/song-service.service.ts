@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Headers } from '@angular/http';
 import { ApiService } from './api.service';
 import { Observable } from 'rxjs/Observable';
 import { BaseModel } from '../models/base-model';
@@ -350,7 +351,9 @@ export class SongService {
   }
 
   createSong(song: Song) {
-    return this.api.create(Song, 'user/api/song', song);
+    const headers = new Headers();
+    headers.append('X-Projector-Web-Song-Create', '1');
+    return this.api.create(Song, 'user/api/song', song, headers);
   }
 
   getAllSongTitlesAfterModifiedDate(modifiedDate: number, selectedLanguage: any) {

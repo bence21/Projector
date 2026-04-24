@@ -18,6 +18,7 @@ import com.bence.projector.server.backend.model.Suggestion;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
@@ -57,6 +58,12 @@ import static com.bence.projector.server.utils.SongUtil.getLastModifiedSong;
 @RestController
 public class SongResource {
 
+    /**
+     * Only the SPA sends header {@code X-Projector-Web-Song-Create}; native apps send nothing, so their uploads use the
+     * review queue for activated users. Requests without this marker are never treated as web uploads.
+     */
+    private static final String WEB_SONG_CREATE_HEADER = "X-Projector-Web-Song-Create";
+
     private final SongRepository songRepository;
     private final SongService songService;
     private final SongAssembler songAssembler;
@@ -94,6 +101,20 @@ public class SongResource {
         this.songCollectionService = songCollectionService;
         this.suggestionService = suggestionService;
         this.songWordValidationService = songWordValidationService;
+    }
+
+    private static boolean isWebClientSongCreate(HttpServletRequest request) {
+        String v = request.getHeader(WEB_SONG_CREATE_HEADER);
+        if (v == null || v.isBlank()) {
+            return false;
+        }
+        v = v.trim();
+        return "1".equals(v) || "true".equalsIgnoreCase(v) || "yes".equalsIgnoreCase(v);
+    }
+
+    private static void markSongForReviewQueue(Song song) {
+        song.setDeleted(true);
+        song.setUploaded(true);
     }
 
     static boolean hasReviewerRoleForSong(User user, Song song) {
@@ -366,9 +387,16 @@ public class SongResource {
         }
         final Song song = songAssembler.createModel(songDTO);
         song.setCreatedByEmail(user.getEmail());
+        final boolean webClientSongCreate = isWebClientSongCreate(httpServletRequest);
+        if (webClientSongCreate) {
+            return createSongForWeb(user, song);
+        }
+        return createSongForNative(songDTO, user, song);
+    }
+
+    private ResponseEntity<Object> createSongForWeb(User user, Song song) {
         if (!user.isActivated()) {
-            song.setDeleted(true);
-            song.setUploaded(true);
+            markSongForReviewQueue(song);
         }
         final Date date = new Date();
         song.setCreatedDate(date);
@@ -382,6 +410,43 @@ public class SongResource {
             return new ResponseEntity<>(dto, HttpStatus.ACCEPTED);
         }
         return new ResponseEntity<>("Could not create", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<Object> createSongForNative(SongDTO songDTO, User user, Song song) {
+        song.setOriginalId(songDTO.getUuid());
+        markSongForReviewQueue(song);
+        final Date date = new Date();
+        song.setCreatedDate(date);
+        song.setModifiedDate(date);
+        final Song savedSong;
+        try {
+            savedSong = songService.save(song);
+        } catch (ServiceException e) {
+            return new ResponseEntity<>(e.getResponseMessage(), e.getHttpStatus());
+        }
+        if (savedSong != null) {
+            Thread thread = new Thread(() -> runNativeUploadPostSave(savedSong));
+            thread.start();
+            SongDTO dto = songAssembler.createDto(savedSong);
+            updateUserWhenCreatedSong(user);
+            return new ResponseEntity<>(dto, HttpStatus.ACCEPTED);
+        }
+        return new ResponseEntity<>("Could not create", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private void runNativeUploadPostSave(Song savedSong) {
+        List<Song> songs = songService.findAllSongsLazy();
+        boolean deleted = false;
+        for (Song song1 : songs) {
+            if (!savedSong.getUuid().equals(song1.getUuid()) && songService.matches(savedSong, song1)) {
+                songService.deleteByUuid(savedSong.getUuid());
+                deleted = true;
+                break;
+            }
+        }
+        if (!deleted) {
+            sendEmail(savedSong);
+        }
     }
 
     private void updateUserWhenCreatedSong(User user) {
