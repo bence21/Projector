@@ -15,17 +15,24 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.bence.projector.common.dto.LoginDTO;
 import com.bence.projector.common.dto.UserDTO;
+import com.bence.songbook.Memory;
 import com.bence.songbook.R;
 import com.bence.songbook.api.LoginApiBean;
 import com.bence.songbook.api.UserApiBean;
 import com.bence.songbook.models.LoggedInUser;
 import com.bence.songbook.repository.impl.ormLite.LoggedInUserRepositoryImpl;
+import com.bence.songbook.ui.utils.PendingUploadRetryAfterLogin;
 import com.bence.songbook.ui.utils.Preferences;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class LoginActivity extends BaseActivity {
 
     public static final int RESULT_LOGGED_IN = 1;
+    /**
+     * When true, leaving login without a successful sign-in clears {@link Memory#clearPendingUploadRetrySong()}.
+     * Set when login was opened after a new-song upload auth failure.
+     */
+    public static final String EXTRA_CLEAR_PENDING_UPLOAD_RETRY_ON_CANCEL = "clearPendingUploadRetryOnCancel";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +67,8 @@ public class LoginActivity extends BaseActivity {
                 loggedInUser.setEmail(userDTO.getEmail());
                 loggedInUser.setPassword(loginDTO.getPassword());
                 loggedInUserRepository.save(loggedInUser);
+                MainActivity.applyPostLoginSideEffectsIfMainAlive();
+                PendingUploadRetryAfterLogin.runIfPending(LoginActivity.this);
                 setResult(RESULT_LOGGED_IN);
                 finish();
             } else {
@@ -94,14 +103,23 @@ public class LoginActivity extends BaseActivity {
 
     @Override
     public void onBackPressed() {
+        super.onBackPressed();
+        clearPendingUploadRetryIfRequested();
         finish();
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
+            clearPendingUploadRetryIfRequested();
             finish();
         }
         return true;
+    }
+
+    private void clearPendingUploadRetryIfRequested() {
+        if (getIntent().getBooleanExtra(EXTRA_CLEAR_PENDING_UPLOAD_RETRY_ON_CANCEL, false)) {
+            Memory.getInstance().clearPendingUploadRetrySong();
+        }
     }
 }

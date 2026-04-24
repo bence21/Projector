@@ -3,6 +3,7 @@ package com.bence.songbook.api.retrofit;
 import com.bence.projector.common.dto.LanguageDTO;
 import com.bence.projector.common.serializer.DateDeserializer;
 import com.bence.projector.common.serializer.DateSerializer;
+import com.bence.songbook.BuildConfig;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
@@ -40,7 +41,8 @@ public class ApiManager {
         String BASE_URL = "http://192.168.1.134:8080";
         String SECOND_BASE_URL = "http://192.168.100.119:8080";
         HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
-        httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        httpLoggingInterceptor.setLevel(
+                BuildConfig.DEBUG ? HttpLoggingInterceptor.Level.BODY : HttpLoggingInterceptor.Level.BASIC);
         HeaderInterceptor headerInterceptor = new HeaderInterceptor();
         OkHttpClient shortOkHttpClient = new OkHttpClient.Builder()
                 .connectTimeout(3, TimeUnit.SECONDS)

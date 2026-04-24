@@ -50,6 +50,9 @@ public class LanguageServiceImpl extends BaseServiceImpl<Language> implements La
 
     @Override
     public Language findOneByUuid(String id) {
+        if (id == null) {
+            return null;
+        }
         if (languageMap.containsKey(id)) {
             return languageMap.get(id);
         }

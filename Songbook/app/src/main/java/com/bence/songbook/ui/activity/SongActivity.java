@@ -62,6 +62,7 @@ import com.bence.songbook.service.SongService;
 import com.bence.songbook.ui.utils.CheckSongForUpdate;
 import com.bence.songbook.ui.utils.PageAdapter;
 import com.bence.songbook.ui.utils.Preferences;
+import com.bence.songbook.ui.utils.SongUploadFailureUi;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.tasks.Task;
@@ -292,28 +293,50 @@ public class SongActivity extends BaseActivity {
             saveToSongList();
         } else if (itemId == R.id.action_upload) {
             MenuItem uploadMenuItem = menu.findItem(R.id.action_upload);
-            uploadMenuItem.setVisible(false);
-            Thread thread = new Thread(() -> {
-                SongApiBean songApiBean = new SongApiBean();
-                final Song uploadedSong = songApiBean.uploadSong(song);
-                runOnUiThread(() -> {
-                    if (uploadedSong != null && !uploadedSong.getUuid().trim().isEmpty()) {
-                        song.setSavedOnlyToDevice(false);
-                        song.setUuid(uploadedSong.getUuid());
-                        song.setModifiedDate(uploadedSong.getModifiedDate());
-                        SongRepository songRepository = new SongRepositoryImpl(this);
-                        songRepository.save(song);
-                        Toast.makeText(SongActivity.this, R.string.successfully_uploaded, Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(SongActivity.this, R.string.upload_failed, Toast.LENGTH_SHORT).show();
-                    }
-                });
-            });
-            thread.start();
+            startUploadInBackground(uploadMenuItem, false);
         } else if (itemId == R.id.action_delete) {
             setSongAsDeleted();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void startUploadInBackground(MenuItem uploadMenuItem, boolean isPostLoginRetry) {
+        uploadMenuItem.setVisible(false);
+        new Thread(() -> {
+            SongApiBean songApiBean = new SongApiBean();
+            SongApiBean.SongUploadResult uploadResult = songApiBean.uploadSong(song, SongActivity.this);
+            runOnUiThread(() -> handleUploadResult(uploadMenuItem, uploadResult, isPostLoginRetry));
+        }).start();
+    }
+
+    private void handleUploadResult(MenuItem uploadMenuItem, SongApiBean.SongUploadResult uploadResult,
+                                    boolean isPostLoginRetry) {
+        Song uploadedSong = uploadResult.getSong();
+        if (uploadedSong != null && !uploadedSong.getUuid().trim().isEmpty()) {
+            song.setSavedOnlyToDevice(false);
+            song.setUuid(uploadedSong.getUuid());
+            song.setModifiedDate(uploadedSong.getModifiedDate());
+            SongRepository songRepository = new SongRepositoryImpl(this);
+            songRepository.save(song);
+            Toast.makeText(SongActivity.this, R.string.successfully_uploaded, Toast.LENGTH_SHORT).show();
+            setUpMenu();
+        } else {
+            SongApiBean.SongUploadFailureKind kind = uploadResult.getFailureKind();
+            boolean authFailure = kind == SongApiBean.SongUploadFailureKind.NEEDS_SIGN_IN
+                    || kind == SongApiBean.SongUploadFailureKind.SESSION_NOT_REFRESHED;
+            if (!isPostLoginRetry && authFailure) {
+                SongUploadFailureUi.showForActivity(SongActivity.this, uploadResult,
+                        SongUploadFailureUi.REQUEST_LOGIN_FOR_UPLOAD_RETRY,
+                        () -> uploadMenuItem.setVisible(true));
+            } else {
+                if (isPostLoginRetry) {
+                    SongUploadFailureUi.showUploadFailureAfterRetry(SongActivity.this, uploadResult);
+                } else {
+                    SongUploadFailureUi.showForActivity(SongActivity.this, uploadResult);
+                }
+                uploadMenuItem.setVisible(true);
+            }
+        }
     }
 
     private void setSongAsDeleted() {
@@ -407,6 +430,20 @@ public class SongActivity extends BaseActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SongUploadFailureUi.REQUEST_LOGIN_FOR_UPLOAD_RETRY) {
+            if (resultCode == LoginActivity.RESULT_LOGGED_IN) {
+                MenuItem uploadMenuItem = menu != null ? menu.findItem(R.id.action_upload) : null;
+                if (uploadMenuItem != null && song != null && song.isSavedOnlyToDevice()) {
+                    startUploadInBackground(uploadMenuItem, true);
+                }
+            } else {
+                MenuItem uploadMenuItem = menu != null ? menu.findItem(R.id.action_upload) : null;
+                if (uploadMenuItem != null) {
+                    uploadMenuItem.setVisible(true);
+                }
+            }
+            return;
+        }
         if (resultCode == CheckSongForUpdate.UPDATE_SONGS_RESULT) {
             setResult(resultCode);
             finish();

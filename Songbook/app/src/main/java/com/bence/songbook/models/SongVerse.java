@@ -1,5 +1,7 @@
 package com.bence.songbook.models;
 
+import static com.bence.songbook.ui.utils.StringUtils.stripAccents;
+
 import android.content.Context;
 
 import com.bence.projector.common.model.SectionType;
@@ -7,8 +9,6 @@ import com.bence.songbook.R;
 import com.j256.ormlite.field.DatabaseField;
 
 import java.io.Serializable;
-
-import static com.bence.songbook.ui.utils.StringUtils.stripAccents;
 
 public class SongVerse extends BaseEntity implements Serializable {
 
@@ -57,7 +57,7 @@ public class SongVerse extends BaseEntity implements Serializable {
         return strippedText;
     }
 
-    SectionType getSectionType() {
+    public SectionType getSectionType() {
         if (sectionTypeData == null) {
             sectionType = SectionType.VERSE;
         } else {

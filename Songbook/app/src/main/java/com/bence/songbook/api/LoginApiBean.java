@@ -5,6 +5,7 @@ import android.util.Log;
 import com.bence.projector.common.dto.LoginDTO;
 import com.bence.songbook.api.retrofit.ApiManager;
 import com.bence.songbook.api.retrofit.LoginApi;
+import com.bence.songbook.http.LoginHttpResponseUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,11 @@ public class LoginApiBean {
         Call<Void> loginCall = loginApi.login(loginDTO.getUsername(), loginDTO.getPassword());
         try {
             Response<Void> execute = loginCall.execute();
-            setCookie(execute.headers(), execute);
+            Headers headers = execute.headers();
+            if (!LoginHttpResponseUtil.isLoginHttpSuccess(execute.code(), headers.values("Location"))) {
+                return false;
+            }
+            setCookie(headers, execute);
             return true;
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);

@@ -32,6 +32,7 @@ import com.bence.songbook.repository.impl.ormLite.LanguageRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongRepositoryImpl;
 import com.bence.songbook.service.UserService;
 import com.bence.songbook.ui.utils.Preferences;
+import com.bence.songbook.ui.utils.SongUploadFailureUi;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
@@ -301,15 +302,22 @@ public class NewSongActivity extends BaseActivity {
         if (!song.isSavedOnlyToDevice()) {
             Thread thread = new Thread(() -> {
                 SongApiBean songApiBean = new SongApiBean();
-                final Song uploadedSong = songApiBean.uploadSong(song);
+                SongApiBean.SongUploadResult uploadResult = songApiBean.uploadSong(song, NewSongActivity.this);
                 runOnUiThread(() -> {
+                    Song uploadedSong = uploadResult.getSong();
                     if (uploadedSong != null && !uploadedSong.getUuid().trim().isEmpty()) {
                         song.setUuid(uploadedSong.getUuid());
                         song.setModifiedDate(uploadedSong.getModifiedDate());
                         songRepository.save(song);
-                        Toast.makeText(NewSongActivity.this, R.string.successfully_uploaded, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), R.string.successfully_uploaded, Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(NewSongActivity.this, R.string.upload_failed, Toast.LENGTH_SHORT).show();
+                        Song pendingUpload = null;
+                        if (uploadResult.getFailureKind() == SongApiBean.SongUploadFailureKind.NEEDS_SIGN_IN
+                                || uploadResult.getFailureKind() == SongApiBean.SongUploadFailureKind.SESSION_NOT_REFRESHED) {
+                            pendingUpload = song;
+                        }
+                        SongUploadFailureUi.showAfterLeaveActivity(getApplicationContext(),
+                                uploadResult.getFailureKind(), pendingUpload);
                     }
                 });
             });

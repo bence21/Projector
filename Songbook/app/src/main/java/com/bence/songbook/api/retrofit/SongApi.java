@@ -29,7 +29,7 @@ public interface SongApi {
     @PUT("/api/song/{uuid}/incViews")
     Call<SongDTO> uploadView(@Path("uuid") String uuid);
 
-    @POST("/api/song/upload")
+    @POST("/user/api/song")
     Call<SongDTO> uploadSong(@Body SongDTO songDTO);
 
     @GET("/api/song/{uuid}")

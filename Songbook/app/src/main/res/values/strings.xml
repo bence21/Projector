@@ -60,6 +60,10 @@
     <string name="language_of_the_song">Language of the song</string>
     <string name="successfully_uploaded">Successfully uploaded!</string>
     <string name="upload_failed">Upload failed</string>
+    <string name="upload_needs_sign_in_message">Sign in to upload songs to the server.</string>
+    <string name="upload_session_expired_message">Your session expired. Sign in again, then try uploading.</string>
+    <string name="upload_open_login">Sign in</string>
+    <string name="upload_network_or_server_message">Could not upload. Check your connection and try again.</string>
     <string name="suggest_edits">Suggest edits</string>
     <string name="short_description_of_the_suggestion">Short description of the suggestion:</string>
     <string name="submit">Submit</string>

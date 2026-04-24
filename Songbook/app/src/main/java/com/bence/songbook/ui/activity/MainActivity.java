@@ -2,7 +2,6 @@ package com.bence.songbook.ui.activity;
 
 import static androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_DRAGGING;
 import static androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE;
-import static com.bence.songbook.ui.activity.LoginActivity.RESULT_LOGGED_IN;
 import static com.bence.songbook.ui.activity.NewSongActivity.sortLanguagesByRecentlyViewedSongs;
 import static com.bence.songbook.ui.activity.SongActivity.saveGmail;
 import static com.bence.songbook.ui.utils.SaveFavouriteInGoogleDrive.REQUEST_CODE_SIGN_IN;
@@ -573,6 +572,22 @@ public class MainActivity extends BaseActivity
         }
     }
 
+    /**
+     * After a successful sign-in from any screen ({@link LoginActivity}, etc.), refresh the drawer
+     * sign-in label and sync favourites if this activity is the one held in {@link Memory}.
+     * Safe to call from any thread; work is posted to the main thread. No-op if {@link MainActivity} is not in memory.
+     */
+    public static void applyPostLoginSideEffectsIfMainAlive() {
+        final MainActivity mainActivity = Memory.getInstance().getMainActivity();
+        if (mainActivity == null) {
+            return;
+        }
+        mainActivity.runOnUiThread(() -> {
+            mainActivity.updateNavSignInTitleByLoggedIn();
+            mainActivity.syncFavouriteSongs();
+        });
+    }
+
     private LoggedInUser getLoggedInUser() {
         return UserService.getInstance().getLoggedInUser(this);
     }
@@ -797,7 +812,8 @@ public class MainActivity extends BaseActivity
                 }
             }
             for (Song song : uploadingSongs) {
-                final Song uploadedSong = songApiBean.uploadSong(song);
+                SongApiBean.SongUploadResult uploadResult = songApiBean.uploadSong(song, MainActivity.this);
+                Song uploadedSong = uploadResult.getSong();
                 if (uploadedSong != null && !uploadedSong.getUuid().trim().isEmpty()) {
                     song.setUuid(uploadedSong.getUuid());
                     song.setModifiedDate(uploadedSong.getModifiedDate());
@@ -1002,10 +1018,8 @@ public class MainActivity extends BaseActivity
                 }
                 break;
             case LOGIN_IN_ACTIVITY_REQUEST_CODE:
-                if (resultCode == RESULT_LOGGED_IN) {
-                    updateNavSignInTitleByLoggedIn();
-                    syncFavouriteSongs();
-                }
+                // Nav + favourite sync: see LoginActivity (applyPostLoginSideEffectsIfMainAlive) on successful login
+                break;
         }
         if (adapter != null) {
             adapter.notifyDataSetChanged();

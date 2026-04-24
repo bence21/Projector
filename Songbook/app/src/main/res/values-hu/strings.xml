@@ -57,6 +57,10 @@
     <string name="language_of_the_song">Az ének nyelve</string>
     <string name="successfully_uploaded">Sikeresen feltöltve!</string>
     <string name="upload_failed">Feltöltés sikertelen</string>
+    <string name="upload_needs_sign_in_message">A szerverre való feltöltéshez jelentkezzen be.</string>
+    <string name="upload_session_expired_message">A munkamenet lejárt. Jelentkezzen be újra, majd próbálja meg újra a feltöltést.</string>
+    <string name="upload_open_login">Bejelentkezés</string>
+    <string name="upload_network_or_server_message">Nem sikerült feltölteni. Ellenőrizze a kapcsolatot, és próbálja újra.</string>
     <string name="suggest_edits">Javasoljon módosításokat</string>
     <string name="short_description_of_the_suggestion">A javaslat rövid leírása:</string>
     <string name="submit">Beküldés</string>
