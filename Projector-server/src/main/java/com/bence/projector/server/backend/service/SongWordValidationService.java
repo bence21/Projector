@@ -45,6 +45,13 @@ public class SongWordValidationService {
     }
 
     public SongWordValidationResult validateWords(Song song) {
+        return validateWords(song, SongWordValidationOptions.DEFAULT);
+    }
+
+    public SongWordValidationResult validateWords(Song song, SongWordValidationOptions options) {
+        if (options == null) {
+            options = SongWordValidationOptions.DEFAULT;
+        }
         if (!isValidSong(song)) {
             return createEmptyValidationResult();
         }
@@ -52,10 +59,13 @@ public class SongWordValidationService {
         Language language = song.getLanguage();
         Collection<SongWord> songWords = getSongWords(song);
         Map<String, ReviewedWord> reviewedWordMap = normalizedWordBunchCacheService.getReviewedWordMapForLanguage(language);
-        List<ReviewedWord> allReviewedWords = new ArrayList<>(reviewedWordMap.values());
+        List<ReviewedWord> allReviewedWordsForSuggestions = options.includeWordSuggestions()
+                ? new ArrayList<>(reviewedWordMap.values())
+                : null;
         NormalizedWordBunchMap normalizedWordBunchMap = buildNormalizedWordBunchMap(language);
 
-        WordCategories categories = categorizeWords(songWords, reviewedWordMap, normalizedWordBunchMap, allReviewedWords);
+        WordCategories categories = categorizeWords(songWords, reviewedWordMap, normalizedWordBunchMap,
+                allReviewedWordsForSuggestions, options);
 
         return new SongWordValidationResult(
                 categories.unreviewedWords,
@@ -71,7 +81,13 @@ public class SongWordValidationService {
     }
 
     private SongWordValidationResult createEmptyValidationResult() {
-        return new SongWordValidationResult(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), false, new ArrayList<>());
+        return new SongWordValidationResult(
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                false,
+                new ArrayList<>()
+        );
     }
 
     private NormalizedWordBunchMap buildNormalizedWordBunchMap(Language language) {
@@ -104,7 +120,8 @@ public class SongWordValidationService {
     private WordCategories categorizeWords(Collection<SongWord> songWords,
                                            Map<String, ReviewedWord> reviewedWordMap,
                                            NormalizedWordBunchMap normalizedWordBunchMap,
-                                           List<ReviewedWord> allReviewedWords) {
+                                           List<ReviewedWord> allReviewedWordsForSuggestions,
+                                           SongWordValidationOptions options) {
         WordCategories categories = new WordCategories();
         Set<String> processedWords = new HashSet<>();
         Map<String, Integer> countInSongMap = buildCountInSongMap(songWords);
@@ -116,7 +133,7 @@ public class SongWordValidationService {
                 processedWords.add(word);
                 boolean allAutoCapitalized = Boolean.TRUE.equals(allOccurrencesAutoCapitalized.get(word));
                 categorizeWord(word, allAutoCapitalized, reviewedWordMap, normalizedWordBunchMap,
-                        countInSongMap, allReviewedWords, categories);
+                        countInSongMap, allReviewedWordsForSuggestions, categories, options);
             }
         }
 
@@ -140,10 +157,10 @@ public class SongWordValidationService {
      * adds it to wordsWithStatus with the lowercase's status and returns true. Otherwise, returns false.
      */
     private boolean tryTreatCapitalizedAsReviewed(String word,
-                                                   Map<String, ReviewedWord> reviewedWordMap,
-                                                   Integer countInSong,
-                                                   int countInAllSongs,
-                                                   WordCategories categories) {
+                                                  Map<String, ReviewedWord> reviewedWordMap,
+                                                  Integer countInSong,
+                                                  int countInAllSongs,
+                                                  WordCategories categories) {
         if (!isCapitalizedFirstWordForm(word)) {
             return false;
         }
@@ -179,8 +196,9 @@ public class SongWordValidationService {
                                 Map<String, ReviewedWord> reviewedWordMap,
                                 NormalizedWordBunchMap normalizedWordBunchMap,
                                 Map<String, Integer> countInSongMap,
-                                List<ReviewedWord> allReviewedWords,
-                                WordCategories categories) {
+                                List<ReviewedWord> allReviewedWordsForSuggestions,
+                                WordCategories categories,
+                                SongWordValidationOptions options) {
         // ReviewedWord map is keyed by lowercase normalized word
         ReviewedWord reviewedWord = reviewedWordMap.get(word);
         Integer countInSong = countInSongMap.get(word);
@@ -192,8 +210,12 @@ public class SongWordValidationService {
                 return;
             }
             categories.unreviewedWords.add(word);
-            RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
-            List<String> suggestions = extractSuggestions(suggestion);
+            List<String> suggestions = null;
+            if (options.includeWordSuggestions()) {
+                RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap,
+                        allReviewedWordsForSuggestions);
+                suggestions = extractSuggestions(suggestion);
+            }
             added = new WordWithStatus(word, ReviewedWordStatusDTO.UNREVIEWED, suggestions, countInSong, countInAllSongs);
             categories.wordsWithStatus.add(added);
         } else {
@@ -203,9 +225,16 @@ public class SongWordValidationService {
                 added = new WordWithStatus(word, ReviewedWordStatusDTO.BANNED, null, countInSong, countInAllSongs);
                 categories.wordsWithStatus.add(added);
             } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.REJECTED) {
-                RejectedWordSuggestion suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWords);
+                RejectedWordSuggestion suggestion;
+                List<String> suggestions;
+                if (options.includeWordSuggestions()) {
+                    suggestion = findSuggestionsForRejectedWord(word, normalizedWordBunchMap, allReviewedWordsForSuggestions);
+                    suggestions = extractSuggestions(suggestion);
+                } else {
+                    suggestion = new RejectedWordSuggestion(word, null, null);
+                    suggestions = null;
+                }
                 categories.rejectedWords.add(suggestion);
-                List<String> suggestions = extractSuggestions(suggestion);
                 added = new WordWithStatus(word, ReviewedWordStatusDTO.REJECTED, suggestions, countInSong, countInAllSongs);
                 categories.wordsWithStatus.add(added);
             } else if (status == com.bence.projector.server.backend.model.ReviewedWordStatus.NOT_SURE) {
@@ -221,13 +250,14 @@ public class SongWordValidationService {
     /**
      * Extracts category/notes/context metadata from a reviewed word (for ACCEPTED or CONTEXT_SPECIFIC)
      * and adds a WordWithStatus to categories.
+     *
      * @param inheritedFromCapitalizedReview true when the word is treated as reviewed only via the capitalized-word rule
      * @return the created WordWithStatus (caller may set allOccurrencesAutoCapitalized)
      */
     private WordWithStatus addWordWithStatusFromReviewedWord(String word, ReviewedWord reviewedWord,
-                                                            Integer countInSong, int countInAllSongs,
-                                                            WordCategories categories,
-                                                            boolean inheritedFromCapitalizedReview) {
+                                                             Integer countInSong, int countInAllSongs,
+                                                             WordCategories categories,
+                                                             boolean inheritedFromCapitalizedReview) {
         ReviewedWordStatus status = reviewedWord.getStatus();
         String category = null;
         String notes = null;
