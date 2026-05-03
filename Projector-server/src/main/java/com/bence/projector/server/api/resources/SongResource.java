@@ -53,6 +53,7 @@ import static com.bence.projector.server.api.resources.UserPropertiesResource.ge
 import static com.bence.projector.server.mailsending.MailSenderService.getDateFormatted2;
 import static com.bence.projector.server.utils.SetLanguages.getLanguageWords;
 import static com.bence.projector.server.utils.SetLanguages.setLanguagesForUnknown;
+import static com.bence.projector.server.utils.SongModerationUtil.markSongForReviewQueue;
 import static com.bence.projector.server.utils.SongUtil.getLastModifiedSong;
 
 @RestController
@@ -110,11 +111,6 @@ public class SongResource {
         }
         v = v.trim();
         return "1".equals(v) || "true".equalsIgnoreCase(v) || "yes".equalsIgnoreCase(v);
-    }
-
-    private static void markSongForReviewQueue(Song song) {
-        song.setDeleted(true);
-        song.setUploaded(true);
     }
 
     static boolean hasReviewerRoleForSong(User user, Song song) {
