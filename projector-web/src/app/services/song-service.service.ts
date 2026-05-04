@@ -162,6 +162,8 @@ export class Song extends BaseModel {
   repeatChorus: boolean = true;
   reviewerErased: boolean = false;
   hasUnsolvedWords: boolean = false;
+  /** From SongTitle API: number of verses; 0 means the song has no verse content. */
+  verseCount?: number;
 
   constructor(values: Object = {}) {
     super(values);
@@ -432,11 +434,17 @@ export class SongService {
     return this.api.getOne(BooleanResponse, 'user/api/song/' + song.uuid + '/hasReviewerRoleForSong');
   }
 
-  runMarkSimilarSongsBatch(): Observable<Response> {
-    return this.api.getRaw('admin/markSimilarSongsAndSet');
+  runMarkSimilarSongsBatch(languageUuid?: string, visibility: 'public' | 'nonPublic' = 'public'): Observable<Response> {
+    const vis = visibility === 'nonPublic' ? 'nonPublic' : 'public';
+    let path = languageUuid
+      ? 'admin/markSimilarSongsAndSet/' + languageUuid
+      : 'admin/markSimilarSongsAndSet';
+    path += (path.indexOf('?') >= 0 ? '&' : '?') + 'visibility=' + encodeURIComponent(vis);
+    return this.api.getRaw(path);
   }
 
-  runRemoveDuplicateUploads(): Observable<Response> {
-    return this.api.getRaw('admin/removeDuplicates');
+  runRemoveDuplicateUploads(languageUuid?: string): Observable<Response> {
+    const path = languageUuid ? 'admin/removeDuplicates/' + languageUuid : 'admin/removeDuplicates';
+    return this.api.getRaw(path);
   }
 }

@@ -13,6 +13,7 @@ import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.SongCollectionElementService;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongLinkService;
+import com.bence.projector.server.backend.service.SongPublicScope;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.UserService;
 
@@ -23,7 +24,6 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -36,6 +36,14 @@ import static com.bence.projector.server.utils.StringUtils.replaceAllOtherThenLe
 import static com.bence.projector.server.utils.StringUtils.stripAccents;
 
 public class SongUtil {
+
+    /**
+     * One language’s songs for the mark-similar batch: version-group pool from {@link SongService}, filtered by visibility in SQL.
+     */
+    private static List<Song> loadSongsForSimilarBatch(SongService songService, Language language, SongPublicScope visibility) {
+        Collection<Song> raw = songService.getSongsByLanguageForSimilarWithVersionGroup(language, visibility);
+        return raw == null ? new ArrayList<>() : new ArrayList<>(raw);
+    }
 
     /**
      * Automatic similarity merge skips merging when the two version groups would form a larger combined
@@ -95,12 +103,22 @@ public class SongUtil {
     @SuppressWarnings("unused")
     public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
                                               SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
+        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, SongPublicScope.PUBLIC);
+    }
+
+    @SuppressWarnings("unused")
+    public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
+                                              SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService,
+                                              SongPublicScope visibility) {
         List<Language> languages = languageService.findAll();
         int languageCount = languages.size();
         int[] songTotalPerLanguage = new int[languageCount];
         int grandTotalSongs = 0;
+        List<List<Song>> songsPerLanguage = new ArrayList<>(languageCount);
         for (int li = 0; li < languageCount; li++) {
-            int c = songService.countSongsByLanguageForSimilarWithVersionGroup(languages.get(li));
+            List<Song> batch = loadSongsForSimilarBatch(songService, languages.get(li), visibility);
+            songsPerLanguage.add(batch);
+            int c = batch.size();
             songTotalPerLanguage[li] = c;
             grandTotalSongs += c;
         }
@@ -109,32 +127,50 @@ public class SongUtil {
         for (int li = 0; li < languageCount; li++) {
             Language language = languages.get(li);
             markSimilarSongsAndSetForLanguage(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
-                    li + 1, languageCount, songsCompletedBeforeLanguage, grandTotalSongs, jobStartMs);
+                    li + 1, languageCount, songsCompletedBeforeLanguage, grandTotalSongs, jobStartMs, songsPerLanguage.get(li), visibility);
             songsCompletedBeforeLanguage += songTotalPerLanguage[li];
         }
     }
 
+    /**
+     * Runs {@link #markSimilarSongsAndSetForLanguage} for a single language (admin / per-language batch).
+     */
+    public static void markSimilarSongsAndSet(SongService songService, Language language,
+                                              SongLinkRepository songLinkRepository, SongLinkService songLinkService,
+                                              SongCollectionService songCollectionService,
+                                              SongCollectionElementService songCollectionElementService) {
+        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, SongPublicScope.PUBLIC);
+    }
+
+    public static void markSimilarSongsAndSet(SongService songService, Language language,
+                                              SongLinkRepository songLinkRepository, SongLinkService songLinkService,
+                                              SongCollectionService songCollectionService,
+                                              SongCollectionElementService songCollectionElementService,
+                                              SongPublicScope visibility) {
+        List<Song> songs = loadSongsForSimilarBatch(songService, language, visibility);
+        long jobStartMs = System.currentTimeMillis();
+        markSimilarSongsAndSetForLanguage(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
+                1, 1, 0, songs.size(), jobStartMs, songs, visibility);
+    }
+
     private static void markSimilarSongsAndSetForLanguage(SongService songService, Language language, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
                                                           SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService,
-                                                          int languageIndex1Based, int languageCount, int songsBeforeThisLanguage, int grandTotalSongs, long jobStartMs) {
+                                                          int languageIndex1Based, int languageCount, int songsBeforeThisLanguage, int grandTotalSongs, long jobStartMs,
+                                                          List<Song> songs, SongPublicScope batchVisibility) {
         Date startDate = new Date();
         long languageStartMs = startDate.getTime();
         String languageLabel = describeLanguageForProgress(language, languageIndex1Based, languageCount);
-        Collection<Song> songs = songService.getSongsByLanguageForSimilarWithVersionGroup(language);
-        if (songs == null) {
-            songs = Collections.emptyList();
-        }
-        // songs = new ArrayList<>(songs).subList(0, 4000);
         int n = songs.size();
-        System.out.println("[markSimilarSongs] " + languageLabel + " — " + n + " songs in batch (grand total across languages: " + grandTotalSongs + ")");
+        List<Song> similaritySearchPool = batchVisibility == SongPublicScope.PUBLIC
+                ? songs
+                : loadSongsForSimilarBatch(songService, language, SongPublicScope.PUBLIC);
+        System.out.println("[markSimilarSongs] " + languageLabel + " — " + n + " songs in batch (grand total across languages: " + grandTotalSongs + "); "
+                + "similarity pool: " + similaritySearchPool.size() + " public songs");
         SimilarBatchProgress progress = new SimilarBatchProgress();
         int i = 0;
         for (Song songForSimilar : songs) {
             ++i;
-            if (!songForSimilar.isPublic()) {
-                continue;
-            }
-            List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, songs);
+            List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, similaritySearchPool);
             markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService, songCollectionService, songCollectionElementService);
             logSimilarBatchProgress(progress, i, n, songsBeforeThisLanguage, grandTotalSongs, languageStartMs, jobStartMs, languageLabel);
         }

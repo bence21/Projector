@@ -1,24 +1,25 @@
 package com.bence.projector.server.backend.service.impl;
 
+import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.common.model.SectionType;
 import com.bence.projector.server.backend.model.FavouriteSong;
 import com.bence.projector.server.backend.model.Language;
+import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.model.SongVerseOrderListItem;
-import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.repository.SongVerseOrderListItemRepository;
 import com.bence.projector.server.backend.service.FavouriteSongService;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ServiceException;
+import com.bence.projector.server.backend.service.SongPublicScope;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongVerseOrderListItemService;
 import com.bence.projector.server.backend.service.SongVerseService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.UserService;
-import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.server.utils.StringUtils;
 import com.bence.projector.server.utils.UnicodeTextNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -462,8 +464,8 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     @Override
-    public Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language) {
-        return getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNullWithVersionGroup(language);
+    public Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language, SongPublicScope visibility) {
+        return getAllByLanguageForSimilarWithVersionGroup(language, visibility);
     }
 
     @Override
@@ -509,11 +511,26 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return null;
     }
 
+    private List<Song> getAllByLanguageForSimilarWithVersionGroup(Language language, SongPublicScope visibility) {
+        try {
+            List<Song> songsFromResultSet = getSongsByLanguageFromResultSetWithVersionGroup(language, visibility);
+            setVerseOrderListForSongsFromResultSet(songsFromResultSet, language, visibility);
+            return songsFromResultSet;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private void setVerseOrderListForSongsFromResultSet(List<Song> songs, Language language) throws SQLException {
+        setVerseOrderListForSongsFromResultSet(songs, language, null);
+    }
+
+    private void setVerseOrderListForSongsFromResultSet(List<Song> songs, Language language, SongPublicScope visibility) throws SQLException {
         if (songs.size() <= 0) {
             return;
         }
-        ResultSet resultSet = getResultSet2(language);
+        ResultSet resultSet = visibility != null ? getResultSet2(language, visibility) : getResultSet2(language);
         int index = 0;
         Song lastSong = null;
         Long lastSongId = null;
@@ -551,6 +568,11 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return getSongsFromResultSet(resultSet, true);
     }
 
+    private List<Song> getSongsByLanguageFromResultSetWithVersionGroup(Language language, SongPublicScope visibility) throws SQLException {
+        ResultSet resultSet = getResultSetWithVersionGroup(language, visibility);
+        return getSongsFromResultSet(resultSet, true);
+    }
+
     private ResultSet getResultSet(Language language) throws SQLException {
         Statement statement = getStatement();
         String sql = getSelectSongFields() + getFromSong();
@@ -563,10 +585,22 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return statement.executeQuery(sql);
     }
 
+    private ResultSet getSongJoinSongVersesResultSet(Language language, String sql, Statement statement, SongPublicScope visibility) throws SQLException {
+        sql += " join song_verse on (song.id = song_verse.song_id)";
+        sql = getConditionSqlByLanguage(language, sql, visibility);
+        return statement.executeQuery(sql);
+    }
+
     private ResultSet getResultSetWithVersionGroup(Language language) throws SQLException {
         Statement statement = getStatement();
         String sql = getSelectSongFields() + ", version_group_id" + getFromSong();
         return getSongJoinSongVersesResultSet(language, sql, statement);
+    }
+
+    private ResultSet getResultSetWithVersionGroup(Language language, SongPublicScope visibility) throws SQLException {
+        Statement statement = getStatement();
+        String sql = getSelectSongFields() + ", version_group_id" + getFromSong();
+        return getSongJoinSongVersesResultSet(language, sql, statement, visibility);
     }
 
     private static String getFromSong() {
@@ -574,7 +608,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     private static String getSelectSongFields() {
-        return "select uuid, title, deleted, is_back_up, reviewer_erased, text, section_type, song_id";
+        return "select uuid, title, deleted, is_back_up, reviewer_erased, has_unsolved_words, text, section_type, song_id";
     }
 
     private String getConditionSqlByLanguage(Language language, String sql) {
@@ -587,11 +621,59 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return sql;
     }
 
+    /**
+     * Base WHERE for NON_PUBLIC similar-batch queries: include live catalog rows ({@code deleted = 0})
+     * and review-queue uploads ({@code uploaded = 1} and {@code deleted = 1}), but not other
+     * soft-deletes that are neither public nor pending review.
+     */
+    private String getConditionSqlByLanguageForNonPublicScope(Language language, String sql) {
+        sql += " where (deleted = 0 or (uploaded = 1 and deleted = 1))";
+        if (language != null) {
+            sql += " and language_id = " + language.getId();
+        }
+        sql += " and is_back_up is null";
+        sql += " and ((reviewer_erased is null) or (reviewer_erased = 0))";
+        return sql;
+    }
+
+    /**
+     * SQL that is true for a {@code song} row exactly when {@link Song#isPublic()} would be true
+     * for a hydrated {@link Song} (same column semantics; use {@code song.} prefix for joins).
+     * <p>
+     * Mirrors: {@code !isReviewerErased() && !isDeleted() && !isBackUp() && !hasUnsolvedWords()} with
+     * {@link Song#isDeleted()}{@code = deleted || isBackUp() || isReviewerErased()}.
+     */
+    private static String sqlSongRowMatchesIsPublic() {
+        return "(song.reviewer_erased is null or song.reviewer_erased = 0)"
+                + " and song.deleted = 0"
+                + " and song.is_back_up is null"
+                + " and (song.has_unsolved_words is null or song.has_unsolved_words = 0)";
+    }
+
+    private String getConditionSqlByLanguage(Language language, String sql, SongPublicScope similarVisibility) {
+        if (similarVisibility == SongPublicScope.PUBLIC) {
+            sql = getConditionSqlByLanguage(language, sql);
+            sql += " and " + sqlSongRowMatchesIsPublic();
+        } else {
+            sql = getConditionSqlByLanguageForNonPublicScope(language, sql);
+            sql += " and not (" + sqlSongRowMatchesIsPublic() + ")";
+        }
+        return sql;
+    }
+
     private ResultSet getResultSet2(Language language) throws SQLException {
+        return getResultSet2(language, null);
+    }
+
+    private ResultSet getResultSet2(Language language, SongPublicScope visibility) throws SQLException {
         Statement statement = getStatement();
         String sql = "select song_id, position from song_verse_order_list_item";
         sql += " join song on (song.id = song_verse_order_list_item.song_id)";
-        sql = getConditionSqlByLanguage(language, sql);
+        if (visibility == null) {
+            sql = getConditionSqlByLanguage(language, sql);
+        } else {
+            sql = getConditionSqlByLanguage(language, sql, visibility);
+        }
         return statement.executeQuery(sql);
     }
 
@@ -612,6 +694,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 song.setDeleted(resultSet.getBoolean("deleted"));
                 song.setIsBackUp(getBooleanFromResultSet(resultSet, "is_back_up"));
                 song.setReviewerErased(getBooleanFromResultSet(resultSet, "reviewer_erased"));
+                song.setHasUnsolvedWords(getBooleanFromResultSet(resultSet, "has_unsolved_words"));
                 if (withVersionGroup) {
                     song.setVersionGroupUuid(resultSet.getString("version_group_id"));
                 }
@@ -826,7 +909,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (song.getAuthor() != null) {
             song.setAuthor(UnicodeTextNormalizer.canonicalizeForPersistence(song.getAuthor()));
         }
-        
+
         // Canonicalize Unicode for verse text
         for (SongVerse verse : songVerses) {
             if (verse.getText() != null) {
@@ -844,23 +927,23 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (songVerses == null || songVerses.isEmpty()) {
             throw new ServiceException("songVerses isEmpty!", HttpStatus.PRECONDITION_FAILED);
         }
-        
+
         canonicalizeSongTextForPersistence(song, songVerses);
-        
+
         if (song.isDeleted() && song.getLanguage() == null) {
             return songRepository.save(song);
         }
         if (song.getLanguage() == null) {
             throw new ServiceException("No language", HttpStatus.PRECONDITION_FAILED);
         }
-        
+
         // Validate words and set hasUnsolvedWords flag only for admins
         // Songs with unsolved words will be filtered out from being public via isPublic() method
         if (isCurrentUserAdmin()) {
             SongWordValidationResult validationResult = songWordValidationService.validateWords(song);
             song.setHasUnsolvedWords(validationResult.isHasIssues());
         }
-        
+
         try {
             List<SongVerse> verses = new ArrayList<>(songVerses);
             List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
@@ -896,6 +979,25 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     @Override
     public void saveAllAndRemoveCache(List<Song> songs) {
         save(songs);
+        removeSongsFromHashMap(songs);
+    }
+
+    @Override
+    @Transactional
+    public void updateVersionGroupForSongs(List<Song> songs, Song versionGroup, Date modifiedDate) {
+        if (songs == null || songs.isEmpty() || versionGroup == null) {
+            return;
+        }
+        List<Long> ids = new ArrayList<>();
+        for (Song s : songs) {
+            if (s.getId() != null) {
+                ids.add(s.getId());
+            }
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        songRepository.updateVersionGroupAndModifiedDate(versionGroup, modifiedDate, ids);
         removeSongsFromHashMap(songs);
     }
 

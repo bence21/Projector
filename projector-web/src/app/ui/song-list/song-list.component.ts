@@ -37,7 +37,7 @@ export class SongListComponent implements OnInit {
   languages: Language[];
   selectedLanguage: Language;
   oldLanguagesKey = 'languages_v2';
-  languagesKey = 'languages_v3';
+  languagesKey = 'languages_v4';
   myUploadsCheck = false;
   private songListComponent_songsType = 'songListComponent_songsType';
   private songListComponent_myUploadsCheck = 'songListComponent_myUploadsCheck';
@@ -59,7 +59,7 @@ export class SongListComponent implements OnInit {
     this.filteredSongsList = [];
     this.songTitlesLocalStorage = JSON.parse(localStorage.getItem('songTitles'));
     if (this.songTitlesLocalStorage) {
-      this.songTitles = this.songTitlesLocalStorage;
+      this.songTitles = this.filterSongsWithVerses(this.songTitlesLocalStorage);
       this.sortSongTitles();
     } else {
       this.songTitlesLocalStorage = [];
@@ -209,6 +209,24 @@ export class SongListComponent implements OnInit {
     return s.toLowerCase();
   }
 
+  /** Keep list entries that have verse content; title API sets verseCount, full songs may set verse arrays. */
+  private static hasDisplayableVerses(song: Song): boolean {
+    if (song == null || song.title === 'loading') {
+      return true;
+    }
+    if (song.verseCount != null) {
+      return song.verseCount > 0;
+    }
+    if (song.songVerseDTOS != null) {
+      return song.songVerseDTOS.length > 0;
+    }
+    return true;
+  }
+
+  private filterSongsWithVerses(songs: Song[]): Song[] {
+    return songs.filter(SongListComponent.hasDisplayableVerses);
+  }
+
   filterStates(filter: string) {
     filter = SongListComponent.stripAccents(filter);
     return this.songTitles.filter(song => {
@@ -266,6 +284,7 @@ export class SongListComponent implements OnInit {
         if (lang.songTitles === undefined) {
           lang.songTitles = [];
         } else {
+          lang.songTitles = this.filterSongsWithVerses(lang.songTitles);
           this.songTitles = lang.songTitles;
           this.sortSongTitles();
           this.songControl.updateValueAndValidity();
@@ -287,6 +306,7 @@ export class SongListComponent implements OnInit {
                 this.removeSong(song, this.songTitles);
               }
             }
+            this.songTitles = this.filterSongsWithVerses(this.songTitles);
             lang.songTitles = this.songTitles;
           } else {
             let modifiedSongs = [];
@@ -301,7 +321,7 @@ export class SongListComponent implements OnInit {
                 modifiedSongs.push(song);
               }
             }
-            this.songTitles = lang.songTitles.concat(modifiedSongs);
+            this.songTitles = this.filterSongsWithVerses(lang.songTitles.concat(modifiedSongs));
             lang.songTitles = this.songTitles;
             this.removeFromOtherLanguages(modifiedSongs, languages, lang);
           }
@@ -332,7 +352,7 @@ export class SongListComponent implements OnInit {
     let languages: Language[] = JSON.parse(this.getFromLocalStorage(this.languagesKey));
     this.songTitles = [];
     for (let language of languages) {
-      this.songTitles = this.songTitles.concat(language.songTitles);
+      this.songTitles = this.songTitles.concat(this.filterSongsWithVerses(language.songTitles || []));
     }
     this.sortAndUpdate();
   }
@@ -431,7 +451,7 @@ export class SongListComponent implements OnInit {
   }
 
   private setSongTitles(songTitles: Song[]) {
-    this.songTitles = songTitles;
+    this.songTitles = this.filterSongsWithVerses(songTitles);
     this.sortSongTitles();
     this.songControl.updateValueAndValidity();
     const pageEvent = new PageEvent();

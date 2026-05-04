@@ -23,10 +23,14 @@ public interface SongService extends BaseService<Song> {
 
     Collection<Song> getSongsByLanguageForSimilar(Language language);
 
-    Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language);
+    /**
+     * Same as , plus SQL filter for
+     * {@link SongPublicScope} (see {@link com.bence.projector.server.backend.model.Song#isPublic()}).
+     */
+    Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language, SongPublicScope visibility);
 
     /**
-     * Same filters and joins as {@link #getSongsByLanguageForSimilarWithVersionGroup(Language)}
+     * Same filters and joins as
      * (songs that have at least one verse row), without loading full entities.
      */
     int countSongsByLanguageForSimilarWithVersionGroup(Language language);
@@ -75,4 +79,10 @@ public interface SongService extends BaseService<Song> {
     List<Song> filterSongsByCreatedEmail(List<Song> songs, String createdByEmail);
 
     void saveAllAndRemoveCache(List<Song> songs);
+
+    /**
+     * Updates only version group and modified date for the given songs (no full ).
+     * Used when merging version groups so corrupt/stale verse-order associations cannot break persistence.
+     */
+    void updateVersionGroupForSongs(List<Song> songs, Song versionGroup, Date modifiedDate);
 }

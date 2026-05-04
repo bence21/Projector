@@ -23,6 +23,7 @@ import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongCollectionElementService;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongLinkService;
+import com.bence.projector.server.backend.service.SongPublicScope;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.StatisticsService;
@@ -612,10 +613,33 @@ public class SongResource {
     @RequestMapping(method = RequestMethod.GET, value = "/admin/removeDuplicates")
     public void removeDuplicates(HttpServletRequest httpServletRequest) {
         saveStatistics(httpServletRequest, statisticsService);
+        removeDuplicateUploadsForLanguageFilter(null);
+    }
+
+    /**
+     * Same as {@link #removeDuplicates} but only considers uploaded songs in the given language.
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/removeDuplicates/{languageId}")
+    public ResponseEntity<Void> removeDuplicatesForLanguage(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        saveStatistics(httpServletRequest, statisticsService);
+        removeDuplicateUploadsForLanguageFilter(language);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private void removeDuplicateUploadsForLanguageFilter(Language languageFilter) {
         Iterable<Song> songs = songRepository.findAll();
         int exceptionCounter = 100;
         HashMap<String, Boolean> deletedMap = new HashMap<>();
         for (Song uploaded : songService.findAllByUploadedTrueAndDeletedTrueAndNotBackup()) {
+            if (languageFilter != null) {
+                if (uploaded.getLanguage() == null || !languageFilter.getUuid().equals(uploaded.getLanguage().getUuid())) {
+                    continue;
+                }
+            }
             for (Song song : songs) {
                 if (deletedMap.containsKey(song.getUuid())) {
                     continue;
@@ -640,13 +664,42 @@ public class SongResource {
     }
 
     /**
-     * Batch job: scans languages for similar public songs, merges version groups / creates song links per {@link com.bence.projector.server.utils.SongUtil}.
+     * Batch job: scans languages for similar songs (public or non-public per {@code visibility}), merges version groups / creates song links per {@link com.bence.projector.server.utils.SongUtil}.
      * May take a long time; admin-only via {@code /admin/**}.
      */
     @RequestMapping(method = RequestMethod.GET, value = "/admin/markSimilarSongsAndSet")
-    public void markSimilarSongsAndSetAdmin(HttpServletRequest httpServletRequest) {
+    public ResponseEntity<Void> markSimilarSongsAndSetAdmin(HttpServletRequest httpServletRequest,
+                                                            @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam) {
+        final SongPublicScope visibility;
+        try {
+            visibility = SongPublicScope.fromRequestParam(visibilityParam);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
         saveStatistics(httpServletRequest, statisticsService);
-        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService);
+        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, visibility);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    /**
+     * Same as {@link #markSimilarSongsAndSetAdmin} but only for one language.
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/markSimilarSongsAndSet/{languageId}")
+    public ResponseEntity<Void> markSimilarSongsAndSetAdminForLanguage(HttpServletRequest httpServletRequest, @PathVariable final String languageId,
+                                                                       @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam) {
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        final SongPublicScope visibility;
+        try {
+            visibility = SongPublicScope.fromRequestParam(visibilityParam);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        saveStatistics(httpServletRequest, statisticsService);
+        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, visibility);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/admin/automaticallyReAssignLanguages")
@@ -908,10 +961,7 @@ public class SongResource {
     private static void setVersionGroupToOther(String song2VersionGroup, List<Song> allByVersionGroup1, SongService songService) {
         Date date = new Date();
         Song oneByUuid = songService.findOneByUuid(song2VersionGroup);
-        for (Song song : allByVersionGroup1) {
-            setVersionGroupAndDate(song, date, oneByUuid);
-        }
-        songService.saveAllByRepository(allByVersionGroup1);
+        songService.updateVersionGroupForSongs(allByVersionGroup1, oneByUuid, date);
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "admin/api/songVersionGroup/remove/{songId}")

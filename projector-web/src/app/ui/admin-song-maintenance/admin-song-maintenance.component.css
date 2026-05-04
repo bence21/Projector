@@ -27,6 +27,11 @@
   color: #b45309;
 }
 
+.similar-visibility-group mat-radio-button {
+  display: block;
+  margin-bottom: 8px;
+}
+
 mat-card-actions {
   padding-left: 16px;
   padding-bottom: 16px;

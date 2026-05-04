@@ -2,14 +2,26 @@
   <h1 class="page-title">Song maintenance</h1>
   <p class="page-intro">Batch jobs for similarity and duplicate uploads. Admin only.</p>
 
+  <app-language-selector
+    [languages]="languages"
+    [selectedLanguage]="selectedLanguage"
+    [allLanguagesSelected]="runForAllLanguages"
+    (selectedLanguageChange)="onLanguageChange($event)"
+    (allSelected)="onAllSelected()">
+  </app-language-selector>
+
   <mat-card class="action-card">
     <mat-card-title>Mark similar songs (batch)</mat-card-title>
     <mat-card-content>
       <p>
-        Scans all languages, compares each <strong>public</strong> song to others, then merges version groups,
+        For each song in scope (see below), compares it to others in the same language/version-group pool, then merges version groups,
         creates song links, or applies near-duplicate rules (including moving collection memberships where applicable),
-        using the server similarity thresholds.
+        using the server similarity thresholds. Scope: the selected language, or all languages if you chose <strong>All</strong>.
       </p>
+      <mat-radio-group [(ngModel)]="similarBatchVisibility" class="similar-visibility-group">
+        <mat-radio-button value="public">Public songs only</mat-radio-button>
+        <mat-radio-button value="nonPublic">Non-public songs only</mat-radio-button>
+      </mat-radio-group>
       <p class="warn">
         This can take a long time. The browser tab may look frozen until the server responds—do not refresh.
       </p>
@@ -17,8 +29,8 @@
     <mat-card-actions>
       <button mat-raised-button color="primary"
               (click)="runMarkSimilarSongsBatch()"
-              [disabled]="loadingSimilarBatch">
-        {{ loadingSimilarBatch ? 'Running…' : 'Run' }}
+              [disabled]="loadingSimilarBatch || maintenanceActionsDisabled">
+        {{ loadingSimilarBatch ? 'Running…' : (runForAllLanguages ? 'Run for all languages' : ('Run for ' + (selectedLanguage?.nativeName || ''))) }}
       </button>
     </mat-card-actions>
   </mat-card>
@@ -29,13 +41,14 @@
       <p>
         Permanently deletes <strong>uploaded</strong> songs that are already soft-deleted in the review queue when they
         match an existing song, have no song-list entries, and are not part of any song collection—same rules as the server cleanup job.
+        Scope follows the language selector above (one language or all).
       </p>
     </mat-card-content>
     <mat-card-actions>
       <button mat-raised-button color="primary"
               (click)="runRemoveDuplicateUploads()"
-              [disabled]="loadingRemoveDuplicates">
-        {{ loadingRemoveDuplicates ? 'Running…' : 'Run' }}
+              [disabled]="loadingRemoveDuplicates || maintenanceActionsDisabled">
+        {{ loadingRemoveDuplicates ? 'Running…' : (runForAllLanguages ? 'Run for all languages' : ('Run for ' + (selectedLanguage?.nativeName || ''))) }}
       </button>
     </mat-card-actions>
   </mat-card>
