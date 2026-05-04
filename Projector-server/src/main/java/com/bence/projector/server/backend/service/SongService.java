@@ -29,12 +29,6 @@ public interface SongService extends BaseService<Song> {
      */
     Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language, SongPublicScope visibility);
 
-    /**
-     * Same filters and joins as
-     * (songs that have at least one verse row), without loading full entities.
-     */
-    int countSongsByLanguageForSimilarWithVersionGroup(Language language);
-
     boolean matches(Song song, Song song2);
 
     List<Song> findAllByVersionGroup(String versionGroup);

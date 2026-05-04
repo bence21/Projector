@@ -468,41 +468,9 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return getAllByLanguageForSimilarWithVersionGroup(language, visibility);
     }
 
-    @Override
-    public int countSongsByLanguageForSimilarWithVersionGroup(Language language) {
-        if (language == null || language.getId() == null) {
-            return 0;
-        }
-        try {
-            try (Statement statement = getStatement()) {
-                String sql = "select count(distinct song.id) " + getFromSong();
-                sql += " join song_verse on (song.id = song_verse.song_id)";
-                sql = getConditionSqlByLanguage(language, sql);
-                ResultSet resultSet = statement.executeQuery(sql);
-                if (resultSet.next()) {
-                    return resultSet.getInt(1);
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
     private List<Song> getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNull(Language language) {
         try {
             List<Song> songsFromResultSet = getSongsByLanguageFromResultSet(language);
-            setVerseOrderListForSongsFromResultSet(songsFromResultSet, language);
-            return songsFromResultSet;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private List<Song> getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNullWithVersionGroup(Language language) {
-        try {
-            List<Song> songsFromResultSet = getSongsByLanguageFromResultSetWithVersionGroup(language);
             setVerseOrderListForSongsFromResultSet(songsFromResultSet, language);
             return songsFromResultSet;
         } catch (SQLException e) {
@@ -527,7 +495,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     private void setVerseOrderListForSongsFromResultSet(List<Song> songs, Language language, SongPublicScope visibility) throws SQLException {
-        if (songs.size() <= 0) {
+        if (songs.isEmpty()) {
             return;
         }
         ResultSet resultSet = visibility != null ? getResultSet2(language, visibility) : getResultSet2(language);
@@ -563,11 +531,6 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return getSongsFromResultSet(resultSet, false);
     }
 
-    private List<Song> getSongsByLanguageFromResultSetWithVersionGroup(Language language) throws SQLException {
-        ResultSet resultSet = getResultSetWithVersionGroup(language);
-        return getSongsFromResultSet(resultSet, true);
-    }
-
     private List<Song> getSongsByLanguageFromResultSetWithVersionGroup(Language language, SongPublicScope visibility) throws SQLException {
         ResultSet resultSet = getResultSetWithVersionGroup(language, visibility);
         return getSongsFromResultSet(resultSet, true);
@@ -589,12 +552,6 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         sql += " join song_verse on (song.id = song_verse.song_id)";
         sql = getConditionSqlByLanguage(language, sql, visibility);
         return statement.executeQuery(sql);
-    }
-
-    private ResultSet getResultSetWithVersionGroup(Language language) throws SQLException {
-        Statement statement = getStatement();
-        String sql = getSelectSongFields() + ", version_group_id" + getFromSong();
-        return getSongJoinSongVersesResultSet(language, sql, statement);
     }
 
     private ResultSet getResultSetWithVersionGroup(Language language, SongPublicScope visibility) throws SQLException {
