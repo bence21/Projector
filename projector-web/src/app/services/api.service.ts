@@ -133,6 +133,13 @@ export class ApiService {
       .catch(ApiService.handleError);
   }
 
+  /** GET without parsing JSON model (e.g. admin maintenance endpoints returning empty body). */
+  public getRaw(api_url: string): Observable<Response> {
+    return this.http
+      .get(api_url)
+      .catch(ApiService.handleError);
+  }
+
   post(api_url: string) {
     return this.http
       .post(api_url, null)

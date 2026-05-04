@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Headers } from '@angular/http';
+import { Headers, Response } from '@angular/http';
 import { ApiService } from './api.service';
 import { Observable } from 'rxjs/Observable';
 import { BaseModel } from '../models/base-model';
@@ -430,5 +430,13 @@ export class SongService {
 
   hasReviewerRoleForSong(song: Song) {
     return this.api.getOne(BooleanResponse, 'user/api/song/' + song.uuid + '/hasReviewerRoleForSong');
+  }
+
+  runMarkSimilarSongsBatch(): Observable<Response> {
+    return this.api.getRaw('admin/markSimilarSongsAndSet');
+  }
+
+  runRemoveDuplicateUploads(): Observable<Response> {
+    return this.api.getRaw('admin/removeDuplicates');
   }
 }

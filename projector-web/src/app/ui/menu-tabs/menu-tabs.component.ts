@@ -36,6 +36,7 @@ export class MenuTabsComponent implements OnInit {
     { link: '/user/notifications', icon: 'notifications', title: 'Notifications' },
     { link: '/desktop-app', icon: 'devices', title: 'Desktop app' },
     { link: '/admin/YouTube-Video-Checker', icon: 'fact_check', title: 'YouTube checker' },
+    { link: '/admin/song-maintenance', icon: 'tune', title: 'Song maintenance' },
     { link: '/words-spell-checker', icon: 'spellcheck', title: 'Words spell checker' },
   ];
   userMenuTabs = [

@@ -1,0 +1,33 @@
+.page-wrap {
+  max-width: 720px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.page-title {
+  margin-bottom: 8px;
+}
+
+.page-intro {
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 24px;
+}
+
+.action-card {
+  margin-bottom: 24px;
+}
+
+.action-card p {
+  margin-top: 0;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.warn {
+  color: #b45309;
+}
+
+mat-card-actions {
+  padding-left: 16px;
+  padding-bottom: 16px;
+}

@@ -3,11 +3,15 @@ package com.bence.projector.server.utils;
 import com.bence.projector.common.model.SectionType;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Song;
+import com.bence.projector.server.backend.model.SongCollection;
+import com.bence.projector.server.backend.model.SongCollectionElement;
 import com.bence.projector.server.backend.model.SongLink;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.repository.SongLinkRepository;
 import com.bence.projector.server.backend.service.LanguageService;
+import com.bence.projector.server.backend.service.SongCollectionElementService;
+import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongLinkService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.UserService;
@@ -19,6 +23,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -31,6 +36,17 @@ import static com.bence.projector.server.utils.StringUtils.replaceAllOtherThenLe
 import static com.bence.projector.server.utils.StringUtils.stripAccents;
 
 public class SongUtil {
+
+    /**
+     * Automatic similarity merge skips merging when the two version groups would form a larger combined
+     * cluster than this (a SongLink is created instead for human review).
+     */
+    private static final int MAX_COMBINED_VERSION_GROUP_SIZE_FOR_AUTO_MERGE = 50;
+
+    /**
+     * Near-duplicate path only moves collection rows off the loser when it is this young (avoids touching long-lived catalog songs).
+     */
+    private static final long MAX_LOSER_AGE_MS_FOR_COLLECTION_TRANSFER = 24L * 60 * 60 * 1000;
 
     private static final String refEnding = " *\n?";
     private static final String endingWithColon = ":" + refEnding;
@@ -77,76 +93,220 @@ public class SongUtil {
     }
 
     @SuppressWarnings("unused")
-    public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService) {
+    public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
+                                              SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
         List<Language> languages = languageService.findAll();
-        for (Language language : languages) {
-            // if (language.getEnglishName().equals("Hungarian")) {
-            markSimilarSongsAndSetForLanguage(songService, language, songLinkRepository, songLinkService);
-            // }
+        int languageCount = languages.size();
+        int[] songTotalPerLanguage = new int[languageCount];
+        int grandTotalSongs = 0;
+        for (int li = 0; li < languageCount; li++) {
+            int c = songService.countSongsByLanguageForSimilarWithVersionGroup(languages.get(li));
+            songTotalPerLanguage[li] = c;
+            grandTotalSongs += c;
+        }
+        long jobStartMs = System.currentTimeMillis();
+        int songsCompletedBeforeLanguage = 0;
+        for (int li = 0; li < languageCount; li++) {
+            Language language = languages.get(li);
+            markSimilarSongsAndSetForLanguage(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
+                    li + 1, languageCount, songsCompletedBeforeLanguage, grandTotalSongs, jobStartMs);
+            songsCompletedBeforeLanguage += songTotalPerLanguage[li];
         }
     }
 
-    private static void markSimilarSongsAndSetForLanguage(SongService songService, Language language, SongLinkRepository songLinkRepository, SongLinkService songLinkService) {
+    private static void markSimilarSongsAndSetForLanguage(SongService songService, Language language, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
+                                                          SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService,
+                                                          int languageIndex1Based, int languageCount, int songsBeforeThisLanguage, int grandTotalSongs, long jobStartMs) {
         Date startDate = new Date();
-        long startDateTime = startDate.getTime();
+        long languageStartMs = startDate.getTime();
+        String languageLabel = describeLanguageForProgress(language, languageIndex1Based, languageCount);
         Collection<Song> songs = songService.getSongsByLanguageForSimilarWithVersionGroup(language);
+        if (songs == null) {
+            songs = Collections.emptyList();
+        }
         // songs = new ArrayList<>(songs).subList(0, 4000);
         int n = songs.size();
+        System.out.println("[markSimilarSongs] " + languageLabel + " — " + n + " songs in batch (grand total across languages: " + grandTotalSongs + ")");
+        SimilarBatchProgress progress = new SimilarBatchProgress();
         int i = 0;
-        int p = 0;
         for (Song songForSimilar : songs) {
             ++i;
             if (!songForSimilar.isPublic()) {
                 continue;
             }
             List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, songs);
-            markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService);
-            p = logProgress(i, n, p, startDateTime);
+            markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService, songCollectionService, songCollectionElementService);
+            logSimilarBatchProgress(progress, i, n, songsBeforeThisLanguage, grandTotalSongs, languageStartMs, jobStartMs, languageLabel);
         }
-        System.out.println("Elapsed seconds: " + (new Date().getTime() - startDateTime) / 1000);
+        long now = System.currentTimeMillis();
+        System.out.println("[markSimilarSongs] " + languageLabel + " — done. Elapsed seconds (this language): " + (now - languageStartMs) / 1000);
     }
 
-    private static int logProgress(int i, int n, int p, long startDateTime) {
-        double progress = (double) (i * 100) / n;
-        if ((int) progress != p) {
-            p = (int) progress;
-            Date date = new Date();
-            long dateTime = date.getTime();
-            double remainingMs = (n - i);
-            remainingMs = remainingMs / i * (dateTime - startDateTime);
-            double remainingSeconds = (long) (remainingMs / 100);
-            remainingSeconds /= 10;
-            System.out.println(p + "%\tRemaining seconds: " + remainingSeconds + "\t Estimated finish: " + new Date((long) (dateTime + remainingMs)) + "\t" + date);
+    private static String describeLanguageForProgress(Language language, int languageIndex1Based, int languageCount) {
+        String english = language != null && language.getEnglishName() != null ? language.getEnglishName() : "?";
+        String suffix = "";
+        if (language != null && language.getNativeName() != null && !language.getNativeName().isBlank()
+                && !language.getNativeName().equalsIgnoreCase(english)) {
+            suffix = " (" + language.getNativeName() + ")";
         }
-        return p;
+        return "Language " + languageIndex1Based + "/" + languageCount + ": " + english + suffix;
     }
 
-    private static void markSimilarSongsAndSetForSong(Song songForSimilar, List<Song> similarSongs, SongLinkRepository songLinkRepository, SongService songService, SongLinkService songLinkService) {
+    private static final class SimilarBatchProgress {
+        private int lastPrintedLangPercent = -1;
+        private int lastPrintedOverallPercent = -1;
+    }
+
+    private static void logSimilarBatchProgress(SimilarBatchProgress state, int i, int n, int songsBeforeThisLanguage, int grandTotalSongs,
+                                                long languageStartMs, long jobStartMs, String languageLabel) {
+        if (n <= 0) {
+            return;
+        }
+        int langPct = (int) ((double) (i * 100) / n);
+        int overallPct = grandTotalSongs <= 0 ? 0 : (int) ((double) ((songsBeforeThisLanguage + i) * 100) / grandTotalSongs);
+        if (langPct == state.lastPrintedLangPercent && overallPct == state.lastPrintedOverallPercent) {
+            return;
+        }
+        state.lastPrintedLangPercent = langPct;
+        state.lastPrintedOverallPercent = overallPct;
+        Date date = new Date();
+        long dateTime = date.getTime();
+        double remainingLangMs = (double) (n - i) / i * (dateTime - languageStartMs);
+        double remainingLangSeconds = (long) (remainingLangMs / 100) / 10.0;
+        double remainingOverallMs = 0;
+        double remainingOverallSeconds = 0;
+        int globalIndex = songsBeforeThisLanguage + i;
+        if (grandTotalSongs > 0 && globalIndex > 0) {
+            remainingOverallMs = (double) (grandTotalSongs - globalIndex) / globalIndex * (dateTime - jobStartMs);
+            remainingOverallSeconds = (long) (remainingOverallMs / 100) / 10.0;
+        }
+        System.out.println("[" + languageLabel + "] "
+                + "this language " + langPct + "% | overall " + overallPct + "%\t"
+                + "rem. s (this lang): " + remainingLangSeconds + "\t rem. s (all langs): " + remainingOverallSeconds + "\t"
+                + "est. finish this lang: " + new Date((long) (dateTime + remainingLangMs)) + "\t"
+                + "est. finish job: " + (grandTotalSongs > 0 && globalIndex > 0 ? new Date((long) (dateTime + remainingOverallMs)) : "—") + "\t"
+                + date);
+    }
+
+    private static void markSimilarSongsAndSetForSong(Song songForSimilar, List<Song> similarSongs, SongLinkRepository songLinkRepository, SongService songService, SongLinkService songLinkService,
+                                                      SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
         if (similarSongs == null || similarSongs.isEmpty()) {
             return;
         }
         List<SongLink> songLinks = null;
         for (Song similarSong : similarSongs) {
             //noinspection ConstantValue
-            handleSimilarSong(songForSimilar, similarSong, songLinks, songService, songLinkService, songLinkRepository);
+            handleSimilarSong(songForSimilar, similarSong, songLinks, songService, songLinkService, songLinkRepository, songCollectionService, songCollectionElementService);
         }
     }
 
-    private static void handleSimilarSong(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, SongLinkRepository songLinkRepository) {
+    private static void handleSimilarSong(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, SongLinkRepository songLinkRepository,
+                                          SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
         Song loadedSongForSimilar = songService.findOneByUuid(songForSimilar.getUuid());
         Song loadedSimilarSong = songService.findOneByUuid(similarSong.getUuid());
-        handleSimilarLoadedSong(loadedSongForSimilar, loadedSimilarSong, songLinks, songService, songLinkService, similarSong.getSimilarRatio(), songLinkRepository);
+        handleSimilarLoadedSong(loadedSongForSimilar, loadedSimilarSong, songLinks, songService, songLinkService, similarSong.getSimilarRatio(), songLinkRepository, songCollectionService, songCollectionElementService);
     }
 
-    private static void handleSimilarLoadedSong(Song loadedSongForSimilar, Song loadedSimilarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, double percentage, SongLinkRepository songLinkRepository) {
+    /**
+     * Package-visible for tests in {@code com.bence.projector.server.utils}.
+     */
+    static void handleSimilarLoadedSong(Song loadedSongForSimilar, Song loadedSimilarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, double percentage, SongLinkRepository songLinkRepository,
+                                        SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
+        if (loadedSongForSimilar == null || loadedSimilarSong == null) {
+            return;
+        }
         if (loadedSongForSimilar.isSameVersionGroup(loadedSimilarSong)) {
             return;
         }
-        if (percentage > 0.9 && percentage < 0.99) {
-            mergeSongVersionGroup(loadedSongForSimilar, loadedSimilarSong, songService);
+        boolean pub1 = loadedSongForSimilar.isPublic();
+        boolean pub2 = loadedSimilarSong.isPublic();
+
+        if (percentage >= 0.99) {
+            if (pub1 != pub2) {
+                Song survivor = pub1 ? loadedSongForSimilar : loadedSimilarSong;
+                Song loser = pub1 ? loadedSimilarSong : loadedSongForSimilar;
+                Song survivorManaged = songService.findOneByUuid(survivor.getUuid());
+                if (survivorManaged != null) {
+                    survivor = survivorManaged;
+                }
+                if (isLoserRecentEnoughForCollectionTransfer(loser)) {
+                    transferSongCollectionElements(loser, survivor, songCollectionService, songCollectionElementService);
+                    removeNearDuplicateLoserSong(loser, songService);
+                } else {
+                    warnSkippingNearDuplicateMergeForOldLoser(loser, survivor);
+                }
+                return;
+            }
+            if (pub1) {
+                mergeSongVersionGroupOrSongLink(loadedSongForSimilar, loadedSimilarSong, songService, songLinks, songLinkService, songLinkRepository);
+                return;
+            }
+            songLinkForSimilar(loadedSongForSimilar, loadedSimilarSong, songLinks, songLinkService, songLinkRepository);
+        } else if (percentage > 0.9) {
+            mergeSongVersionGroupOrSongLink(loadedSongForSimilar, loadedSimilarSong, songService, songLinks, songLinkService, songLinkRepository);
         } else {
             songLinkForSimilar(loadedSongForSimilar, loadedSimilarSong, songLinks, songLinkService, songLinkRepository);
         }
+    }
+
+    private static void mergeSongVersionGroupOrSongLink(Song loadedSongForSimilar, Song loadedSimilarSong, SongService songService, List<SongLink> songLinks, SongLinkService songLinkService, SongLinkRepository songLinkRepository) {
+        if (!mergeSongVersionGroup(loadedSongForSimilar, loadedSimilarSong, songService, MAX_COMBINED_VERSION_GROUP_SIZE_FOR_AUTO_MERGE)) {
+            songLinkForSimilar(loadedSongForSimilar, loadedSimilarSong, songLinks, songLinkService, songLinkRepository);
+        }
+    }
+
+    static boolean isLoserRecentEnoughForCollectionTransfer(Song loser) {
+        if (loser == null) {
+            return false;
+        }
+        Date created = loser.getCreatedDate();
+        if (created == null) {
+            return false;
+        }
+        return new Date().getTime() - created.getTime() < MAX_LOSER_AGE_MS_FOR_COLLECTION_TRANSFER;
+    }
+
+    private static void warnSkippingNearDuplicateMergeForOldLoser(Song loser, Song survivor) {
+        String loserTitle = loser.getTitle() != null ? loser.getTitle() : "";
+        String survivorTitle = survivor.getTitle() != null ? survivor.getTitle() : "";
+        System.out.println("[SongUtil] Skipped near-duplicate merge (loser older than 1 day; no collection transfer / delete). "
+                + "loser=" + loser.getUuid() + " \"" + loserTitle + "\" created=" + loser.getCreatedDate()
+                + " survivor=" + survivor.getUuid() + " \"" + survivorTitle + "\"");
+    }
+
+    /**
+     * Reassigns every {@link SongCollectionElement} that points at {@code loser} so it points at {@code survivor}
+     * (same rows, new song FK). A song may appear in many collections; each membership row is updated in place.
+     * Package-visible for tests.
+     */
+    static void transferSongCollectionElements(Song loser, Song survivor, SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
+        if (loser == null || survivor == null || loser.getId() == null || loser.getUuid() == null || survivor.getUuid() == null) {
+            return;
+        }
+        String loserUuid = loser.getUuid();
+        List<SongCollection> collections = songCollectionService.findAllBySong(loser);
+        if (collections == null || collections.isEmpty()) {
+            return;
+        }
+        Date touch = new Date();
+        for (SongCollection collection : collections) {
+            for (SongCollectionElement loserEl : collection.getElementsForSongUuid(loserUuid)) {
+                loserEl.setSong(survivor);
+                songCollectionElementService.save(loserEl);
+            }
+            collection.setModifiedDate(touch);
+            songCollectionService.saveWithoutForeign(collection);
+        }
+    }
+
+    /**
+     * After collection membership was moved off the loser, permanently delete it (including queue-style soft-deleted uploads).
+     */
+    private static void removeNearDuplicateLoserSong(Song loser, SongService songService) {
+        if (loser == null || loser.getUuid() == null) {
+            return;
+        }
+        songService.deleteByUuid(loser.getUuid());
     }
 
     private static void songLinkForSimilar(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongLinkService songLinkService, SongLinkRepository songLinkRepository) {

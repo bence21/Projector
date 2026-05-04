@@ -1,0 +1,42 @@
+<div class="page-wrap">
+  <h1 class="page-title">Song maintenance</h1>
+  <p class="page-intro">Batch jobs for similarity and duplicate uploads. Admin only.</p>
+
+  <mat-card class="action-card">
+    <mat-card-title>Mark similar songs (batch)</mat-card-title>
+    <mat-card-content>
+      <p>
+        Scans all languages, compares each <strong>public</strong> song to others, then merges version groups,
+        creates song links, or applies near-duplicate rules (including moving collection memberships where applicable),
+        using the server similarity thresholds.
+      </p>
+      <p class="warn">
+        This can take a long time. The browser tab may look frozen until the server responds—do not refresh.
+      </p>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="primary"
+              (click)="runMarkSimilarSongsBatch()"
+              [disabled]="loadingSimilarBatch">
+        {{ loadingSimilarBatch ? 'Running…' : 'Run' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <mat-card class="action-card">
+    <mat-card-title>Remove duplicate uploads</mat-card-title>
+    <mat-card-content>
+      <p>
+        Permanently deletes <strong>uploaded</strong> songs that are already soft-deleted in the review queue when they
+        match an existing song, have no song-list entries, and are not part of any song collection—same rules as the server cleanup job.
+      </p>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="primary"
+              (click)="runRemoveDuplicateUploads()"
+              [disabled]="loadingRemoveDuplicates">
+        {{ loadingRemoveDuplicates ? 'Running…' : 'Run' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>

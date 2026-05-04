@@ -315,7 +315,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
 
     private List<Song> getSimilarSongsForSong(boolean checkDeleted, Collection<Song> songs, String text, String songUuid, HashMap<String, Boolean> wordHashMap) {
         List<Song> similar = new ArrayList<>();
-        int wordCount = wordHashMap.keySet().size();
+        int wordCount = wordHashMap.size();
         for (Song databaseSong : songs) {
             try {
                 if ((songUuid != null && databaseSong.getUuid().equals(songUuid)) || (databaseSong.isDeleted() && !checkDeleted)) {
@@ -464,6 +464,27 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     @Override
     public Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language) {
         return getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNullWithVersionGroup(language);
+    }
+
+    @Override
+    public int countSongsByLanguageForSimilarWithVersionGroup(Language language) {
+        if (language == null || language.getId() == null) {
+            return 0;
+        }
+        try {
+            try (Statement statement = getStatement()) {
+                String sql = "select count(distinct song.id) " + getFromSong();
+                sql += " join song_verse on (song.id = song_verse.song_id)";
+                sql = getConditionSqlByLanguage(language, sql);
+                ResultSet resultSet = statement.executeQuery(sql);
+                if (resultSet.next()) {
+                    return resultSet.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     private List<Song> getAllByLanguageAndIsBackUpIsNullAndDeletedIsFalseAndReviewerErasedIsNull(Language language) {

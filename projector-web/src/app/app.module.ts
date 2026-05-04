@@ -106,6 +106,7 @@ import { SongGuidelinesCheckerComponent } from './ui/song-guidelines-checker/son
 import { GuidelineDataService } from './services/guidelines-data.service';
 import { SongGuidelineCheckerComponent } from './ui/song-guideline-checker/song-guideline-checker.component';
 import { WordsSpellCheckerComponent } from './ui/words-spell-checker/words-spell-checker.component';
+import { AdminSongMaintenanceComponent } from './ui/admin-song-maintenance/admin-song-maintenance.component';
 import { NormalizedWordBunchDataService } from './services/normalized-word-bunch-data.service';
 import { ReviewedWordDataService } from './services/reviewed-word-data.service';
 import { WordReviewHelperService } from './services/word-review-helper.service';
@@ -217,6 +218,7 @@ export class PlunkerMaterialModule {
     SongGuidelinesCheckerComponent,
     SongGuidelineCheckerComponent,
     WordsSpellCheckerComponent,
+    AdminSongMaintenanceComponent,
     WordReviewDialogComponent,
     WordContextDialogComponent,
     SongWordValidationDialogComponent,

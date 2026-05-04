@@ -3,6 +3,7 @@ import { SectionType, Song, SongVerseUI } from "../services/song-service.service
 import { SongWordValidationService } from "../services/song-word-validation.service";
 import { MatDialog, MatSnackBar } from "@angular/material";
 import { Language } from "../models/language";
+import { SongWordValidationResult } from "../models/songWordValidationResult";
 import { SongWordValidationDialogComponent } from "../ui/song-word-validation-dialog/song-word-validation-dialog.component";
 import { ConfirmActionDialogComponent } from "../ui/confirm-action-dialog/confirm-action-dialog.component";
 import { isSongPublic } from './song-public.util';
@@ -70,6 +71,46 @@ export interface WordValidationConfig {
   onSave: () => void;
 }
 
+function formatPercent(ratio: number | undefined): string {
+  const safeRatio = ratio || 0;
+  return `${Math.round(safeRatio * 100)}%`;
+}
+
+function maybeConfirmMixedLanguageWarning(
+  validationResult: SongWordValidationResult,
+  dialog: MatDialog,
+  proceed: () => void
+): void {
+  if (!validationResult || !validationResult.hasMixedLanguageWarning) {
+    proceed();
+    return;
+  }
+
+  const foreignWordCount = validationResult.foreignWordCount || 0;
+  const totalReviewedWordCount = validationResult.totalReviewedWordCount || 0;
+  const foreignWordRatio = validationResult.foreignWordRatio || 0;
+  const foreignLanguages = validationResult.foreignLanguages || [];
+  const languageLabel = foreignLanguages.length > 0
+    ? ` Detected foreign languages: ${foreignLanguages.join(', ')}.`
+    : '';
+
+  const confirmDialogRef = dialog.open(ConfirmActionDialogComponent, {
+    width: '560px',
+    data: {
+      title: 'Mixed-Language Warning',
+      message: `This song contains many foreign-language words (${foreignWordCount}/${totalReviewedWordCount}, ${formatPercent(foreignWordRatio)}). A small amount is okay, but heavy language mixing should be avoided.${languageLabel} Do you want to continue anyway?`,
+      confirmText: 'Continue',
+      cancelText: 'Cancel'
+    }
+  });
+
+  confirmDialogRef.afterClosed().subscribe(confirmed => {
+    if (confirmed) {
+      proceed();
+    }
+  });
+}
+
 export function validateWordsAndSave(config: WordValidationConfig): void {
   const { song, validationService, dialog, snackBar, language, publish, onSave } = config;
 
@@ -124,13 +165,13 @@ export function validateWordsAndSave(config: WordValidationConfig): void {
           if (result && result.proceed) {
             // Keep publish intent when only unreviewed words remain; otherwise fall back to draft.
             song.uploaded = result.saveAsDraft ? false : publish;
-            onSave();
+            maybeConfirmMixedLanguageWarning(validationResult, dialog, onSave);
           }
           // If user cancelled, do nothing
         });
       } else {
         // No issues, proceed with save
-        onSave();
+        maybeConfirmMixedLanguageWarning(validationResult, dialog, onSave);
       }
     },
     (err) => {

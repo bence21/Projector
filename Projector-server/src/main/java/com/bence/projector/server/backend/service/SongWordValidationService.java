@@ -6,6 +6,7 @@ import com.bence.projector.common.dto.ReviewedWordStatusDTO;
 import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.common.dto.WordWithStatus;
 import com.bence.projector.server.api.assembler.LanguageAssembler;
+import com.bence.projector.server.backend.model.ForeignLanguageType;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.ReviewedWord;
 import com.bence.projector.server.backend.model.ReviewedWordStatus;
@@ -32,16 +33,24 @@ import static com.bence.projector.server.utils.UnicodeTextNormalizer.canonicaliz
 @Service
 public class SongWordValidationService {
 
+    private static final MixedLanguageMetrics EMPTY_MIXED_LANGUAGE_METRICS =
+            new MixedLanguageMetrics(false, 0, 0, 0.0d, List.of());
+
     private static final int MAX_ALTERNATIVE_SUGGESTIONS = 5;
+    private static final double MIXED_LANGUAGE_RATIO_THRESHOLD = 0.15d;
+    private static final int MIXED_LANGUAGE_WORD_COUNT_THRESHOLD = 10;
 
     private final NormalizedWordBunchCacheService normalizedWordBunchCacheService;
     private final LanguageAssembler languageAssembler;
+    private final ReviewedWordService reviewedWordService;
 
     @Autowired
     public SongWordValidationService(NormalizedWordBunchCacheService normalizedWordBunchCacheService,
-                                     LanguageAssembler languageAssembler) {
+                                     LanguageAssembler languageAssembler,
+                                     ReviewedWordService reviewedWordService) {
         this.normalizedWordBunchCacheService = normalizedWordBunchCacheService;
         this.languageAssembler = languageAssembler;
+        this.reviewedWordService = reviewedWordService;
     }
 
     public SongWordValidationResult validateWords(Song song) {
@@ -66,13 +75,21 @@ public class SongWordValidationService {
 
         WordCategories categories = categorizeWords(songWords, reviewedWordMap, normalizedWordBunchMap,
                 allReviewedWordsForSuggestions, options);
+        MixedLanguageMetrics mixedLanguageMetrics = options.includeMixedLanguageAnalysis()
+                ? computeMixedLanguageMetrics(categories.wordsWithStatus, categories.unreviewedWords, language)
+                : EMPTY_MIXED_LANGUAGE_METRICS;
 
         return new SongWordValidationResult(
                 categories.unreviewedWords,
                 categories.bannedWords,
                 categories.rejectedWords,
                 categories.hasIssues(),
-                categories.wordsWithStatus
+                categories.wordsWithStatus,
+                mixedLanguageMetrics.hasWarning,
+                mixedLanguageMetrics.foreignWordCount,
+                mixedLanguageMetrics.totalReviewedWordCount,
+                mixedLanguageMetrics.foreignWordRatio,
+                mixedLanguageMetrics.foreignLanguages
         );
     }
 
@@ -86,6 +103,11 @@ public class SongWordValidationService {
                 new ArrayList<>(),
                 new ArrayList<>(),
                 false,
+                new ArrayList<>(),
+                false,
+                0,
+                0,
+                0.0d,
                 new ArrayList<>()
         );
     }
@@ -294,6 +316,105 @@ public class SongWordValidationService {
         boolean hasIssues() {
             return !unreviewedWords.isEmpty() || !bannedWords.isEmpty() || !rejectedWords.isEmpty();
         }
+    }
+
+    private MixedLanguageMetrics computeMixedLanguageMetrics(List<WordWithStatus> wordsWithStatus,
+                                                             List<String> unreviewedWords,
+                                                             Language songLanguage) {
+        if (wordsWithStatus == null || wordsWithStatus.isEmpty()) {
+            return buildMetricsFromCounts(0, 0, new HashSet<>());
+        }
+
+        int foreignWordCount = 0;
+        int totalReviewedWordCount = 0;
+        Set<String> foreignLanguageSet = new HashSet<>();
+
+        for (WordWithStatus wordWithStatus : wordsWithStatus) {
+            ReviewedWordStatusDTO status = wordWithStatus.getStatus();
+            if (!isReviewedStatus(status)) {
+                continue;
+            }
+            totalReviewedWordCount++;
+            if (isExplicitForeignWord(wordWithStatus)) {
+                foreignWordCount++;
+                addForeignLanguageLabel(foreignLanguageSet, wordWithStatus.getSourceLanguage());
+            }
+        }
+
+        if (unreviewedWords != null && songLanguage != null) {
+            for (String unreviewedWord : unreviewedWords) {
+                List<Language> sourceLanguages = reviewedWordService.detectSourceLanguages(unreviewedWord, songLanguage);
+                if (sourceLanguages == null || sourceLanguages.isEmpty()) {
+                    continue;
+                }
+                foreignWordCount++;
+                for (Language sourceLanguage : sourceLanguages) {
+                    if (sourceLanguage == null) {
+                        continue;
+                    }
+                    String englishName = sourceLanguage.getEnglishName();
+                    String nativeName = sourceLanguage.getNativeName();
+                    if (englishName != null && !englishName.trim().isEmpty()) {
+                        foreignLanguageSet.add(englishName.trim());
+                    } else if (nativeName != null && !nativeName.trim().isEmpty()) {
+                        foreignLanguageSet.add(nativeName.trim());
+                    }
+                }
+            }
+        }
+
+        return buildMetricsFromCounts(foreignWordCount, totalReviewedWordCount, foreignLanguageSet);
+    }
+
+    private MixedLanguageMetrics buildMetricsFromCounts(int foreignWordCount, int totalReviewedWordCount, Set<String> foreignLanguageSet) {
+        List<String> foreignLanguages = new ArrayList<>(foreignLanguageSet);
+        foreignLanguages.sort(String::compareToIgnoreCase);
+
+        double foreignWordRatio = totalReviewedWordCount == 0
+                ? 0.0d
+                : (double) foreignWordCount / totalReviewedWordCount;
+        boolean hasWarning = foreignWordRatio > MIXED_LANGUAGE_RATIO_THRESHOLD
+                || foreignWordCount >= MIXED_LANGUAGE_WORD_COUNT_THRESHOLD;
+
+        return new MixedLanguageMetrics(hasWarning, foreignWordCount, totalReviewedWordCount, foreignWordRatio, foreignLanguages);
+    }
+
+    private boolean isReviewedStatus(ReviewedWordStatusDTO status) {
+        if (status == null) {
+            return false;
+        }
+        return status == ReviewedWordStatusDTO.REVIEWED_GOOD
+                || status == ReviewedWordStatusDTO.ACCEPTED
+                || status == ReviewedWordStatusDTO.CONTEXT_SPECIFIC
+                || status == ReviewedWordStatusDTO.AUTO_ACCEPTED_FROM_PUBLIC
+                || status == ReviewedWordStatusDTO.AUTO_ACCEPTED_FROM_BIBLE;
+    }
+
+    private boolean isExplicitForeignWord(WordWithStatus wordWithStatus) {
+        if (wordWithStatus == null) {
+            return false;
+        }
+        Integer foreignLanguageType = wordWithStatus.getForeignLanguageType();
+        return foreignLanguageType != null && foreignLanguageType == ForeignLanguageType.FOREIGN.ordinal();
+    }
+
+    private void addForeignLanguageLabel(Set<String> labels, LanguageDTO sourceLanguage) {
+        if (labels == null || sourceLanguage == null) {
+            return;
+        }
+        String englishName = sourceLanguage.getEnglishName();
+        String nativeName = sourceLanguage.getNativeName();
+        if (englishName != null && !englishName.trim().isEmpty()) {
+            labels.add(englishName.trim());
+            return;
+        }
+        if (nativeName != null && !nativeName.trim().isEmpty()) {
+            labels.add(nativeName.trim());
+        }
+    }
+
+    private record MixedLanguageMetrics(boolean hasWarning, int foreignWordCount, int totalReviewedWordCount,
+                                        double foreignWordRatio, List<String> foreignLanguages) {
     }
 
     /**

@@ -5,7 +5,7 @@ public record SongWordValidationOptions(boolean includeWordSuggestions, boolean 
     /**
      * Word suggestions on; mixed-language metrics off.
      */
-    public static final SongWordValidationOptions DEFAULT = new SongWordValidationOptions(true, false);
+    public static final SongWordValidationOptions DEFAULT = new SongWordValidationOptions(true, true);
 
     /**
      * Skips similarity-based suggestions (and the full reviewed-word list scan); still runs mixed-language

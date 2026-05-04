@@ -16,10 +16,13 @@ import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.Suggestion;
 import com.bence.projector.server.backend.model.User;
+import com.bence.projector.server.backend.repository.SongLinkRepository;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ServiceException;
+import com.bence.projector.server.backend.service.SongCollectionElementService;
 import com.bence.projector.server.backend.service.SongCollectionService;
+import com.bence.projector.server.backend.service.SongLinkService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.StatisticsService;
@@ -55,6 +58,7 @@ import static com.bence.projector.server.utils.SetLanguages.getLanguageWords;
 import static com.bence.projector.server.utils.SetLanguages.setLanguagesForUnknown;
 import static com.bence.projector.server.utils.SongModerationUtil.markSongForReviewQueue;
 import static com.bence.projector.server.utils.SongUtil.getLastModifiedSong;
+import static com.bence.projector.server.utils.SongUtil.markSimilarSongsAndSet;
 
 @RestController
 public class SongResource {
@@ -74,6 +78,9 @@ public class SongResource {
     private final LanguageService languageService;
     private final MailSenderService mailSenderService;
     private final SongCollectionService songCollectionService;
+    private final SongLinkRepository songLinkRepository;
+    private final SongLinkService songLinkService;
+    private final SongCollectionElementService songCollectionElementService;
     private final SuggestionService suggestionService;
     private final SongWordValidationService songWordValidationService;
     private PasswordEncoder passwordEncoder;
@@ -89,6 +96,9 @@ public class SongResource {
                         MailSenderService mailSenderService,
                         SuggestionService suggestionService,
                         SongCollectionService songCollectionService,
+                        SongLinkRepository songLinkRepository,
+                        SongLinkService songLinkService,
+                        SongCollectionElementService songCollectionElementService,
                         SongWordValidationService songWordValidationService
     ) {
         this.songRepository = songRepository;
@@ -100,6 +110,9 @@ public class SongResource {
         this.languageService = languageService;
         this.mailSenderService = mailSenderService;
         this.songCollectionService = songCollectionService;
+        this.songLinkRepository = songLinkRepository;
+        this.songLinkService = songLinkService;
+        this.songCollectionElementService = songCollectionElementService;
         this.suggestionService = suggestionService;
         this.songWordValidationService = songWordValidationService;
     }
@@ -626,6 +639,16 @@ public class SongResource {
         }
     }
 
+    /**
+     * Batch job: scans languages for similar public songs, merges version groups / creates song links per {@link com.bence.projector.server.utils.SongUtil}.
+     * May take a long time; admin-only via {@code /admin/**}.
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/markSimilarSongsAndSet")
+    public void markSimilarSongsAndSetAdmin(HttpServletRequest httpServletRequest) {
+        saveStatistics(httpServletRequest, statisticsService);
+        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService);
+    }
+
     @RequestMapping(method = RequestMethod.GET, value = "/admin/automaticallyReAssignLanguages")
     public void automaticallyReAssignLanguages(HttpServletRequest httpServletRequest) {
         saveStatistics(httpServletRequest, statisticsService);
@@ -828,6 +851,15 @@ public class SongResource {
     }
 
     public static void mergeSongVersionGroup(Song song1, Song song2, SongService songService) {
+        mergeSongVersionGroup(song1, song2, songService, null);
+    }
+
+    /**
+     * @param maxCombinedMemberCount if non-null, merge is skipped when the two version groups together
+     *                               would contain more than this many songs (avoids large automatic merges).
+     * @return false only when the limit blocked a merge that would otherwise have run; true otherwise
+     */
+    public static boolean mergeSongVersionGroup(Song song1, Song song2, SongService songService, Integer maxCombinedMemberCount) {
         String song1VersionGroup = getUuidFromVersionGroupSong(song1);
         String song2VersionGroup = getUuidFromVersionGroupSong(song2);
         if (song1VersionGroup == null) {
@@ -841,6 +873,14 @@ public class SongResource {
             List<Song> allByVersionGroup2 = songService.findAllByVersionGroup(song2VersionGroup);
             int size1 = allByVersionGroup1.size();
             int size2 = allByVersionGroup2.size();
+            if (maxCombinedMemberCount != null && size1 + size2 > maxCombinedMemberCount) {
+                String t1 = song1.getTitle() != null ? song1.getTitle() : "";
+                String t2 = song2.getTitle() != null ? song2.getTitle() : "";
+                System.out.println("[mergeSongVersionGroup] Skipped auto-merge: combined version groups "
+                        + size1 + " + " + size2 + " = " + (size1 + size2) + " exceed limit " + maxCombinedMemberCount
+                        + " ('" + t1 + "' " + song1.getUuid() + " / '" + t2 + "' " + song2.getUuid() + ")");
+                return false;
+            }
             if (size1 == size2) {
                 double sum1 = 0;
                 for (Song song : allByVersionGroup1) {
@@ -862,6 +902,7 @@ public class SongResource {
                 setVersionGroupToOther(song1VersionGroup, allByVersionGroup2, songService);
             }
         }
+        return true;
     }
 
     private static void setVersionGroupToOther(String song2VersionGroup, List<Song> allByVersionGroup1, SongService songService) {

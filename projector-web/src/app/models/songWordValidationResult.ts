@@ -7,6 +7,11 @@ export class SongWordValidationResult {
   rejectedWords: RejectedWordSuggestion[];
   hasIssues: boolean;
   wordsWithStatus?: WordWithStatus[];
+  hasMixedLanguageWarning?: boolean;
+  foreignWordCount?: number;
+  totalReviewedWordCount?: number;
+  foreignWordRatio?: number;
+  foreignLanguages?: string[];
 
   constructor(values: Object = {}) {
     Object.assign(this, values);
