@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -123,7 +124,13 @@ public class NormalizedWordResource {
     private List<SpellCheckerRowData> flattenToRows(List<NormalizedWordBunch> bunches) {
         List<SpellCheckerRowData> rows = new ArrayList<>();
         for (NormalizedWordBunch nwb : bunches) {
+            if (nwb == null || nwb.getWordBunches() == null) {
+                continue;
+            }
             for (WordBunch wb : nwb.getWordBunches()) {
+                if (wb == null) {
+                    continue;
+                }
                 rows.add(new SpellCheckerRowData(nwb, wb));
             }
         }
@@ -152,7 +159,11 @@ public class NormalizedWordResource {
         if (songs != null && !songs.isEmpty()) {
             dto.setSong(songTitleAssembler.createDto(songs.get(0)));
         }
-        ReviewedWord rw = reviewedWordMap.get(wb.getWord());
+        String word = wb.getWord();
+        ReviewedWord rw = null;
+        if (reviewedWordMap != null && word != null) {
+            rw = reviewedWordMap.get(word);
+        }
         if (rw != null) {
             dto.setReviewedWord(reviewedWordAssembler.createDto(rw));
         }
@@ -235,8 +246,12 @@ public class NormalizedWordResource {
     }
 
     private Set<String> getNormalizedWordsSet(List<ReviewedWord> reviewedWords) {
+        if (reviewedWords == null || reviewedWords.isEmpty()) {
+            return new HashSet<>();
+        }
         return reviewedWords.stream()
                 .map(ReviewedWord::getNormalizedWord)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }
 
