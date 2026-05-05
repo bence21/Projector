@@ -3,7 +3,7 @@
 </mat-checkbox>
 <h4>Matches: {{percentage*100 | number :'1.0-2'}}%</h4>
 <mat-grid-list cols="2" rowHeight="700px">
-  <mat-grid-tile style="overflow-y: auto;" [colspan]="1" [rowspan]="1">
+  <mat-grid-tile [colspan]="1" [rowspan]="1">
     <mat-card class="example-card">
       <div class="descriptionHeader" *ngIf="isCompareDescriptionLabel()">
         {{m_descriptionLabelLeft}}
@@ -13,6 +13,9 @@
         <mat-card-title>{{m_song.title}}</mat-card-title>
       </mat-card-header>
       <mat-card-content [style.overflow]="'auto'" [style.height.px]="'600'">
+        <div *ngIf="conditionForShowingCollection() && leftCollections != undefined">
+          <app-song-collection-lines [collections]="leftCollections"></app-song-collection-lines>
+        </div>
         <mat-card *ngFor="let songVerse of m_song.getVerses()">
           <mat-card-content>
             <div *ngFor="let lineCompare of songVerse.lineCompareLines">
@@ -50,6 +53,9 @@
           {{m_secondSong.title + " - "}}<a href="/#/song/{{m_secondSong.uuid}}" target="_blank">{{'Open'}}</a>
         </mat-card-title>
       </mat-card-header>
+      <div *ngIf="conditionForShowingCollection() && rightCollections != undefined">
+        <app-song-collection-lines [collections]="rightCollections"></app-song-collection-lines>
+      </div>
       <mat-card-content [style.overflow]="'auto'" [style.height.px]="'600'">
         <mat-card *ngFor="let songVerse of m_secondSong.getVerses()">
           <mat-card-content>

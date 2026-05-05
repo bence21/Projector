@@ -1,6 +1,9 @@
 import { Component, Input, OnChanges, SimpleChanges, ViewChildren, QueryList, ElementRef } from '@angular/core';
-import { ColorText, Song, LineCompare, LineWord, WordCompare } from "../../services/song-service.service";
+import { ColorText, Song, SongService, LineCompare, LineWord, WordCompare } from "../../services/song-service.service";
 import { SongListComponent } from '../song-list/song-list.component';
+import { SongCollection } from '../../models/songCollection';
+import { SongCollectionDataService } from '../../services/song-collection-data.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-compare-songs',
@@ -25,8 +28,15 @@ export class CompareSongsComponent implements OnChanges {
   @ViewChildren("rightDifferentLines") rightDifferentLines: QueryList<ElementRef>;
   m_descriptionLabelLeft: string;
   m_descriptionLabelRight: string;
+  leftCollections: SongCollection[] = [];
+  rightCollections: SongCollection[] = [];
+  hasReviewerRoleForAnySong = false;
 
-  constructor() {
+  constructor(
+    public auth: AuthService,
+    private songService: SongService,
+    private songCollectionService: SongCollectionDataService
+  ) {
     const text = localStorage.getItem("repeatChorus");
     if (text === undefined || text == null || text.trim().length == 0) {
       this.repeatChorus = false;
@@ -490,7 +500,48 @@ export class CompareSongsComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    this.refreshCollectionsAndRoles();
     this.calculateDifferences(this.repeatChorus);
+  }
+
+  conditionForShowingCollection() {
+    const user = this.auth.getUser();
+    return this.auth.isLoggedIn && user != undefined && (user.isAdmin() || this.hasReviewerRoleForAnySong);
+  }
+
+  private refreshCollectionsAndRoles(): void {
+    this.leftCollections = [];
+    this.rightCollections = [];
+    this.hasReviewerRoleForAnySong = false;
+    if (!this.m_song || !this.m_secondSong) {
+      return;
+    }
+    const leftId = this.m_song.uuid || this.m_song.id;
+    const rightId = this.m_secondSong.uuid || this.m_secondSong.id;
+    if (leftId) {
+      this.songCollectionService.getAllBySongId(leftId).subscribe((songCollections) => {
+        this.leftCollections = songCollections || [];
+      });
+    }
+    if (rightId) {
+      this.songCollectionService.getAllBySongId(rightId).subscribe((songCollections) => {
+        this.rightCollections = songCollections || [];
+      });
+    }
+    const user = this.auth.getUser();
+    if (!this.auth.isLoggedIn || user == undefined || user.email == '') {
+      return;
+    }
+    if (user.isAdmin()) {
+      this.hasReviewerRoleForAnySong = true;
+      return;
+    }
+    this.songService.hasReviewerRoleForSong(this.m_song).subscribe((booleanResponse) => {
+      this.hasReviewerRoleForAnySong = this.hasReviewerRoleForAnySong || booleanResponse.response;
+    });
+    this.songService.hasReviewerRoleForSong(this.m_secondSong).subscribe((booleanResponse) => {
+      this.hasReviewerRoleForAnySong = this.hasReviewerRoleForAnySong || booleanResponse.response;
+    });
   }
 
   // noinspection JSMethodCanBeStatic

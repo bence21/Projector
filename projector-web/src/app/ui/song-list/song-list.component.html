@@ -46,6 +46,14 @@
           <mat-radio-button class="example-radio-button" [value]="'REVIEWER'">In review</mat-radio-button>
         </mat-radio-group>
       </div>
+      <div class="section" *ngIf="auth.isLoggedIn && auth.getUser().isAdmin() && songsType === 'REVIEWER'">
+        <button mat-raised-button color="primary" type="button"
+          (click)="processFirstInReviewSongQuick()"
+          [disabled]="quickReviewBusy">
+          Quick review first in queue
+        </button>
+        <span *ngIf="quickReviewBusy" style="margin-left: 12px;">Working…</span>
+      </div>
       <form class="example-form">
         <mat-form-field class="example-full-width">
           <input type="text" placeholder="Search" aria-label="Text" matInput [formControl]="songControl"

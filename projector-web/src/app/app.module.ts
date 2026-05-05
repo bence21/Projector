@@ -111,6 +111,7 @@ import { NormalizedWordBunchDataService } from './services/normalized-word-bunch
 import { ReviewedWordDataService } from './services/reviewed-word-data.service';
 import { WordReviewHelperService } from './services/word-review-helper.service';
 import { SongWordValidationService } from './services/song-word-validation.service';
+import { QuickReviewFlowService } from './services/quick-review-flow.service';
 import { WordReviewDialogComponent } from './ui/word-review-dialog/word-review-dialog.component';
 import { WordContextDialogComponent } from './ui/word-context-dialog/word-context-dialog.component';
 import { SongWordValidationDialogComponent } from './ui/song-word-validation-dialog/song-word-validation-dialog.component';
@@ -123,6 +124,9 @@ import { MarkAsContextSpecificButtonComponent } from './ui/mark-as-context-speci
 import { MarkAsAcceptedButtonComponent } from './ui/mark-as-accepted-button/mark-as-accepted-button.component';
 import { MarkAsNotSureButtonComponent } from './ui/mark-as-not-sure-button/mark-as-not-sure-button.component';
 import { ConfirmActionDialogComponent } from './ui/confirm-action-dialog/confirm-action-dialog.component';
+import { QuickReviewSummaryDialogComponent } from './ui/quick-review-summary-dialog/quick-review-summary-dialog.component';
+import { SongCollectionLinesComponent } from './ui/song-collection-lines/song-collection-lines.component';
+import { SongMetaTableComponent } from './ui/song-meta-table/song-meta-table.component';
 
 @NgModule({
   exports: [
@@ -231,6 +235,9 @@ export class PlunkerMaterialModule {
     MarkAsAcceptedButtonComponent,
     MarkAsNotSureButtonComponent,
     ConfirmActionDialogComponent,
+    QuickReviewSummaryDialogComponent,
+    SongCollectionLinesComponent,
+    SongMetaTableComponent,
   ],
   imports: [
     BrowserModule,
@@ -256,6 +263,7 @@ export class PlunkerMaterialModule {
     WordContextDialogComponent,
     SongWordValidationDialogComponent,
     ConfirmActionDialogComponent,
+    QuickReviewSummaryDialogComponent,
   ],
   providers: [
     ApiService,
@@ -275,6 +283,7 @@ export class PlunkerMaterialModule {
     ReviewedWordDataService,
     WordReviewHelperService,
     SongWordValidationService,
+    QuickReviewFlowService,
   ],
   bootstrap: [AppComponent]
 })

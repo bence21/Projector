@@ -14,8 +14,10 @@ import { Title } from "@angular/platform-browser";
 import { User } from '../../models/user';
 import { SELECTED_LANGUGAGE } from '../../util/constants';
 import { compress, decompress } from 'lz-string';
-import { generalError } from '../../util/error-util';
+import { checkAuthenticationError, ErrorUtil, generalError } from '../../util/error-util';
 import { MatDialog, MatSnackBar } from '@angular/material';
+import { SongWordValidationService } from '../../services/song-word-validation.service';
+import { QuickReviewFlowService } from '../../services/quick-review-flow.service';
 
 @Component({
   selector: 'app-song-list',
@@ -42,6 +44,7 @@ export class SongListComponent implements OnInit {
   private songListComponent_songsType = 'songListComponent_songsType';
   private songListComponent_myUploadsCheck = 'songListComponent_myUploadsCheck';
   private _subscription: Subscription;
+  quickReviewBusy = false;
 
   constructor(private songService: SongService,
     private router: Router,
@@ -51,6 +54,8 @@ export class SongListComponent implements OnInit {
     public auth: AuthService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
+    private songWordValidationService: SongWordValidationService,
+    private quickReviewFlowService: QuickReviewFlowService,
   ) {
     localStorage.setItem(this.oldLanguagesKey, '');
     this.songControl = new FormControl();
@@ -566,5 +571,55 @@ export class SongListComponent implements OnInit {
     localStorage.setItem(this.songListComponent_myUploadsCheck, this.myUploadsCheck.toString());
     this.loadSongs();
   }
+
+  /**
+   * Admin-only: first song in the in-review list → validate words → summary → save (publish) → merge with top similar.
+   * Merge order matches the manual flow (similar song first, new queued song second).
+   */
+  processFirstInReviewSongQuick(): void {
+    const user = this.auth.getUser();
+    if (!user || !user.isAdmin()) {
+      return;
+    }
+    if (this.songsType !== Song.REVIEWER || !this.selectedLanguage) {
+      this.snackBar.open('Switch to "In review" and pick a language.', 'Close', { duration: 4000 });
+      return;
+    }
+    const titles = this.songTitles.filter((t) =>
+      t != null && t.title !== 'loading' && (t.id != null && t.id !== '' || t.uuid != null && t.uuid !== '')
+    );
+    if (titles.length === 0) {
+      this.snackBar.open('No songs in review for this filter.', 'Close', { duration: 3000 });
+      return;
+    }
+    const firstRef = titles[0];
+    const songId = (firstRef.id != null && firstRef.id !== '') ? firstRef.id : firstRef.uuid;
+    this.quickReviewBusy = true;
+    this.songService.getSong(songId).subscribe(
+      (fullSong) => {
+        if (!fullSong) {
+          this.quickReviewBusy = false;
+          this.snackBar.open('Could not load the first queued song.', 'Close', { duration: 4000 });
+          return;
+        }
+        this.openQuickReviewSummaryAndContinue(fullSong);
+      },
+      (err) => {
+        this.quickReviewBusy = false;
+        generalError(this.processFirstInReviewSongQuick, this, err, this.dialog, this.snackBar);
+      }
+    );
+  }
+
+  private openQuickReviewSummaryAndContinue(fullSong: Song): void {
+    this.quickReviewFlowService.runQuickReview(
+      fullSong,
+      this.selectedLanguage,
+      (busy) => this.quickReviewBusy = busy,
+      () => this.loadSongs(),
+      (err) => generalError(this.processFirstInReviewSongQuick, this, err, this.dialog, this.snackBar)
+    );
+  }
+
 }
 

@@ -309,6 +309,9 @@ export class Song extends BaseModel {
   }
 
   private removeMainSong(verses: SongVerseDTO[]) {
+    if (verses == undefined) {
+      return;
+    }
     for (const verse of verses) {
       verse.mainSong = undefined;
     }

@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>{{ data.title }}</h2>
+<mat-dialog-content>
+  <p><strong>New song:</strong> {{ data.newSongTitle }}</p>
+  <p><strong>Language:</strong> {{ data.languageLabel }}</p>
+  <ng-container *ngIf="data.notes && data.notes.length">
+    <p><strong>Notes:</strong></p>
+    <ul>
+      <li *ngFor="let n of data.notes">{{ n }}</li>
+    </ul>
+  </ng-container>
+  <p *ngIf="data.loadingMessage"><strong>{{ data.loadingMessage }}</strong></p>
+  <div class="compare-wrapper" *ngIf="data.newSong && data.similarSong">
+    <app-compare-songs
+      [song]="data.newSong"
+      [secondSong]="data.similarSong"
+      [descriptionLabelLeft]="'Current song:'"
+      [descriptionLabelRight]="'Top similar:'">
+    </app-compare-songs>
+  </div>
+  <div class="meta-wrapper" *ngIf="data.newSong">
+    <div class="meta-column">
+      <h4>Current song details</h4>
+      <app-song-meta-table [song]="data.newSong"></app-song-meta-table>
+    </div>
+    <div class="meta-column" *ngIf="data.similarSong">
+      <h4>Top similar details</h4>
+      <app-song-meta-table [song]="data.similarSong"></app-song-meta-table>
+    </div>
+  </div>
+  <p *ngIf="data.footerHint">{{ data.footerHint }}</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button [mat-dialog-close]="false">{{ data.cancelText || 'Cancel' }}</button>
+  <button mat-button [mat-dialog-close]="true" color="primary" [disabled]="!data.canConfirm">
+    {{ data.confirmText || 'Confirm' }}
+  </button>
+</mat-dialog-actions>
