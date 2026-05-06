@@ -103,13 +103,20 @@ public class SongUtil {
     @SuppressWarnings("unused")
     public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
                                               SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
-        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, SongPublicScope.PUBLIC);
+        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, SongPublicScope.PUBLIC, null);
     }
 
     @SuppressWarnings("unused")
     public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
                                               SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService,
                                               SongPublicScope visibility) {
+        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, visibility, null);
+    }
+
+    @SuppressWarnings("unused")
+    public static void markSimilarSongsAndSet(SongService songService, LanguageService languageService, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
+                                              SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService,
+                                              SongPublicScope visibility, Date nearDuplicateCutoffDayStart) {
         List<Language> languages = languageService.findAll();
         int languageCount = languages.size();
         int[] songTotalPerLanguage = new int[languageCount];
@@ -127,7 +134,7 @@ public class SongUtil {
         for (int li = 0; li < languageCount; li++) {
             Language language = languages.get(li);
             markSimilarSongsAndSetForLanguage(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
-                    li + 1, languageCount, songsCompletedBeforeLanguage, grandTotalSongs, jobStartMs, songsPerLanguage.get(li), visibility);
+                    li + 1, languageCount, songsCompletedBeforeLanguage, grandTotalSongs, jobStartMs, songsPerLanguage.get(li), visibility, nearDuplicateCutoffDayStart);
             songsCompletedBeforeLanguage += songTotalPerLanguage[li];
         }
     }
@@ -139,7 +146,7 @@ public class SongUtil {
                                               SongLinkRepository songLinkRepository, SongLinkService songLinkService,
                                               SongCollectionService songCollectionService,
                                               SongCollectionElementService songCollectionElementService) {
-        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, SongPublicScope.PUBLIC);
+        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, SongPublicScope.PUBLIC, null);
     }
 
     public static void markSimilarSongsAndSet(SongService songService, Language language,
@@ -147,16 +154,24 @@ public class SongUtil {
                                               SongCollectionService songCollectionService,
                                               SongCollectionElementService songCollectionElementService,
                                               SongPublicScope visibility) {
+        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, visibility, null);
+    }
+
+    public static void markSimilarSongsAndSet(SongService songService, Language language,
+                                              SongLinkRepository songLinkRepository, SongLinkService songLinkService,
+                                              SongCollectionService songCollectionService,
+                                              SongCollectionElementService songCollectionElementService,
+                                              SongPublicScope visibility, Date nearDuplicateCutoffDayStart) {
         List<Song> songs = loadSongsForSimilarBatch(songService, language, visibility);
         long jobStartMs = System.currentTimeMillis();
         markSimilarSongsAndSetForLanguage(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
-                1, 1, 0, songs.size(), jobStartMs, songs, visibility);
+                1, 1, 0, songs.size(), jobStartMs, songs, visibility, nearDuplicateCutoffDayStart);
     }
 
     private static void markSimilarSongsAndSetForLanguage(SongService songService, Language language, SongLinkRepository songLinkRepository, SongLinkService songLinkService,
                                                           SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService,
                                                           int languageIndex1Based, int languageCount, int songsBeforeThisLanguage, int grandTotalSongs, long jobStartMs,
-                                                          List<Song> songs, SongPublicScope batchVisibility) {
+                                                          List<Song> songs, SongPublicScope batchVisibility, Date nearDuplicateCutoffDayStart) {
         Date startDate = new Date();
         long languageStartMs = startDate.getTime();
         String languageLabel = describeLanguageForProgress(language, languageIndex1Based, languageCount);
@@ -171,7 +186,7 @@ public class SongUtil {
         for (Song songForSimilar : songs) {
             ++i;
             List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, similaritySearchPool, true);
-            markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService, songCollectionService, songCollectionElementService);
+            markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService, songCollectionService, songCollectionElementService, nearDuplicateCutoffDayStart);
             logSimilarBatchProgress(progress, i, n, songsBeforeThisLanguage, grandTotalSongs, languageStartMs, jobStartMs, languageLabel);
         }
         long now = System.currentTimeMillis();
@@ -225,29 +240,29 @@ public class SongUtil {
     }
 
     private static void markSimilarSongsAndSetForSong(Song songForSimilar, List<Song> similarSongs, SongLinkRepository songLinkRepository, SongService songService, SongLinkService songLinkService,
-                                                      SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
+                                                      SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService, Date nearDuplicateCutoffDayStart) {
         if (similarSongs == null || similarSongs.isEmpty()) {
             return;
         }
         List<SongLink> songLinks = null;
         for (Song similarSong : similarSongs) {
             //noinspection ConstantValue
-            handleSimilarSong(songForSimilar, similarSong, songLinks, songService, songLinkService, songLinkRepository, songCollectionService, songCollectionElementService);
+            handleSimilarSong(songForSimilar, similarSong, songLinks, songService, songLinkService, songLinkRepository, songCollectionService, songCollectionElementService, nearDuplicateCutoffDayStart);
         }
     }
 
     private static void handleSimilarSong(Song songForSimilar, Song similarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, SongLinkRepository songLinkRepository,
-                                          SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
+                                          SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService, Date nearDuplicateCutoffDayStart) {
         Song loadedSongForSimilar = songService.findOneByUuid(songForSimilar.getUuid());
         Song loadedSimilarSong = songService.findOneByUuid(similarSong.getUuid());
-        handleSimilarLoadedSong(loadedSongForSimilar, loadedSimilarSong, songLinks, songService, songLinkService, similarSong.getSimilarRatio(), songLinkRepository, songCollectionService, songCollectionElementService);
+        handleSimilarLoadedSong(loadedSongForSimilar, loadedSimilarSong, songLinks, songService, songLinkService, similarSong.getSimilarRatio(), songLinkRepository, songCollectionService, songCollectionElementService, nearDuplicateCutoffDayStart);
     }
 
     /**
      * Package-visible for tests in {@code com.bence.projector.server.utils}.
      */
     static void handleSimilarLoadedSong(Song loadedSongForSimilar, Song loadedSimilarSong, List<SongLink> songLinks, SongService songService, SongLinkService songLinkService, double percentage, SongLinkRepository songLinkRepository,
-                                        SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService) {
+                                        SongCollectionService songCollectionService, SongCollectionElementService songCollectionElementService, Date nearDuplicateCutoffDayStart) {
         if (loadedSongForSimilar == null || loadedSimilarSong == null) {
             return;
         }
@@ -265,11 +280,11 @@ public class SongUtil {
                 if (survivorManaged != null) {
                     survivor = survivorManaged;
                 }
-                if (isLoserRecentEnoughForCollectionTransfer(loser)) {
+                if (isLoserEligibleForNearDuplicateCollectionTransfer(loser, nearDuplicateCutoffDayStart)) {
                     transferSongCollectionElements(loser, survivor, songCollectionService, songCollectionElementService);
                     removeNearDuplicateLoserSong(loser, songService);
                 } else {
-                    warnSkippingNearDuplicateMergeForOldLoser(loser, survivor);
+                    warnSkippingNearDuplicateMergeForOldLoser(loser, survivor, nearDuplicateCutoffDayStart);
                 }
                 return;
             }
@@ -291,7 +306,12 @@ public class SongUtil {
         }
     }
 
-    static boolean isLoserRecentEnoughForCollectionTransfer(Song loser) {
+    /**
+     * Eligibility for transferring collection memberships and deleting the non-public loser in the near-duplicate path ({@literal >=} 99%).
+     * When {@code nearDuplicateCutoffDayStart} is non-null, Loser{@code createdDate} must be {@code >=} that instant (start of the chosen calendar day in the JVM default zone).
+     * When null, the previous rule applies: loser must be younger than {@link #MAX_LOSER_AGE_MS_FOR_COLLECTION_TRANSFER}.
+     */
+    static boolean isLoserEligibleForNearDuplicateCollectionTransfer(Song loser, Date nearDuplicateCutoffDayStart) {
         if (loser == null) {
             return false;
         }
@@ -299,13 +319,23 @@ public class SongUtil {
         if (created == null) {
             return false;
         }
+        if (nearDuplicateCutoffDayStart != null) {
+            return !created.before(nearDuplicateCutoffDayStart);
+        }
         return new Date().getTime() - created.getTime() < MAX_LOSER_AGE_MS_FOR_COLLECTION_TRANSFER;
     }
 
-    private static void warnSkippingNearDuplicateMergeForOldLoser(Song loser, Song survivor) {
+    static boolean isLoserRecentEnoughForCollectionTransfer(Song loser) {
+        return isLoserEligibleForNearDuplicateCollectionTransfer(loser, null);
+    }
+
+    private static void warnSkippingNearDuplicateMergeForOldLoser(Song loser, Song survivor, Date nearDuplicateCutoffDayStart) {
         String loserTitle = loser.getTitle() != null ? loser.getTitle() : "";
         String survivorTitle = survivor.getTitle() != null ? survivor.getTitle() : "";
-        System.out.println("[SongUtil] Skipped near-duplicate merge (loser older than 1 day; no collection transfer / delete). "
+        String reason = nearDuplicateCutoffDayStart != null
+                ? "(loser created before cutoff " + nearDuplicateCutoffDayStart + "; no collection transfer / delete). "
+                : "(loser older than 1 day; no collection transfer / delete). ";
+        System.out.println("[SongUtil] Skipped near-duplicate merge " + reason
                 + "loser=" + loser.getUuid() + " \"" + loserTitle + "\" created=" + loser.getCreatedDate()
                 + " survivor=" + survivor.getUuid() + " \"" + survivorTitle + "\"");
     }

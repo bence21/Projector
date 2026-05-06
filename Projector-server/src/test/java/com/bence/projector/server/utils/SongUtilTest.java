@@ -16,6 +16,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -99,7 +101,7 @@ public class SongUtilTest {
 
         SongUtil.handleSimilarLoadedSong(
                 anchor, similar, null, songService, songLinkService, 0.995, songLinkRepository,
-                songCollectionService, songCollectionElementService);
+                songCollectionService, songCollectionElementService, null);
 
         verify(songCollectionService).findAllBySong(similar);
         verify(songService).deleteByUuid("similar");
@@ -114,7 +116,7 @@ public class SongUtilTest {
 
         SongUtil.handleSimilarLoadedSong(
                 anchor, similar, null, songService, songLinkService, 0.995, songLinkRepository,
-                songCollectionService, songCollectionElementService);
+                songCollectionService, songCollectionElementService, null);
 
         verify(songCollectionService, never()).findAllBySong(any());
         verify(songService, never()).deleteByUuid(any());
@@ -135,6 +137,56 @@ public class SongUtilTest {
     }
 
     @Test
+    public void isLoserEligibleForNearDuplicate_falseWhenCreatedBeforeCutoff() {
+        Song s = publicSong(1L, "x");
+        s.setCreatedDate(Date.from(LocalDate.of(2025, 12, 31).atStartOfDay(ZoneId.systemDefault()).toInstant()));
+        Date cutoff = Date.from(LocalDate.of(2026, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Assert.assertFalse(SongUtil.isLoserEligibleForNearDuplicateCollectionTransfer(s, cutoff));
+    }
+
+    @Test
+    public void isLoserEligibleForNearDuplicate_trueWhenCreatedOnCutoffDay() {
+        Song s = publicSong(1L, "x");
+        Date cutoff = Date.from(LocalDate.of(2026, 1, 15).atStartOfDay(ZoneId.systemDefault()).toInstant());
+        s.setCreatedDate(Date.from(LocalDate.of(2026, 1, 15).atTime(14, 30).atZone(ZoneId.systemDefault()).toInstant()));
+        Assert.assertTrue(SongUtil.isLoserEligibleForNearDuplicateCollectionTransfer(s, cutoff));
+    }
+
+    @Test
+    public void handleSimilarLoadedSong_nearDuplicate_transfersWhenLoserOlderThan24hButAfterAbsoluteCutoff() {
+        Song anchor = publicSong(1L, "anchor");
+        Song similar = nonPublicSong(2L, "similar");
+        similar.setCreatedDate(Date.from(LocalDate.of(2026, 2, 15).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant()));
+
+        Date cutoff = Date.from(LocalDate.of(2026, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        when(songCollectionService.findAllBySong(similar)).thenReturn(Collections.emptyList());
+
+        SongUtil.handleSimilarLoadedSong(
+                anchor, similar, null, songService, songLinkService, 0.995, songLinkRepository,
+                songCollectionService, songCollectionElementService, cutoff);
+
+        verify(songCollectionService).findAllBySong(similar);
+        verify(songService).deleteByUuid("similar");
+    }
+
+    @Test
+    public void handleSimilarLoadedSong_nearDuplicate_skipsWhenBeforeAbsoluteCutoffEvenIfWithin24h() {
+        Song anchor = publicSong(1L, "anchor");
+        Song similar = nonPublicSong(2L, "similar");
+        similar.setCreatedDate(new Date(System.currentTimeMillis() - 2L * 60 * 60 * 1000));
+
+        Date cutoff = new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000);
+
+        SongUtil.handleSimilarLoadedSong(
+                anchor, similar, null, songService, songLinkService, 0.995, songLinkRepository,
+                songCollectionService, songCollectionElementService, cutoff);
+
+        verify(songCollectionService, never()).findAllBySong(any());
+        verify(songService, never()).deleteByUuid(any());
+    }
+
+    @Test
     public void handleSimilarLoadedSong_nearDuplicateBothPublic_attemptsVersionGroupMerge() {
         Song a = publicSong(1L, "a");
         Song b = publicSong(2L, "b");
@@ -146,7 +198,7 @@ public class SongUtilTest {
 
         SongUtil.handleSimilarLoadedSong(
                 a, b, null, songService, songLinkService, 0.991, songLinkRepository,
-                songCollectionService, songCollectionElementService);
+                songCollectionService, songCollectionElementService, null);
 
         verify(songService, times(2)).findAllByVersionGroup(any());
         verify(songCollectionService, never()).findAllBySong(any());
@@ -175,7 +227,7 @@ public class SongUtilTest {
 
         SongUtil.handleSimilarLoadedSong(
                 a, b, null, songService, songLinkService, 0.991, songLinkRepository,
-                songCollectionService, songCollectionElementService);
+                songCollectionService, songCollectionElementService, null);
 
         ArgumentCaptor<SongLink> linkCaptor = ArgumentCaptor.forClass(SongLink.class);
         verify(songLinkService).save(linkCaptor.capture());
@@ -193,7 +245,7 @@ public class SongUtilTest {
 
         SongUtil.handleSimilarLoadedSong(
                 a, b, null, songService, songLinkService, 0.995, songLinkRepository,
-                songCollectionService, songCollectionElementService);
+                songCollectionService, songCollectionElementService, null);
 
         verify(songLinkService).save(any(SongLink.class));
         verify(songService, never()).deleteByUuid(any());

@@ -22,6 +22,11 @@
         <mat-radio-button value="public">Public songs only</mat-radio-button>
         <mat-radio-button value="nonPublic">Non-public songs only</mat-radio-button>
       </mat-radio-group>
+      <mat-form-field class="cutoff-date-field" appearance="outline">
+        <mat-label>Near-duplicate transfer/delete cutoff date</mat-label>
+        <input matInput type="date" [(ngModel)]="nearDuplicateCutoffDate" (ngModelChange)="onNearDuplicateCutoffDateChange($event)">
+        <mat-hint>Non-public &quot;loser&quot; songs are only moved/deleted when created on or after this date (server local calendar day).</mat-hint>
+      </mat-form-field>
       <p class="warn">
         This can take a long time. The browser tab may look frozen until the server responds—do not refresh.
       </p>

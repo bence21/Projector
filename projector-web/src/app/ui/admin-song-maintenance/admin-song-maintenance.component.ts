@@ -10,6 +10,8 @@ import { User } from '../../models/user';
 import { SELECTED_LANGUGAGE } from '../../util/constants';
 import { SongListComponent } from '../song-list/song-list.component';
 
+const NEAR_DUPLICATE_CUTOFF_STORAGE_KEY = 'adminSongMaintenance_nearDuplicateCutoffDate';
+
 @Component({
   selector: 'app-admin-song-maintenance',
   templateUrl: './admin-song-maintenance.component.html',
@@ -28,6 +30,9 @@ export class AdminSongMaintenanceComponent implements OnInit {
   /** Server query param visibility: public vs non-public songs in the batch. */
   similarBatchVisibility: 'public' | 'nonPublic' = 'public';
 
+  /** YYYY-MM-DD for admin near-duplicate eligibility; persisted in localStorage. */
+  nearDuplicateCutoffDate: string;
+
   constructor(
     private titleService: Title,
     private songService: SongService,
@@ -36,6 +41,8 @@ export class AdminSongMaintenanceComponent implements OnInit {
     private languageDataService: LanguageDataService,
     private auth: AuthService,
   ) {
+    const saved = localStorage.getItem(NEAR_DUPLICATE_CUTOFF_STORAGE_KEY);
+    this.nearDuplicateCutoffDate = saved && saved.trim().length > 0 ? saved.trim() : '';
   }
 
   ngOnInit() {
@@ -58,6 +65,14 @@ export class AdminSongMaintenanceComponent implements OnInit {
         this.selectedLanguage = this.languages[0];
       }
     });
+  }
+
+  onNearDuplicateCutoffDateChange(value: string): void {
+    if (value == null || value === '') {
+      localStorage.removeItem(NEAR_DUPLICATE_CUTOFF_STORAGE_KEY);
+    } else {
+      localStorage.setItem(NEAR_DUPLICATE_CUTOFF_STORAGE_KEY, value);
+    }
   }
 
   onLanguageChange(language: Language) {
@@ -83,7 +98,10 @@ export class AdminSongMaintenanceComponent implements OnInit {
       return;
     }
     this.loadingSimilarBatch = true;
-    this.songService.runMarkSimilarSongsBatch(this.languageUuidForBatch(), this.similarBatchVisibility).subscribe(
+    const cutoff = this.nearDuplicateCutoffDate && this.nearDuplicateCutoffDate.trim().length > 0
+      ? this.nearDuplicateCutoffDate.trim()
+      : undefined;
+    this.songService.runMarkSimilarSongsBatch(this.languageUuidForBatch(), this.similarBatchVisibility, cutoff).subscribe(
       () => {
         const scope = this.similarBatchVisibility === 'nonPublic' ? 'non-public' : 'public';
         const msg = this.runForAllLanguages

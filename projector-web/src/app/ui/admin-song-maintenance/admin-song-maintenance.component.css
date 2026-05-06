@@ -32,6 +32,13 @@
   margin-bottom: 8px;
 }
 
+.cutoff-date-field {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 16px;
+}
+
 mat-card-actions {
   padding-left: 16px;
   padding-bottom: 16px;

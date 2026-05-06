@@ -47,6 +47,11 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 import java.security.Principal;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -669,15 +674,23 @@ public class SongResource {
      */
     @RequestMapping(method = RequestMethod.GET, value = "/admin/markSimilarSongsAndSet")
     public ResponseEntity<Void> markSimilarSongsAndSetAdmin(HttpServletRequest httpServletRequest,
-                                                            @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam) {
+                                                            @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam,
+                                                            @RequestParam(value = "nearDuplicateCreatedFrom", required = false) String nearDuplicateCreatedFromParam) {
         final SongPublicScope visibility;
         try {
             visibility = SongPublicScope.fromRequestParam(visibilityParam);
         } catch (IllegalArgumentException ex) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
+        final Date nearDuplicateCutoffDayStart;
+        try {
+            nearDuplicateCutoffDayStart = parseNearDuplicateCutoffDayStartOrNull(nearDuplicateCreatedFromParam);
+        } catch (DateTimeParseException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
         saveStatistics(httpServletRequest, statisticsService);
-        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, visibility);
+        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
+                visibility, nearDuplicateCutoffDayStart);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
@@ -686,7 +699,8 @@ public class SongResource {
      */
     @RequestMapping(method = RequestMethod.GET, value = "/admin/markSimilarSongsAndSet/{languageId}")
     public ResponseEntity<Void> markSimilarSongsAndSetAdminForLanguage(HttpServletRequest httpServletRequest, @PathVariable final String languageId,
-                                                                       @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam) {
+                                                                       @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam,
+                                                                       @RequestParam(value = "nearDuplicateCreatedFrom", required = false) String nearDuplicateCreatedFromParam) {
         Language language = languageService.findOneByUuid(languageId);
         if (language == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -697,9 +711,31 @@ public class SongResource {
         } catch (IllegalArgumentException ex) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
+        final Date nearDuplicateCutoffDayStart;
+        try {
+            nearDuplicateCutoffDayStart = parseNearDuplicateCutoffDayStartOrNull(nearDuplicateCreatedFromParam);
+        } catch (DateTimeParseException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
         saveStatistics(httpServletRequest, statisticsService);
-        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService, visibility);
+        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
+                visibility, nearDuplicateCutoffDayStart);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    /**
+     * Interprets {@code YYYY-MM-DD} as the start of that calendar day in the JVM default time zone (inclusive cutoff for {@code Song#getCreatedDate()}).
+     */
+    private static Date parseNearDuplicateCutoffDayStartOrNull(String nearDuplicateCreatedFromParam) throws DateTimeParseException {
+        if (nearDuplicateCreatedFromParam == null || nearDuplicateCreatedFromParam.isBlank()) {
+            return null;
+        }
+        LocalDate d = LocalDate.parse(nearDuplicateCreatedFromParam.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+        try {
+            return Date.from(d.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        } catch (DateTimeException ex) {
+            throw new DateTimeParseException("Invalid nearDuplicateCreatedFrom day", nearDuplicateCreatedFromParam, 0, ex);
+        }
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/admin/automaticallyReAssignLanguages")

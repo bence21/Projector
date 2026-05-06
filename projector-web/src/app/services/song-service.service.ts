@@ -437,12 +437,15 @@ export class SongService {
     return this.api.getOne(BooleanResponse, 'user/api/song/' + song.uuid + '/hasReviewerRoleForSong');
   }
 
-  runMarkSimilarSongsBatch(languageUuid?: string, visibility: 'public' | 'nonPublic' = 'public'): Observable<Response> {
+  runMarkSimilarSongsBatch(languageUuid?: string, visibility: 'public' | 'nonPublic' = 'public', nearDuplicateCreatedFrom?: string): Observable<Response> {
     const vis = visibility === 'nonPublic' ? 'nonPublic' : 'public';
     let path = languageUuid
       ? 'admin/markSimilarSongsAndSet/' + languageUuid
       : 'admin/markSimilarSongsAndSet';
     path += (path.indexOf('?') >= 0 ? '&' : '?') + 'visibility=' + encodeURIComponent(vis);
+    if (nearDuplicateCreatedFrom != null && nearDuplicateCreatedFrom.trim().length > 0) {
+      path += '&nearDuplicateCreatedFrom=' + encodeURIComponent(nearDuplicateCreatedFrom.trim());
+    }
     return this.api.getRaw(path);
   }
 
