@@ -53,9 +53,14 @@ public interface SongService extends BaseService<Song> {
 
     List<Song> findAllSimilar(Song song, boolean checkDeleted);
 
-    List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs);
+    List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs, boolean requirePreciseSimilarRatio);
 
-    List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs);
+    default List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs) {
+        return findAllSimilar(song, checkDeleted, songs, false);
+    }
+
+    List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs,
+                                         boolean requirePreciseSimilarRatio);
 
     @SuppressWarnings("unused")
     void enrollSongInMap(Song song);

@@ -170,7 +170,7 @@ public class SongUtil {
         int i = 0;
         for (Song songForSimilar : songs) {
             ++i;
-            List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, similaritySearchPool);
+            List<Song> similarSongs = songService.findAllSimilarSongsForSong(songForSimilar, false, similaritySearchPool, true);
             markSimilarSongsAndSetForSong(songForSimilar, similarSongs, songLinkRepository, songService, songLinkService, songCollectionService, songCollectionElementService);
             logSimilarBatchProgress(progress, i, n, songsBeforeThisLanguage, grandTotalSongs, languageStartMs, jobStartMs, languageLabel);
         }

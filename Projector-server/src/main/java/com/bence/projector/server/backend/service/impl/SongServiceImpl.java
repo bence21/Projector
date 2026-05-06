@@ -51,6 +51,12 @@ import static com.bence.projector.server.utils.StringUtils.longestCommonSubStrin
 public class SongServiceImpl extends BaseServiceImpl<Song> implements SongService {
 
     private final String wordsSplit = "[.,;?_\"'\\n!:/|\\\\ ]";
+
+    private static final double SIMILARITY_RATIO_LCS = 0.55;
+    /**
+     * When capped LCS ratios sit below the similarity cutoff but remain close, an uncapped recompute may change the outcome (precision-only path).
+     */
+    private static final double SIMILARITY_LCS_MARGIN_FOR_UNCAP_RECHECK = 0.12;
     @Autowired
     private SongRepository songRepository;
     @Autowired
@@ -290,17 +296,18 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     @Override
-    public List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs) {
-        // returns custom queried Song models
+    public List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs,
+                                                 boolean requirePreciseSimilarRatio) {
         String text = song.getTextLazyLowerCase();
         String songId = song.getUuid();
         HashMap<String, Boolean> wordHashMap = song.getWordHashMap();
-        return getSimilarSongsForSong(checkDeleted, songs, text, songId, wordHashMap);
+        return getSimilarSongsForSong(checkDeleted, songs, text, songId, wordHashMap, requirePreciseSimilarRatio);
     }
 
     @Override
-    public List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs) {
-        List<Song> similarSongsForSong = findAllSimilarSongsForSong(song, checkDeleted, songs);
+    public List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs,
+                                     boolean requirePreciseSimilarRatio) {
+        List<Song> similarSongsForSong = findAllSimilarSongsForSong(song, checkDeleted, songs, requirePreciseSimilarRatio);
         return getSongsFromRepository(similarSongsForSong);
     }
 
@@ -315,7 +322,9 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return songs;
     }
 
-    private List<Song> getSimilarSongsForSong(boolean checkDeleted, Collection<Song> songs, String text, String songUuid, HashMap<String, Boolean> wordHashMap) {
+    private List<Song> getSimilarSongsForSong(boolean checkDeleted, Collection<Song> songs, String text, String songUuid,
+                                              HashMap<String, Boolean> wordHashMap,
+                                              boolean requirePreciseSimilarRatio) {
         List<Song> similar = new ArrayList<>();
         int wordCount = wordHashMap.size();
         for (Song databaseSong : songs) {
@@ -329,7 +338,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 }
                 continue;
             }
-            if (songsIsSimilar(text, wordHashMap, wordCount, databaseSong)) {
+            if (songsIsSimilar(text, wordHashMap, wordCount, databaseSong, requirePreciseSimilarRatio)) {
                 similar.add(databaseSong);
             }
         }
@@ -341,7 +350,8 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         similar.sort((o1, o2) -> Double.compare(o2.getSimilarRatio(), o1.getSimilarRatio()));
     }
 
-    private boolean songsIsSimilar(String text, HashMap<String, Boolean> wordHashMap, int wordCount, Song databaseSong) {
+    private boolean songsIsSimilar(String text, HashMap<String, Boolean> wordHashMap, int wordCount, Song databaseSong,
+                                   boolean requirePreciseSimilarRatio) {
         String secondText = databaseSong.getTextLazyLowerCase();
         int count = 0;
         Set<String> wordsSet = databaseSong.getWordHashMapKeySet();
@@ -350,25 +360,77 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 ++count;
             }
         }
-        return isSimilarByCountAndSetPercentage(text, wordCount, databaseSong, secondText, count);
+        return isSimilarByCountAndSetPercentage(text, wordCount, databaseSong, secondText, count, requirePreciseSimilarRatio);
     }
 
-    private boolean isSimilarByCountAndSetPercentage(String text, int wordCount, Song databaseSong, String secondText, int count) {
+    /**
+     * Capped LCS first; optional uncapped recompute for accurate ratios / borderline decisions (see {@link #shouldRecomputeLcsUncapped}).
+     * Package-visible for unit tests.
+     */
+    static LcsSongPairResult evaluateLcsForSimilarTexts(String text, String secondText, boolean requirePreciseSimilarity) {
+        final int capSide = StringUtils.HIGHEST_COMMON_STRING_CAPPED_CHARS_PER_SIDE;
+        int lcs = StringUtils.highestCommonStringInt(text, secondText);
+        final int lenA = text.length();
+        final int lenB = secondText.length();
+        double ratioA = (double) lcs / lenA;
+        double ratioB = (double) lcs / lenB;
+        boolean pass = ratioA > SIMILARITY_RATIO_LCS && ratioB > SIMILARITY_RATIO_LCS;
+        boolean longPair = lenA > capSide || lenB > capSide;
+        boolean usedUncapped = false;
+        if (requirePreciseSimilarity && longPair
+                && shouldRecomputeLcsUncapped(lcs, lenA, lenB, ratioA, ratioB, pass, capSide)) {
+            lcs = StringUtils.highestCommonStringIntUncapped(text, secondText);
+            ratioA = (double) lcs / lenA;
+            ratioB = (double) lcs / lenB;
+            pass = ratioA > SIMILARITY_RATIO_LCS && ratioB > SIMILARITY_RATIO_LCS;
+            usedUncapped = true;
+        }
+        return new LcsSongPairResult(lcs, ratioA, ratioB, pass, usedUncapped);
+    }
+
+    private static boolean shouldRecomputeLcsUncapped(int lcsCapped, int lenA, int lenB,
+                                                      double ratioACapped, double ratioBCapped, boolean passAfterCapped,
+                                                      int capSide) {
+        if (passAfterCapped) {
+            return true;
+        }
+        if (isLikelyPinnedToCompareWindow(lcsCapped, lenA, lenB, capSide)) {
+            return true;
+        }
+        return isNearMissVsLcsThreshold(ratioACapped, ratioBCapped);
+    }
+
+    private static boolean isLikelyPinnedToCompareWindow(int lcsCapped, int lenA, int lenB, int capSide) {
+        int truncA = Math.min(lenA, capSide);
+        int truncB = Math.min(lenB, capSide);
+        int maxAchievableOnCappedGrid = Math.min(truncA, truncB);
+        return lcsCapped >= maxAchievableOnCappedGrid;
+    }
+
+    private static boolean isNearMissVsLcsThreshold(double ratioA, double ratioB) {
+        if (ratioA > SIMILARITY_RATIO_LCS && ratioB > SIMILARITY_RATIO_LCS) {
+            return false;
+        }
+        double mn = Math.min(ratioA, ratioB);
+        double mx = Math.max(ratioA, ratioB);
+        return mn > SIMILARITY_RATIO_LCS - SIMILARITY_LCS_MARGIN_FOR_UNCAP_RECHECK
+                && mx > SIMILARITY_RATIO_LCS - SIMILARITY_LCS_MARGIN_FOR_UNCAP_RECHECK;
+    }
+
+    record LcsSongPairResult(int lcsLength, double ratioAlongA, double ratioAlongB, boolean combinedPassesLcsThreshold,
+                             boolean usedUncappedLcs) {
+    }
+
+    private boolean isSimilarByCountAndSetPercentage(String text, int wordCount, Song databaseSong, String secondText, int count,
+                                                     boolean requirePreciseSimilarRatio) {
         double x = count;
         x /= wordCount;
         if (x > 0.5) {
-            int highestCommonStringInt = StringUtils.highestCommonStringInt(text, secondText);
-            x = highestCommonStringInt;
-            x = x / text.length();
-            if (x > 0.55) {
-                double y;
-                y = highestCommonStringInt;
-                y = y / secondText.length();
-                if (y > 0.55) {
-                    x = (x + y) / 2;
-                    databaseSong.setSimilarRatio(x);
-                    return true;
-                }
+            LcsSongPairResult lcsResult = evaluateLcsForSimilarTexts(text, secondText, requirePreciseSimilarRatio);
+            if (lcsResult.combinedPassesLcsThreshold) {
+                x = (lcsResult.ratioAlongA + lcsResult.ratioAlongB) / 2;
+                databaseSong.setSimilarRatio(x);
+                return true;
             }
             int longestCommonSubStringLength = longestCommonSubString(text, secondText);
             if (longestCommonSubStringLength > 50) {
