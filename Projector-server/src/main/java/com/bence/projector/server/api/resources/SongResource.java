@@ -1043,6 +1043,7 @@ public class SongResource {
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/api/songsYoutube")
+    @Transactional
     public List<SongTitleDTO> getSongsContainingYoutubeUrl() {
         List<Song> allContainingYoutubeUrl = songService.findAllContainingYoutubeUrl();
         return songTitleAssembler.createDtoList(allContainingYoutubeUrl);
@@ -1068,6 +1069,7 @@ public class SongResource {
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/admin/api/songTitlesContainingYouTube")
+    @Transactional
     public List<SongTitleDTO> getAllSongTitlesContainingYouTube(HttpServletRequest httpServletRequest) {
         saveStatistics(httpServletRequest, statisticsService);
         return getSongsContainingYoutubeUrl();
