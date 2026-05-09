@@ -58,23 +58,30 @@ public final class TitleSimilarity {
     }
 
     public static List<Song> rankSongs(String candidate, List<Song> songs) {
-        List<Song> ranked = new ArrayList<>();
+        List<ScoredSong> scoredSongs = new ArrayList<>();
         for (Song song : songs) {
             if (song != null) {
-                ranked.add(song);
+                scoredSongs.add(new ScoredSong(song, score(candidate, song)));
             }
         }
-        ranked.sort(Comparator
-                .comparingDouble((Song s) -> score(candidate, s)).reversed()
-                .thenComparingInt(s -> {
-                    String title = s.getTitle();
+        scoredSongs.sort(Comparator
+                .comparingDouble(ScoredSong::score).reversed()
+                .thenComparingInt(scored -> {
+                    String title = scored.song().getTitle();
                     return title != null ? title.length() : Integer.MAX_VALUE;
                 })
-                .thenComparing(s -> {
-                    String title = s.getTitle();
+                .thenComparing(scored -> {
+                    String title = scored.song().getTitle();
                     return title != null ? title : "";
                 }));
+        List<Song> ranked = new ArrayList<>(scoredSongs.size());
+        for (ScoredSong scoredSong : scoredSongs) {
+            ranked.add(scoredSong.song());
+        }
         return ranked;
+    }
+
+    private record ScoredSong(Song song, double score) {
     }
 
     private static int levenshtein(String a, String b) {

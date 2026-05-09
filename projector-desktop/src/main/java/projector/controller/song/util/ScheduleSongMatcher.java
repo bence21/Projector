@@ -34,7 +34,7 @@ public final class ScheduleSongMatcher {
         }
 
         List<Song> exact = songs.stream()
-                .filter(s -> s != null && TitleSimilarity.normalize(s.getStrippedTitle()).equals(c))
+                .filter(s -> s != null && exactMatchByStrippedTitle(c, s))
                 .collect(Collectors.toList());
         List<Song> pool = exact.isEmpty()
                 ? songs.stream()
@@ -77,6 +77,14 @@ public final class ScheduleSongMatcher {
             return false;
         }
         return t.contains(candidateNorm) || candidateNorm.contains(t);
+    }
+
+    private static boolean exactMatchByStrippedTitle(String candidateNorm, Song song) {
+        String stripped = song.getStrippedTitle();
+        if (stripped == null || stripped.isEmpty()) {
+            return false;
+        }
+        return stripped.equals(candidateNorm);
     }
 
     private static Song pickShortestTitle(List<Song> pool) {

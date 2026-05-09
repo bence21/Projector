@@ -55,4 +55,13 @@ public class ScheduleSongMatcherTest {
         Assert.assertEquals(ScheduleSongMatcher.MatchStatus.NOT_FOUND, r.status());
         Assert.assertNull(r.song());
     }
+
+    @Test
+    public void exactMatch_handlesExtraWhitespaceInTitle() {
+        Song s = new Song();
+        s.setTitle("  Amazing    Grace  ");
+        ScheduleSongMatcher.Result r = ScheduleSongMatcher.match("Amazing Grace", List.of(s));
+        Assert.assertEquals(ScheduleSongMatcher.MatchStatus.MATCHED, r.status());
+        Assert.assertSame(s, r.song());
+    }
 }
