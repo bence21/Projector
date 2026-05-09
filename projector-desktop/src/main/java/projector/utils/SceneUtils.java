@@ -1,6 +1,7 @@
 package projector.utils;
 
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
@@ -17,6 +18,11 @@ import java.net.URL;
 
 public class SceneUtils {
     private static final Logger LOG = LoggerFactory.getLogger(SceneUtils.class);
+
+    public static void setVisibleAndManaged(Node node, boolean value) {
+        node.setVisible(value);
+        node.setManaged(value);
+    }
 
     public static void addIconToStage(Stage stage, Class<?> aClass) {
         addOneIcon(stage, aClass, "/icons/icon32.png");

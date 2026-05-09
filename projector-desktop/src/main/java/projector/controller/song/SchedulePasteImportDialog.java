@@ -339,13 +339,20 @@ public final class SchedulePasteImportDialog {
                                   Button appendButton, Button replaceButton) {
         parseProgressBar.progressProperty().unbind();
         parseProgressLabel.textProperty().unbind();
-        parseProgressBar.setVisible(false);
-        parseProgressBar.setManaged(false);
-        parseProgressLabel.setVisible(false);
-        parseProgressLabel.setManaged(false);
+        SceneUtils.setVisibleAndManaged(parseProgressBar, false);
+        SceneUtils.setVisibleAndManaged(parseProgressLabel, false);
         reparseButton.setDisable(false);
         appendButton.setDisable(false);
         replaceButton.setDisable(false);
+    }
+
+    private record ReparseContext(TextArea textArea, SongController songController,
+                                  TableView<PreviewRow> table, Runnable refreshNotFound,
+                                  ProgressBar parseProgressBar, Label parseProgressLabel,
+                                  Button reparseButton, Button appendButton, Button replaceButton,
+                                  ResourceBundle bundle,
+                                  Task<ObservableList<PreviewRow>>[] currentReparseTask,
+                                  long[] reparseRequestId) {
     }
 
     private static Runnable createLaunchReparseRunnable(TextArea textArea, SongController songController,
@@ -356,116 +363,146 @@ public final class SchedulePasteImportDialog {
                                                         ResourceBundle bundle,
                                                         Task<ObservableList<PreviewRow>>[] currentReparseTask,
                                                         long[] reparseRequestId) {
-        return () -> {
-            String rawText = textArea.getText();
-            if (rawText == null) {
-                rawText = "";
-            }
-            if (rawText.isBlank()) {
-                Task<ObservableList<PreviewRow>> previous = currentReparseTask[0];
-                if (previous != null && previous.isRunning()) {
-                    previous.cancel();
+        ReparseContext ctx = new ReparseContext(textArea, songController, table, refreshNotFound,
+                parseProgressBar, parseProgressLabel, reparseButton, appendButton, replaceButton,
+                bundle, currentReparseTask, reparseRequestId);
+        return () -> launchReparse(ctx);
+    }
+
+    private static void launchReparse(ReparseContext ctx) {
+        String rawText = ctx.textArea().getText();
+        if (rawText == null) {
+            rawText = "";
+        }
+        cancelRunningReparse(ctx);
+        if (rawText.isBlank()) {
+            clearPreview(ctx);
+            return;
+        }
+
+        long requestId = ++ctx.reparseRequestId()[0];
+        List<Song> songs = new ArrayList<>(ctx.songController().getSongsForScheduleImport());
+        ObservableList<PreviewRow> liveRows = FXCollections.observableArrayList();
+        ctx.table().setItems(liveRows);
+        ctx.refreshNotFound().run();
+
+        Task<ObservableList<PreviewRow>> task = createParseTask(ctx, rawText, songs, liveRows, requestId);
+        ctx.currentReparseTask()[0] = task;
+        setParsingUi(ctx, task);
+        installTaskHandlers(ctx, task, requestId);
+        startParseThread(task);
+    }
+
+    private static void cancelRunningReparse(ReparseContext ctx) {
+        Task<ObservableList<PreviewRow>> previous = ctx.currentReparseTask()[0];
+        if (previous != null && previous.isRunning()) {
+            previous.cancel();
+        }
+    }
+
+    private static void clearPreview(ReparseContext ctx) {
+        ctx.table().setItems(FXCollections.observableArrayList());
+        ctx.refreshNotFound().run();
+        setIdleUi(ctx.parseProgressBar(), ctx.parseProgressLabel(), ctx.reparseButton(),
+                ctx.appendButton(), ctx.replaceButton());
+    }
+
+    private static Task<ObservableList<PreviewRow>> createParseTask(ReparseContext ctx, String textToParse,
+                                                                    List<Song> songs,
+                                                                    ObservableList<PreviewRow> liveRows,
+                                                                    long requestId) {
+        return new Task<>() {
+            @Override
+            protected ObservableList<PreviewRow> call() {
+                updateProgress(0, 1);
+                updateMessage("Parsing...");
+                List<SchedulePasteEntry> entries = SchedulePasteParser.parse(textToParse);
+                int total = entries.isEmpty() ? 1 : entries.size();
+                ObservableList<PreviewRow> rows = FXCollections.observableArrayList();
+                int n = 1;
+                int done = 0;
+                for (SchedulePasteEntry entry : entries) {
+                    if (isCancelled()) {
+                        return rows;
+                    }
+                    PreviewRow previewRow = buildPreviewRow(entry, n++, songs, ctx.bundle());
+                    rows.add(previewRow);
+                    Platform.runLater(() -> {
+                        if (requestId != ctx.reparseRequestId()[0]) {
+                            return;
+                        }
+                        liveRows.add(previewRow);
+                        ctx.refreshNotFound().run();
+                    });
+                    done++;
+                    updateProgress(done, total);
+                    updateMessage("Matching " + done + "/" + total);
                 }
-                table.setItems(FXCollections.observableArrayList());
-                refreshNotFound.run();
-                setIdleUi(parseProgressBar, parseProgressLabel, reparseButton, appendButton, replaceButton);
+                return rows;
+            }
+        };
+    }
+
+    private static PreviewRow buildPreviewRow(SchedulePasteEntry entry, int rowNumber,
+                                              List<Song> songs, ResourceBundle bundle) {
+        if (entry.getKind() == SchedulePasteEntry.Kind.SECTION) {
+            return PreviewRow.section(rowNumber, entry, bundle);
+        }
+        ScheduleSongMatcher.Result result = ScheduleSongMatcher.match(entry.getText(), songs);
+        return PreviewRow.song(rowNumber, entry, result, songs, bundle);
+    }
+
+    private static void setParsingUi(ReparseContext ctx, Task<?> task) {
+        ctx.reparseButton().setDisable(true);
+        ctx.appendButton().setDisable(true);
+        ctx.replaceButton().setDisable(true);
+        SceneUtils.setVisibleAndManaged(ctx.parseProgressBar(), true);
+        SceneUtils.setVisibleAndManaged(ctx.parseProgressLabel(), true);
+        ctx.parseProgressBar().progressProperty().bind(task.progressProperty());
+        ctx.parseProgressLabel().textProperty().bind(task.messageProperty());
+    }
+
+    private static void setFailedUi(ReparseContext ctx) {
+        ctx.parseProgressBar().progressProperty().unbind();
+        ctx.parseProgressLabel().textProperty().unbind();
+        SceneUtils.setVisibleAndManaged(ctx.parseProgressBar(), true);
+        ctx.parseProgressBar().setProgress(0);
+        SceneUtils.setVisibleAndManaged(ctx.parseProgressLabel(), true);
+        ctx.parseProgressLabel().setText("Failed to parse");
+        ctx.reparseButton().setDisable(false);
+        ctx.appendButton().setDisable(false);
+        ctx.replaceButton().setDisable(false);
+    }
+
+    private static void installTaskHandlers(ReparseContext ctx, Task<ObservableList<PreviewRow>> task,
+                                            long requestId) {
+        task.setOnSucceeded(event -> {
+            if (requestId != ctx.reparseRequestId()[0]) {
                 return;
             }
-
-            Task<ObservableList<PreviewRow>> previous = currentReparseTask[0];
-            if (previous != null && previous.isRunning()) {
-                previous.cancel();
+            ctx.refreshNotFound().run();
+            setIdleUi(ctx.parseProgressBar(), ctx.parseProgressLabel(), ctx.reparseButton(),
+                    ctx.appendButton(), ctx.replaceButton());
+        });
+        task.setOnFailed(event -> {
+            if (requestId != ctx.reparseRequestId()[0]) {
+                return;
             }
+            setFailedUi(ctx);
+        });
+        task.setOnCancelled(event -> {
+            if (requestId != ctx.reparseRequestId()[0]) {
+                return;
+            }
+            setIdleUi(ctx.parseProgressBar(), ctx.parseProgressLabel(), ctx.reparseButton(),
+                    ctx.appendButton(), ctx.replaceButton());
+        });
+    }
 
-            long requestId = ++reparseRequestId[0];
-            List<Song> songs = new ArrayList<>(songController.getSongsForScheduleImport());
-            String textToParse = rawText;
-            ObservableList<PreviewRow> liveRows = FXCollections.observableArrayList();
-            table.setItems(liveRows);
-            refreshNotFound.run();
-
-            Task<ObservableList<PreviewRow>> task = new Task<>() {
-                @Override
-                protected ObservableList<PreviewRow> call() {
-                    updateProgress(0, 1);
-                    updateMessage("Parsing...");
-                    List<SchedulePasteEntry> entries = SchedulePasteParser.parse(textToParse);
-                    int total = entries.isEmpty() ? 1 : entries.size();
-                    ObservableList<PreviewRow> rows = FXCollections.observableArrayList();
-                    int n = 1;
-                    int done = 0;
-                    for (SchedulePasteEntry entry : entries) {
-                        if (isCancelled()) {
-                            return rows;
-                        }
-                        PreviewRow previewRow;
-                        if (entry.getKind() == SchedulePasteEntry.Kind.SECTION) {
-                            previewRow = PreviewRow.section(n++, entry, bundle);
-                        } else {
-                            ScheduleSongMatcher.Result result = ScheduleSongMatcher.match(entry.getText(), songs);
-                            previewRow = PreviewRow.song(n++, entry, result, songs, bundle);
-                        }
-                        rows.add(previewRow);
-                        Platform.runLater(() -> {
-                            if (requestId != reparseRequestId[0]) {
-                                return;
-                            }
-                            liveRows.add(previewRow);
-                            refreshNotFound.run();
-                        });
-                        done++;
-                        updateProgress(done, total);
-                        updateMessage("Matching " + done + "/" + total);
-                    }
-                    return rows;
-                }
-            };
-
-            currentReparseTask[0] = task;
-            reparseButton.setDisable(true);
-            appendButton.setDisable(true);
-            replaceButton.setDisable(true);
-            parseProgressBar.setVisible(true);
-            parseProgressBar.setManaged(true);
-            parseProgressLabel.setVisible(true);
-            parseProgressLabel.setManaged(true);
-            parseProgressBar.progressProperty().bind(task.progressProperty());
-            parseProgressLabel.textProperty().bind(task.messageProperty());
-
-            task.setOnSucceeded(event -> {
-                if (requestId != reparseRequestId[0]) {
-                    return;
-                }
-                refreshNotFound.run();
-                setIdleUi(parseProgressBar, parseProgressLabel, reparseButton, appendButton, replaceButton);
-            });
-            task.setOnFailed(event -> {
-                if (requestId != reparseRequestId[0]) {
-                    return;
-                }
-                parseProgressBar.progressProperty().unbind();
-                parseProgressLabel.textProperty().unbind();
-                parseProgressBar.setVisible(true);
-                parseProgressBar.setManaged(true);
-                parseProgressBar.setProgress(0);
-                parseProgressLabel.setVisible(true);
-                parseProgressLabel.setManaged(true);
-                parseProgressLabel.setText("Failed to parse");
-                reparseButton.setDisable(false);
-                appendButton.setDisable(false);
-                replaceButton.setDisable(false);
-            });
-            task.setOnCancelled(event -> {
-                if (requestId != reparseRequestId[0]) {
-                    return;
-                }
-                setIdleUi(parseProgressBar, parseProgressLabel, reparseButton, appendButton, replaceButton);
-            });
-
-            Thread parseThread = new Thread(task, "schedule-paste-parse-thread");
-            parseThread.setDaemon(true);
-            parseThread.start();
-        };
+    private static void startParseThread(Task<?> task) {
+        Thread parseThread = new Thread(task, "schedule-paste-parse-thread");
+        parseThread.setDaemon(true);
+        parseThread.start();
     }
 
     private static Runnable createImportRowsRunnable(TableView<PreviewRow> table, ScheduleController scheduleController,
@@ -492,11 +529,9 @@ public final class SchedulePasteImportDialog {
         Button reparseButton = new Button(bundle.getString("Reparse"));
         ProgressBar parseProgressBar = new ProgressBar(0);
         parseProgressBar.setPrefWidth(180);
-        parseProgressBar.setVisible(false);
-        parseProgressBar.setManaged(false);
+        SceneUtils.setVisibleAndManaged(parseProgressBar, false);
         Label parseProgressLabel = new Label();
-        parseProgressLabel.setVisible(false);
-        parseProgressLabel.setManaged(false);
+        SceneUtils.setVisibleAndManaged(parseProgressLabel, false);
         HBox topBar = createTopBar(reparseButton, parseProgressBar, parseProgressLabel);
 
         TableUi tableUi = createTableUi(bundle);
