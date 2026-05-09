@@ -57,6 +57,10 @@
     <string name="language_of_the_song">Limba cântecului</string>
     <string name="successfully_uploaded">S-a încărcat cu succes!</string>
     <string name="upload_failed">Încărcare eșuată</string>
+    <string name="upload_needs_sign_in_message">Conectați-vă pentru a încărca cântece pe server.</string>
+    <string name="upload_session_expired_message">Sesiunea a expirat. Conectați-vă din nou, apoi încercați din nou încărcarea.</string>
+    <string name="upload_open_login">Conectare</string>
+    <string name="upload_network_or_server_message">Nu s-a putut încărca. Verificați conexiunea și încercați din nou.</string>
     <string name="suggest_edits">Sugerează modificări</string>
     <string name="short_description_of_the_suggestion">Scurta descriere a sugestii:</string>
     <string name="submit">Afirmă</string>

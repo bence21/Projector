@@ -1,5 +1,6 @@
 package com.bence.songbook.api;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.bence.projector.common.dto.SongDTO;
@@ -11,18 +12,53 @@ import com.bence.songbook.api.retrofit.ApiManager;
 import com.bence.songbook.api.retrofit.SongApi;
 import com.bence.songbook.models.Language;
 import com.bence.songbook.models.Song;
+import com.bence.songbook.service.UserService;
 
-import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.List;
 
 import retrofit2.Call;
+import retrofit2.Response;
 
 public class SongApiBean {
+
+    public enum SongUploadFailureKind {
+        SUCCESS,
+        NEEDS_SIGN_IN,
+        SESSION_NOT_REFRESHED,
+        NETWORK_OR_SERVER
+    }
+
+    public static final class SongUploadResult {
+        private final Song song;
+        private final SongUploadFailureKind failureKind;
+
+        private SongUploadResult(Song song, SongUploadFailureKind failureKind) {
+            this.song = song;
+            this.failureKind = failureKind;
+        }
+
+        public static SongUploadResult success(Song song) {
+            return new SongUploadResult(song, SongUploadFailureKind.SUCCESS);
+        }
+
+        public static SongUploadResult failure(SongUploadFailureKind kind) {
+            return new SongUploadResult(null, kind);
+        }
+
+        public Song getSong() {
+            return song;
+        }
+
+        public SongUploadFailureKind getFailureKind() {
+            return failureKind;
+        }
+    }
+
     private static final String TAG = SongApiBean.class.getName();
-    private SongApi songApi;
-    private SongAssembler songAssembler;
+    private final SongApi songApi;
+    private final SongAssembler songAssembler;
 
     public SongApiBean() {
         songApi = ApiManager.getClient().create(SongApi.class);
@@ -34,8 +70,6 @@ public class SongApiBean {
         try {
             List<SongDTO> songDTOs = call.execute().body();
             return songAssembler.createModelList(songDTOs, progressMessage);
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -46,8 +80,6 @@ public class SongApiBean {
         Call<List<SongTitleDTO>> call = songApi.getSongsContainingYoutubeUrl();
         try {
             return call.execute().body();
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -59,8 +91,6 @@ public class SongApiBean {
         try {
             List<SongDTO> songDTOs = call.execute().body();
             return songAssembler.createModelList(songDTOs, progressMessage);
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -72,8 +102,6 @@ public class SongApiBean {
         try {
             List<SongDTO> songDTOs = call.execute().body();
             return songAssembler.createModelList(songDTOs);
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -91,8 +119,6 @@ public class SongApiBean {
             songs = songAssembler.createModelList(songDTOs, progressMessage);
             System.out.println("songs = " + songs);
             return songs;
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -106,8 +132,6 @@ public class SongApiBean {
             List<SongDTO> songDTOs = call.execute().body();
             songs = songAssembler.createModelList(songDTOs);
             return songs;
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -124,8 +148,6 @@ public class SongApiBean {
             }
             songs = songAssembler.createModelList(songDTOs, progressMessage);
             return songs;
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage(), e);
         }
@@ -142,22 +164,40 @@ public class SongApiBean {
         return null;
     }
 
-    private Song doCallSong(Call<SongDTO> call) {
-        try {
-            SongDTO songDTO = call.execute().body();
-            return songAssembler.createModel(songDTO);
-        } catch (UnknownHostException e) {
-            return null;
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-        return null;
+    public SongUploadResult uploadSong(Song song, Context context) {
+        Context appContext = context != null ? context.getApplicationContext() : null;
+        return uploadSong(song, appContext, false);
     }
 
-    public Song uploadSong(Song song) {
+    private SongUploadResult uploadSong(Song song, Context appContext, boolean secondTry) {
         final SongDTO dto = songAssembler.createDto(song);
         Call<SongDTO> call = songApi.uploadSong(dto);
-        return doCallSong(call);
+        try {
+            Response<SongDTO> response = call.execute();
+            if (response.isSuccessful()) {
+                SongDTO body = response.body();
+                Song model = body != null ? songAssembler.createModel(body) : null;
+                if (model != null && model.getUuid() != null && !model.getUuid().trim().isEmpty()) {
+                    return SongUploadResult.success(model);
+                }
+            }
+            if (!secondTry && appContext != null
+                    && UserService.getInstance().loginIfNeeded(response.headers(), appContext, response.raw())) {
+                return uploadSong(song, appContext, true);
+            }
+            if (UserService.getInstance().loginNeeded(response.headers(), response.raw())) {
+                if (appContext == null || !UserService.getInstance().isLoggedIn(appContext)) {
+                    return SongUploadResult.failure(SongUploadFailureKind.NEEDS_SIGN_IN);
+                }
+                return SongUploadResult.failure(SongUploadFailureKind.SESSION_NOT_REFRESHED);
+            }
+            return SongUploadResult.failure(SongUploadFailureKind.NETWORK_OR_SERVER);
+        } catch (UnknownHostException e) {
+            return SongUploadResult.failure(SongUploadFailureKind.NETWORK_OR_SERVER);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+            return SongUploadResult.failure(SongUploadFailureKind.NETWORK_OR_SERVER);
+        }
     }
 
     public Song getSong(String songUuid) {

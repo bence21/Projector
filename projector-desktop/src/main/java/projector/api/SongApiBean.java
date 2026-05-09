@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import projector.api.assembler.SongAssembler;
 import projector.api.retrofit.ApiManager;
 import projector.api.retrofit.SongApi;
+import projector.controller.util.UserService;
 import projector.model.Language;
 import projector.model.Song;
 import projector.service.ServiceManager;
@@ -24,6 +25,40 @@ import java.util.Date;
 import java.util.List;
 
 public class SongApiBean {
+
+    public enum SongUploadFailureKind {
+        SUCCESS,
+        NEEDS_SIGN_IN,
+        SESSION_NOT_REFRESHED,
+        NETWORK_OR_SERVER
+    }
+
+    public static final class SongUploadResult {
+        private final Song song;
+        private final SongUploadFailureKind failureKind;
+
+        private SongUploadResult(Song song, SongUploadFailureKind failureKind) {
+            this.song = song;
+            this.failureKind = failureKind;
+        }
+
+        public static SongUploadResult success(Song song) {
+            return new SongUploadResult(song, SongUploadFailureKind.SUCCESS);
+        }
+
+        public static SongUploadResult failure(SongUploadFailureKind kind) {
+            return new SongUploadResult(null, kind);
+        }
+
+        public Song getSong() {
+            return song;
+        }
+
+        public SongUploadFailureKind getFailureKind() {
+            return failureKind;
+        }
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(SongApiBean.class);
     private final SongApi songApi;
     private final SongAssembler songAssembler;
@@ -93,22 +128,38 @@ public class SongApiBean {
         return null;
     }
 
-    private Song doCallSong(Call<SongDTO> call) {
-        try {
-            SongDTO songDTO = call.execute().body();
-            return songAssembler.createModel(songDTO);
-        } catch (UnknownHostException e) {
-            return null;
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
-        return null;
+    public SongUploadResult uploadSong(Song song) {
+        return uploadSong(song, false);
     }
 
-    public Song uploadSong(Song song) {
+    private SongUploadResult uploadSong(Song song, boolean secondTry) {
         final SongDTO dto = songAssembler.createDto(song);
         Call<SongDTO> call = songApi.uploadSong(dto);
-        return doCallSong(call);
+        try {
+            Response<SongDTO> response = call.execute();
+            if (response.isSuccessful()) {
+                SongDTO body = response.body();
+                Song model = body != null ? songAssembler.createModel(body) : null;
+                if (model != null && model.getUuid() != null && !model.getUuid().trim().isEmpty()) {
+                    return SongUploadResult.success(model);
+                }
+            }
+            if (!secondTry && UserService.getInstance().loginIfNeeded(response.headers(), response.raw())) {
+                return uploadSong(song, true);
+            }
+            if (UserService.getInstance().loginNeeded(response.headers(), response.raw())) {
+                if (!UserService.getInstance().isLoggedIn()) {
+                    return SongUploadResult.failure(SongUploadFailureKind.NEEDS_SIGN_IN);
+                }
+                return SongUploadResult.failure(SongUploadFailureKind.SESSION_NOT_REFRESHED);
+            }
+            return SongUploadResult.failure(SongUploadFailureKind.NETWORK_OR_SERVER);
+        } catch (UnknownHostException e) {
+            return SongUploadResult.failure(SongUploadFailureKind.NETWORK_OR_SERVER);
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+            return SongUploadResult.failure(SongUploadFailureKind.NETWORK_OR_SERVER);
+        }
     }
 
     public List<Song> getSongsByLanguageAndAfterModifiedDate(Language language, Long modifiedDate) {

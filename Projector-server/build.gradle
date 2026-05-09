@@ -64,6 +64,10 @@ dependencies {
     // OpenAPI & Swagger AutoDocs
     // Source: https://www.baeldung.com/spring-rest-openapi-documentation
     implementation 'org.springdoc:springdoc-openapi-ui:1.6.4'
+
+    // Distributed lock for @Scheduled jobs (multi-instance)
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:5.16.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.16.0'
 }
 
 sourceSets {

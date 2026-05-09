@@ -1,0 +1,9 @@
+---
+description: Projection util naming — generic private helpers vs QR-specific public API
+globs: projector-desktop/**/*.java
+---
+
+# Projection utility naming
+
+- **Private / low-level helpers** that only compute geometry or layout from projection screens (e.g. max square side from scaled content) should use **domain-neutral names** (e.g. `computeMaxSquareSideFromProjectionScreens`) so they stay reusable for future features.
+- **Public API and constants** that exist specifically for QR encoding in this app may use **QR-specific** names (e.g. `getMaxQrEncodeSideLength`, `QR_ENCODE_*`).

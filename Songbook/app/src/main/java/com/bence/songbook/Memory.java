@@ -38,6 +38,11 @@ public class Memory {
     private SongList editingSongList;
     private String lastSearchedInText;
     private List<Language> passingLanguages;
+    /**
+     * Song to upload once after the user completes {@link com.bence.songbook.ui.activity.LoginActivity}
+     * (e.g. new-song flow finished before login). Consumed by {@link com.bence.songbook.ui.utils.PendingUploadRetryAfterLogin}.
+     */
+    private Song pendingUploadRetrySong;
 
     private Memory() {
 
@@ -209,6 +214,23 @@ public class Memory {
 
     public void setPassingLanguages(List<Language> passingLanguages) {
         this.passingLanguages = passingLanguages;
+    }
+
+    public synchronized void setPendingUploadRetrySong(Song song) {
+        this.pendingUploadRetrySong = song;
+    }
+
+    /**
+     * @return the pending song and clears it, or null if none
+     */
+    public synchronized Song consumePendingUploadRetrySong() {
+        Song s = pendingUploadRetrySong;
+        pendingUploadRetrySong = null;
+        return s;
+    }
+
+    public synchronized void clearPendingUploadRetrySong() {
+        pendingUploadRetrySong = null;
     }
 
     public void onText(String text) {

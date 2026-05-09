@@ -12,33 +12,20 @@ import com.bence.projector.server.backend.service.SongLinkService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.StatisticsService;
 import com.bence.projector.server.backend.service.UserService;
-import com.bence.projector.server.mailsending.ConfigurationUtil;
-import com.bence.projector.server.mailsending.FreemarkerConfiguration;
 import com.bence.projector.server.mailsending.MailSenderService;
-import com.bence.projector.server.utils.AppProperties;
-import freemarker.template.Template;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
-import java.io.StringWriter;
 import java.security.Principal;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static com.bence.projector.server.api.resources.StatisticsResource.saveStatistics;
 
@@ -47,7 +34,6 @@ public class SongLinkResource {
     private final StatisticsService statisticsService;
     private final SongLinkService songLinkService;
     private final SongLinkAssembler songLinkAssembler;
-    private final JavaMailSender sender;
     private final UserService userService;
     private final SongService songService;
     private final LanguageService languageService;
@@ -55,11 +41,10 @@ public class SongLinkResource {
     private final SongRepository songRepository;
 
     @Autowired
-    public SongLinkResource(StatisticsService statisticsService, SongLinkService songLinkService, SongLinkAssembler songLinkAssembler, @Qualifier("javaMailSender") JavaMailSender sender, UserService userService, SongService songService, LanguageService languageService, MailSenderService mailSenderService, SongRepository songRepository) {
+    public SongLinkResource(StatisticsService statisticsService, SongLinkService songLinkService, SongLinkAssembler songLinkAssembler, UserService userService, SongService songService, LanguageService languageService, MailSenderService mailSenderService, SongRepository songRepository) {
         this.statisticsService = statisticsService;
         this.songLinkService = songLinkService;
         this.songLinkAssembler = songLinkAssembler;
-        this.sender = sender;
         this.userService = userService;
         this.songService = songService;
         this.languageService = languageService;
@@ -99,11 +84,8 @@ public class SongLinkResource {
         if (model != null && !model.alreadyTheSameVersionGroup(songRepository)) {
             SongLink songLink = songLinkService.save(model);
             Thread thread = new Thread(() -> {
-                try {
-                    sendEmail(songLink);
-                } catch (MessagingException e) {
-                    e.printStackTrace();
-                }
+                mailSenderService.enqueueEmailVersionGroupLinkForAdmins(songLink);
+                mailSenderService.tryToSendAllPrevious();
             });
             thread.start();
         }
@@ -161,65 +143,11 @@ public class SongLinkResource {
         model.setCreatedByEmail(user.getEmail());
         SongLink songLink = songLinkService.save(model);
         Thread thread = new Thread(() -> {
-            try {
-                sendEmail(songLink);
-            } catch (MessagingException e) {
-                e.printStackTrace();
-            }
+            mailSenderService.enqueueEmailVersionGroupLinkForAdmins(songLink);
+            mailSenderService.tryToSendAllPrevious();
         });
         thread.start();
         return new ResponseEntity<>(songLinkAssembler.createDto(model), HttpStatus.ACCEPTED);
     }
 
-    private void sendEmail(SongLink songLink)
-            throws MessagingException, MailSendException {
-        final String freemarkerName = FreemarkerConfiguration.NEW_SONG_LINK + ".ftl";
-        freemarker.template.Configuration config = ConfigurationUtil.getConfiguration();
-        config.setDefaultEncoding("UTF-8");
-        MimeMessage message = sender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        mailSenderService.setToAdmin(helper);
-        helper.setFrom(mailSenderService.getNoReplyInternetAddress());
-        helper.setSubject("Új verzió összekötés");
-
-        try {
-            Template template = config.getTemplate(freemarkerName);
-
-            StringWriter writer = new StringWriter();
-            template.process(createPattern(songLink), writer);
-
-            helper.getMimeMessage().setContent(writer.toString(), "text/html;charset=utf-8");
-        } catch (Exception e) {
-            e.printStackTrace();
-            String createdByEmail = songLink.getCreatedByEmail();
-            if (createdByEmail == null) {
-                createdByEmail = "";
-            }
-            helper.getMimeMessage().setContent("<div>\n" +
-                    "    <h3>Új verzió összekötés: </h3>\n" +
-                    "    <a href=\"" + AppProperties.getInstance().baseUrl() + "/#/song/" + songLink.getSong1Uuid() + "\">Link1</a>\n" +
-                    "<br><a href=\"" + AppProperties.getInstance().baseUrl() + "/#/song/" + songLink.getSong2Uuid() + "\">Link2</a>\n" +
-                    "  <h3>Email </h3><h4>" + createdByEmail + "</h4>" +
-                    "</div>", "text/html;charset=utf-8");
-        }
-        sender.send(message);
-    }
-
-    private Map<String, Object> createPattern(SongLink songLink) {
-        Map<String, Object> data = new HashMap<>();
-        String createdByEmail = songLink.getCreatedByEmail();
-        if (createdByEmail == null) {
-            createdByEmail = "";
-        }
-        data.put("baseUrl", AppProperties.getInstance().baseUrl());
-        data.put("id", songLink.getUuid());
-        data.put("email", createdByEmail);
-        Song song1 = songLink.getSong1(songRepository);
-        Song song2 = songLink.getSong2(songRepository);
-        data.put("song1Title", song1.getTitle());
-        data.put("song2Title", song2.getTitle());
-        data.put("song1", song1.getUuid());
-        data.put("song2", song2.getUuid());
-        return data;
-    }
 }

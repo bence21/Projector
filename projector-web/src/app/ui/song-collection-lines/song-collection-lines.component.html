@@ -1,0 +1,5 @@
+<div *ngFor="let collection of collections">
+  <p *ngFor="let collectionElement of collection.songCollectionElements">
+    {{collection.name + " " + collectionElement.ordinalNumber}}
+  </p>
+</div>

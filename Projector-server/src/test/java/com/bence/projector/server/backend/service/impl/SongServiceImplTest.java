@@ -53,7 +53,7 @@ public class SongServiceImplTest extends BaseServiceTest {
     @Test
     public void testFindAll() {
         List<Song> songs = songService.findAll();
-        if (songs.size() > 0) {
+        if (!songs.isEmpty()) {
             for (Song song : songs) {
                 songService.delete(song.getId());
             }
@@ -80,5 +80,25 @@ public class SongServiceImplTest extends BaseServiceTest {
         songService.save(song);
         Song song1 = songService.findAll().get(0);
         Assert.assertEquals(song.getTitle(), song1.getTitle());
+    }
+
+    @Test
+    public void evaluateLcsForSimilarTexts_preciseMode_recomputesUncappedForLongIdenticalPair() {
+        String body = "\nór isten, kérlek, kegyelmezz nékem\n";
+        String s = body.repeat(120);
+        SongServiceImpl.LcsSongPairResult r = SongServiceImpl.evaluateLcsForSimilarTexts(s, s, true);
+        Assert.assertTrue(r.usedUncappedLcs());
+        Assert.assertTrue(r.combinedPassesLcsThreshold());
+        Assert.assertEquals(1.0, (r.ratioAlongA() + r.ratioAlongB()) / 2, 1e-12);
+    }
+
+    @Test
+    public void evaluateLcsForSimilarTexts_fastMode_returnsExactScoreForLongIdenticalPair() {
+        String body = "\nór isten, kérlek, kegyelmezz nékem\n";
+        String s = body.repeat(120);
+        SongServiceImpl.LcsSongPairResult r = SongServiceImpl.evaluateLcsForSimilarTexts(s, s, false);
+        Assert.assertFalse(r.usedUncappedLcs());
+        Assert.assertEquals(1.0, r.ratioAlongA(), 1e-15);
+        Assert.assertEquals(1.0, r.ratioAlongB(), 1e-15);
     }
 }

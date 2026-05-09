@@ -12,6 +12,10 @@ import java.util.regex.Pattern;
 public class StringUtils {
 
     private static final int N = 2000;
+    /**
+     * Max characters compared per dimension in {@link #highestCommonStringInt(String, String)} (both sides clipped to {@code N-2}).
+     */
+    public static final int HIGHEST_COMMON_STRING_CAPPED_CHARS_PER_SIDE = N - 2;
     private static final Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
     public static final char NON_BREAKING_SPACE = '\u00A0';
     public static final String WHITE_SPACES = " \\t\\f\\r" + NON_BREAKING_SPACE;
@@ -74,6 +78,9 @@ public class StringUtils {
     }
 
     public synchronized static int highestCommonStringInt(String a, String b) {
+        if (a == null || b == null) {
+            return 0;
+        }
         int aLength = a.length();
         if (aLength <= 0) {
             return 0;
@@ -81,6 +88,9 @@ public class StringUtils {
         int bLength = b.length();
         if (bLength <= 0) {
             return 0;
+        }
+        if (a.equals(b)) {
+            return aLength;
         }
         int i;
         int j = 0;
@@ -115,6 +125,50 @@ public class StringUtils {
             }
         }
         return t[i][j];
+    }
+
+    /**
+     * Longest-common-subsequence length for full inputs (memory O(min(|a|, |b|))).
+     * Use for precision only; {@link #highestCommonStringInt(String, String)} stays capped for performance.
+     */
+    public static int highestCommonStringIntUncapped(String a, String b) {
+        if (a == null || b == null) {
+            return 0;
+        }
+        final int na = a.length();
+        final int nb = b.length();
+        if (na == 0 || nb == 0) {
+            return 0;
+        }
+        if (a.equals(b)) {
+            return na;
+        }
+
+        // Use shorter string along the outer dimension to reduce memory (rows are size m + 1 with m = longer length).
+        CharSequence xa = na <= nb ? a : b;
+        CharSequence xb = na <= nb ? b : a;
+        int nOuter = xa.length();
+        int mInner = xb.length();
+        int[] prev = new int[mInner + 1];
+        int[] curr = new int[mInner + 1];
+        for (int i = 1; i <= nOuter; i++) {
+            curr[0] = 0;
+            char ca = xa.charAt(i - 1);
+            for (int j = 1; j <= mInner; j++) {
+                if (ca == xb.charAt(j - 1)) {
+                    curr[j] = prev[j - 1] + 1;
+                } else //noinspection ManualMinMaxCalculation
+                    if (prev[j] > curr[j - 1]) {
+                        curr[j] = prev[j];
+                    } else {
+                        curr[j] = curr[j - 1];
+                    }
+            }
+            int[] swap = prev;
+            prev = curr;
+            curr = swap;
+        }
+        return prev[mInner];
     }
 
     public static int longestCommonSubString(String a, String b) {

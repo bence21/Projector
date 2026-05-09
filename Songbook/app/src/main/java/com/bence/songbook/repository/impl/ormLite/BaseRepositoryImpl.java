@@ -50,7 +50,7 @@ public abstract class BaseRepositoryImpl<T extends Base> implements BaseReposito
             dao.createOrUpdate(model);
         } catch (SQLException e) {
             String msg = "Could not save " + clazzName;
-            Log.e(TAG, msg);
+            Log.e(TAG, msg + ": " + e.getMessage(), e);
             throw new RepositoryException(msg, e);
         }
     }
@@ -63,7 +63,7 @@ public abstract class BaseRepositoryImpl<T extends Base> implements BaseReposito
             }
         } catch (SQLException e) {
             String msg = "Could not save " + clazzNames;
-            Log.e(TAG, msg);
+            Log.e(TAG, msg + ": " + e.getMessage(), e);
             throw new RepositoryException(msg, e);
         }
     }

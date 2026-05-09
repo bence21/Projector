@@ -346,3 +346,29 @@
     -fx-border-color: #ffffff;
     -fx-border-width: 1;
 }
+
+.utils-qr-section {
+    -fx-spacing: 14;
+    -fx-padding: 16;
+    -fx-background-color: derive(-generalBackgroundColor, 4%);
+    -fx-background-radius: 6;
+    -fx-border-color: derive(-textColor, 88%);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-max-width: Infinity;
+}
+
+.utils-section-heading {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 2 0;
+}
+
+.utils-qr-preview-frame {
+    -fx-padding: 16;
+    -fx-background-color: -textFieldBackgroundColor;
+    -fx-background-radius: 4;
+    -fx-border-color: derive(-textColor, 82%);
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+}

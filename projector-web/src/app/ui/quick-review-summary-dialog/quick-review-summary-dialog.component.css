@@ -1,0 +1,18 @@
+ul {
+  margin-top: 0;
+  padding-left: 1.2rem;
+}
+
+.compare-wrapper {
+  margin-top: 12px;
+}
+
+.meta-wrapper {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.meta-column {
+  flex: 1 1 0;
+}

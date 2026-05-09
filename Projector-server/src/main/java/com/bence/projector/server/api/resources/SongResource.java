@@ -16,16 +16,21 @@ import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.Suggestion;
 import com.bence.projector.server.backend.model.User;
+import com.bence.projector.server.backend.repository.SongLinkRepository;
 import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ServiceException;
+import com.bence.projector.server.backend.service.SongCollectionElementService;
 import com.bence.projector.server.backend.service.SongCollectionService;
+import com.bence.projector.server.backend.service.SongLinkService;
+import com.bence.projector.server.backend.service.SongPublicScope;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.StatisticsService;
 import com.bence.projector.server.backend.service.SuggestionService;
 import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.mailsending.MailSenderService;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +47,11 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 import java.security.Principal;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -52,10 +62,18 @@ import static com.bence.projector.server.api.resources.UserPropertiesResource.ge
 import static com.bence.projector.server.mailsending.MailSenderService.getDateFormatted2;
 import static com.bence.projector.server.utils.SetLanguages.getLanguageWords;
 import static com.bence.projector.server.utils.SetLanguages.setLanguagesForUnknown;
+import static com.bence.projector.server.utils.SongModerationUtil.markSongForReviewQueue;
 import static com.bence.projector.server.utils.SongUtil.getLastModifiedSong;
+import static com.bence.projector.server.utils.SongUtil.markSimilarSongsAndSet;
 
 @RestController
 public class SongResource {
+
+    /**
+     * Only the SPA sends header {@code X-Projector-Web-Song-Create}; native apps send nothing, so their uploads use the
+     * review queue for activated users. Requests without this marker are never treated as web uploads.
+     */
+    private static final String WEB_SONG_CREATE_HEADER = "X-Projector-Web-Song-Create";
 
     private final SongRepository songRepository;
     private final SongService songService;
@@ -66,6 +84,9 @@ public class SongResource {
     private final LanguageService languageService;
     private final MailSenderService mailSenderService;
     private final SongCollectionService songCollectionService;
+    private final SongLinkRepository songLinkRepository;
+    private final SongLinkService songLinkService;
+    private final SongCollectionElementService songCollectionElementService;
     private final SuggestionService suggestionService;
     private final SongWordValidationService songWordValidationService;
     private PasswordEncoder passwordEncoder;
@@ -81,6 +102,9 @@ public class SongResource {
                         MailSenderService mailSenderService,
                         SuggestionService suggestionService,
                         SongCollectionService songCollectionService,
+                        SongLinkRepository songLinkRepository,
+                        SongLinkService songLinkService,
+                        SongCollectionElementService songCollectionElementService,
                         SongWordValidationService songWordValidationService
     ) {
         this.songRepository = songRepository;
@@ -92,8 +116,20 @@ public class SongResource {
         this.languageService = languageService;
         this.mailSenderService = mailSenderService;
         this.songCollectionService = songCollectionService;
+        this.songLinkRepository = songLinkRepository;
+        this.songLinkService = songLinkService;
+        this.songCollectionElementService = songCollectionElementService;
         this.suggestionService = suggestionService;
         this.songWordValidationService = songWordValidationService;
+    }
+
+    private static boolean isWebClientSongCreate(HttpServletRequest request) {
+        String v = request.getHeader(WEB_SONG_CREATE_HEADER);
+        if (v == null || v.isBlank()) {
+            return false;
+        }
+        v = v.trim();
+        return "1".equals(v) || "true".equalsIgnoreCase(v) || "yes".equalsIgnoreCase(v);
     }
 
     static boolean hasReviewerRoleForSong(User user, Song song) {
@@ -366,9 +402,16 @@ public class SongResource {
         }
         final Song song = songAssembler.createModel(songDTO);
         song.setCreatedByEmail(user.getEmail());
+        final boolean webClientSongCreate = isWebClientSongCreate(httpServletRequest);
+        if (webClientSongCreate) {
+            return createSongForWeb(user, song);
+        }
+        return createSongForNative(songDTO, user, song);
+    }
+
+    private ResponseEntity<Object> createSongForWeb(User user, Song song) {
         if (!user.isActivated()) {
-            song.setDeleted(true);
-            song.setUploaded(true);
+            markSongForReviewQueue(song);
         }
         final Date date = new Date();
         song.setCreatedDate(date);
@@ -382,6 +425,43 @@ public class SongResource {
             return new ResponseEntity<>(dto, HttpStatus.ACCEPTED);
         }
         return new ResponseEntity<>("Could not create", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<Object> createSongForNative(SongDTO songDTO, User user, Song song) {
+        song.setOriginalId(songDTO.getUuid());
+        markSongForReviewQueue(song);
+        final Date date = new Date();
+        song.setCreatedDate(date);
+        song.setModifiedDate(date);
+        final Song savedSong;
+        try {
+            savedSong = songService.save(song);
+        } catch (ServiceException e) {
+            return new ResponseEntity<>(e.getResponseMessage(), e.getHttpStatus());
+        }
+        if (savedSong != null) {
+            Thread thread = new Thread(() -> runNativeUploadPostSave(savedSong));
+            thread.start();
+            SongDTO dto = songAssembler.createDto(savedSong);
+            updateUserWhenCreatedSong(user);
+            return new ResponseEntity<>(dto, HttpStatus.ACCEPTED);
+        }
+        return new ResponseEntity<>("Could not create", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private void runNativeUploadPostSave(Song savedSong) {
+        List<Song> songs = songService.findAllSongsLazy();
+        boolean deleted = false;
+        for (Song song1 : songs) {
+            if (!savedSong.getUuid().equals(song1.getUuid()) && songService.matches(savedSong, song1)) {
+                songService.deleteByUuid(savedSong.getUuid());
+                deleted = true;
+                break;
+            }
+        }
+        if (!deleted) {
+            sendEmail(savedSong);
+        }
     }
 
     private void updateUserWhenCreatedSong(User user) {
@@ -413,40 +493,8 @@ public class SongResource {
         }
     }
 
-    @RequestMapping(method = RequestMethod.POST, value = "/api/song/upload")
-    public ResponseEntity<Object> uploadSong(@RequestBody final SongDTO songDTO, HttpServletRequest httpServletRequest) {
-        saveStatistics(httpServletRequest, statisticsService);
-        final Song song = songAssembler.createModel(songDTO);
-        song.setOriginalId(songDTO.getUuid());
-        song.setDeleted(true);
-        song.setUploaded(true);
-        Song savedSong;
-        try {
-            savedSong = songService.save(song);
-        } catch (ServiceException e) {
-            return new ResponseEntity<>(e.getResponseMessage(), e.getHttpStatus());
-        }
-        if (savedSong != null) {
-            Thread thread = new Thread(() -> {
-                List<Song> songs = songService.findAllSongsLazy();
-                boolean deleted = false;
-                for (Song song1 : songs) {
-                    if (!savedSong.getUuid().equals(song.getUuid()) && songService.matches(savedSong, song1)) {
-                        songService.deleteByUuid(savedSong.getUuid());
-                        deleted = true;
-                        break;
-                    }
-                }
-                if (!deleted) {
-                    sendEmail(savedSong);
-                }
-            });
-            thread.start();
-            SongDTO dto = songAssembler.createDto(savedSong);
-            return new ResponseEntity<>(dto, HttpStatus.ACCEPTED);
-        }
-        return new ResponseEntity<>("Could not create", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    // @RequestMapping(method = RequestMethod.POST, value = "/api/song/upload")
+    // deleted
 
     @RequestMapping(method = RequestMethod.GET, value = "/api/songs/upload")
     public ResponseEntity<Object> uploadedSongs(HttpServletRequest httpServletRequest) {
@@ -570,10 +618,33 @@ public class SongResource {
     @RequestMapping(method = RequestMethod.GET, value = "/admin/removeDuplicates")
     public void removeDuplicates(HttpServletRequest httpServletRequest) {
         saveStatistics(httpServletRequest, statisticsService);
+        removeDuplicateUploadsForLanguageFilter(null);
+    }
+
+    /**
+     * Same as {@link #removeDuplicates} but only considers uploaded songs in the given language.
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/removeDuplicates/{languageId}")
+    public ResponseEntity<Void> removeDuplicatesForLanguage(HttpServletRequest httpServletRequest, @PathVariable final String languageId) {
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        saveStatistics(httpServletRequest, statisticsService);
+        removeDuplicateUploadsForLanguageFilter(language);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private void removeDuplicateUploadsForLanguageFilter(Language languageFilter) {
         Iterable<Song> songs = songRepository.findAll();
         int exceptionCounter = 100;
         HashMap<String, Boolean> deletedMap = new HashMap<>();
         for (Song uploaded : songService.findAllByUploadedTrueAndDeletedTrueAndNotBackup()) {
+            if (languageFilter != null) {
+                if (uploaded.getLanguage() == null || !languageFilter.getUuid().equals(uploaded.getLanguage().getUuid())) {
+                    continue;
+                }
+            }
             for (Song song : songs) {
                 if (deletedMap.containsKey(song.getUuid())) {
                     continue;
@@ -594,6 +665,76 @@ public class SongResource {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Batch job: scans languages for similar songs (public or non-public per {@code visibility}), merges version groups / creates song links per {@link com.bence.projector.server.utils.SongUtil}.
+     * May take a long time; admin-only via {@code /admin/**}.
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/markSimilarSongsAndSet")
+    public ResponseEntity<Void> markSimilarSongsAndSetAdmin(HttpServletRequest httpServletRequest,
+                                                            @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam,
+                                                            @RequestParam(value = "nearDuplicateCreatedFrom", required = false) String nearDuplicateCreatedFromParam) {
+        final SongPublicScope visibility;
+        try {
+            visibility = SongPublicScope.fromRequestParam(visibilityParam);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        final Date nearDuplicateCutoffDayStart;
+        try {
+            nearDuplicateCutoffDayStart = parseNearDuplicateCutoffDayStartOrNull(nearDuplicateCreatedFromParam);
+        } catch (DateTimeParseException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        saveStatistics(httpServletRequest, statisticsService);
+        markSimilarSongsAndSet(songService, languageService, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
+                visibility, nearDuplicateCutoffDayStart);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    /**
+     * Same as {@link #markSimilarSongsAndSetAdmin} but only for one language.
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/markSimilarSongsAndSet/{languageId}")
+    public ResponseEntity<Void> markSimilarSongsAndSetAdminForLanguage(HttpServletRequest httpServletRequest, @PathVariable final String languageId,
+                                                                       @RequestParam(value = "visibility", defaultValue = "public") String visibilityParam,
+                                                                       @RequestParam(value = "nearDuplicateCreatedFrom", required = false) String nearDuplicateCreatedFromParam) {
+        Language language = languageService.findOneByUuid(languageId);
+        if (language == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        final SongPublicScope visibility;
+        try {
+            visibility = SongPublicScope.fromRequestParam(visibilityParam);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        final Date nearDuplicateCutoffDayStart;
+        try {
+            nearDuplicateCutoffDayStart = parseNearDuplicateCutoffDayStartOrNull(nearDuplicateCreatedFromParam);
+        } catch (DateTimeParseException ex) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        saveStatistics(httpServletRequest, statisticsService);
+        markSimilarSongsAndSet(songService, language, songLinkRepository, songLinkService, songCollectionService, songCollectionElementService,
+                visibility, nearDuplicateCutoffDayStart);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    /**
+     * Interprets {@code YYYY-MM-DD} as the start of that calendar day in the JVM default time zone (inclusive cutoff for {@code Song#getCreatedDate()}).
+     */
+    private static Date parseNearDuplicateCutoffDayStartOrNull(String nearDuplicateCreatedFromParam) throws DateTimeParseException {
+        if (nearDuplicateCreatedFromParam == null || nearDuplicateCreatedFromParam.isBlank()) {
+            return null;
+        }
+        LocalDate d = LocalDate.parse(nearDuplicateCreatedFromParam.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+        try {
+            return Date.from(d.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        } catch (DateTimeException ex) {
+            throw new DateTimeParseException("Invalid nearDuplicateCreatedFrom day", nearDuplicateCreatedFromParam, 0, ex);
         }
     }
 
@@ -623,6 +764,7 @@ public class SongResource {
     }
 
     @Scheduled(fixedRate = 5 * 60 * 1000)
+    @SchedulerLock(name = "SongResource_checkEmptySongs", lockAtMostFor = "PT10M", lockAtLeastFor = "PT10S")
     public void checkEmptySongs_runEvery5Minute_() {
         List<Song> songsByVersesIsEmpty = getAllByVersesIsEmptyOrShort();
         int size = songsByVersesIsEmpty.size();
@@ -798,6 +940,15 @@ public class SongResource {
     }
 
     public static void mergeSongVersionGroup(Song song1, Song song2, SongService songService) {
+        mergeSongVersionGroup(song1, song2, songService, null);
+    }
+
+    /**
+     * @param maxCombinedMemberCount if non-null, merge is skipped when the two version groups together
+     *                               would contain more than this many songs (avoids large automatic merges).
+     * @return false only when the limit blocked a merge that would otherwise have run; true otherwise
+     */
+    public static boolean mergeSongVersionGroup(Song song1, Song song2, SongService songService, Integer maxCombinedMemberCount) {
         String song1VersionGroup = getUuidFromVersionGroupSong(song1);
         String song2VersionGroup = getUuidFromVersionGroupSong(song2);
         if (song1VersionGroup == null) {
@@ -811,6 +962,14 @@ public class SongResource {
             List<Song> allByVersionGroup2 = songService.findAllByVersionGroup(song2VersionGroup);
             int size1 = allByVersionGroup1.size();
             int size2 = allByVersionGroup2.size();
+            if (maxCombinedMemberCount != null && size1 + size2 > maxCombinedMemberCount) {
+                String t1 = song1.getTitle() != null ? song1.getTitle() : "";
+                String t2 = song2.getTitle() != null ? song2.getTitle() : "";
+                System.out.println("[mergeSongVersionGroup] Skipped auto-merge: combined version groups "
+                        + size1 + " + " + size2 + " = " + (size1 + size2) + " exceed limit " + maxCombinedMemberCount
+                        + " ('" + t1 + "' " + song1.getUuid() + " / '" + t2 + "' " + song2.getUuid() + ")");
+                return false;
+            }
             if (size1 == size2) {
                 double sum1 = 0;
                 for (Song song : allByVersionGroup1) {
@@ -832,15 +991,13 @@ public class SongResource {
                 setVersionGroupToOther(song1VersionGroup, allByVersionGroup2, songService);
             }
         }
+        return true;
     }
 
     private static void setVersionGroupToOther(String song2VersionGroup, List<Song> allByVersionGroup1, SongService songService) {
         Date date = new Date();
         Song oneByUuid = songService.findOneByUuid(song2VersionGroup);
-        for (Song song : allByVersionGroup1) {
-            setVersionGroupAndDate(song, date, oneByUuid);
-        }
-        songService.saveAllByRepository(allByVersionGroup1);
+        songService.updateVersionGroupForSongs(allByVersionGroup1, oneByUuid, date);
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "admin/api/songVersionGroup/remove/{songId}")
@@ -886,6 +1043,7 @@ public class SongResource {
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/api/songsYoutube")
+    @Transactional
     public List<SongTitleDTO> getSongsContainingYoutubeUrl() {
         List<Song> allContainingYoutubeUrl = songService.findAllContainingYoutubeUrl();
         return songTitleAssembler.createDtoList(allContainingYoutubeUrl);
@@ -911,6 +1069,7 @@ public class SongResource {
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/admin/api/songTitlesContainingYouTube")
+    @Transactional
     public List<SongTitleDTO> getAllSongTitlesContainingYouTube(HttpServletRequest httpServletRequest) {
         saveStatistics(httpServletRequest, statisticsService);
         return getSongsContainingYoutubeUrl();

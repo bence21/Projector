@@ -23,7 +23,11 @@ public interface SongService extends BaseService<Song> {
 
     Collection<Song> getSongsByLanguageForSimilar(Language language);
 
-    Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language);
+    /**
+     * Same as , plus SQL filter for
+     * {@link SongPublicScope} (see {@link com.bence.projector.server.backend.model.Song#isPublic()}).
+     */
+    Collection<Song> getSongsByLanguageForSimilarWithVersionGroup(Language language, SongPublicScope visibility);
 
     boolean matches(Song song, Song song2);
 
@@ -49,9 +53,14 @@ public interface SongService extends BaseService<Song> {
 
     List<Song> findAllSimilar(Song song, boolean checkDeleted);
 
-    List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs);
+    List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs, boolean requirePreciseSimilarRatio);
 
-    List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs);
+    default List<Song> findAllSimilar(Song song, boolean checkDeleted, Collection<Song> songs) {
+        return findAllSimilar(song, checkDeleted, songs, false);
+    }
+
+    List<Song> findAllSimilarSongsForSong(Song song, boolean checkDeleted, Collection<Song> songs,
+                                         boolean requirePreciseSimilarRatio);
 
     @SuppressWarnings("unused")
     void enrollSongInMap(Song song);
@@ -69,4 +78,10 @@ public interface SongService extends BaseService<Song> {
     List<Song> filterSongsByCreatedEmail(List<Song> songs, String createdByEmail);
 
     void saveAllAndRemoveCache(List<Song> songs);
+
+    /**
+     * Updates only version group and modified date for the given songs (no full ).
+     * Used when merging version groups so corrupt/stale verse-order associations cannot break persistence.
+     */
+    void updateVersionGroupForSongs(List<Song> songs, Song versionGroup, Date modifiedDate);
 }

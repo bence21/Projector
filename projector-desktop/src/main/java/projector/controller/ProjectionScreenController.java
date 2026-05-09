@@ -1886,6 +1886,16 @@ public class ProjectionScreenController {
         return new ScaledSizes(width, height);
     }
 
+    /** Scaled content width in pixels (same basis as image cache / PDF DPI). Returns 0 if not laid out. */
+    public double getScaledContentWidth() {
+        return getGetScaledSizes().width();
+    }
+
+    /** Scaled content height in pixels (same basis as image cache / PDF DPI). Returns 0 if not laid out. */
+    public double getScaledContentHeight() {
+        return getGetScaledSizes().height();
+    }
+
     public void stopCountDownTimer() {
         try {
             this.countDownTimerRunning = false;

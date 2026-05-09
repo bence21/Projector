@@ -5,6 +5,7 @@ import com.bence.projector.server.backend.model.NotificationType;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.repository.NotificationStatusRepository;
 import com.bence.projector.server.backend.service.UserService;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,7 @@ public class NewUserEmailScheduler {
     }
 
     @Scheduled(cron = "0 0 9 * * *")
+    @SchedulerLock(name = "NewUserEmailScheduler_sendNewUserDigest", lockAtMostFor = "PT30M", lockAtLeastFor = "PT10S")
     public void sendNewUserDigest() {
         Date lastNotificationDate = getLastNotificationDateOrOneDayBefore();
         List<User> users = userService.findAllByCreatedDateAfter(lastNotificationDate);

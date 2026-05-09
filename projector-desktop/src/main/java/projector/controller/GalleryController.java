@@ -72,7 +72,7 @@ import static projector.controller.util.ImageCacheService.saveImage;
 
 public class GalleryController {
 
-    private static final String FOLDER_PATH = "gallery";
+    public static final String FOLDER_PATH = "gallery";
     private static final String GALLERY_ROOT_NAME = "Gallery";
     private static final Logger LOG = LoggerFactory.getLogger(GalleryController.class);
     private static final Settings settings = Settings.getInstance();

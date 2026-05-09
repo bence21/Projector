@@ -66,6 +66,7 @@ public class SongVerseAssembler implements GeneralAssembler<SongVerse, SongVerse
         SongVerseDTO songVerseDTO = new SongVerseDTO();
         songVerseDTO.setText(songVerse.getText());
         songVerseDTO.setChorus(songVerse.isChorus());
+        songVerseDTO.setType(songVerse.getSectionType().getValue());
         return songVerseDTO;
     }
 }

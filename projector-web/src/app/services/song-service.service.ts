@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Headers, Response } from '@angular/http';
 import { ApiService } from './api.service';
 import { Observable } from 'rxjs/Observable';
 import { BaseModel } from '../models/base-model';
@@ -161,6 +162,8 @@ export class Song extends BaseModel {
   repeatChorus: boolean = true;
   reviewerErased: boolean = false;
   hasUnsolvedWords: boolean = false;
+  /** From SongTitle API: number of verses; 0 means the song has no verse content. */
+  verseCount?: number;
 
   constructor(values: Object = {}) {
     super(values);
@@ -306,6 +309,9 @@ export class Song extends BaseModel {
   }
 
   private removeMainSong(verses: SongVerseDTO[]) {
+    if (verses == undefined) {
+      return;
+    }
     for (const verse of verses) {
       verse.mainSong = undefined;
     }
@@ -350,7 +356,9 @@ export class SongService {
   }
 
   createSong(song: Song) {
-    return this.api.create(Song, 'user/api/song', song);
+    const headers = new Headers();
+    headers.append('X-Projector-Web-Song-Create', '1');
+    return this.api.create(Song, 'user/api/song', song, headers);
   }
 
   getAllSongTitlesAfterModifiedDate(modifiedDate: number, selectedLanguage: any) {
@@ -427,5 +435,22 @@ export class SongService {
 
   hasReviewerRoleForSong(song: Song) {
     return this.api.getOne(BooleanResponse, 'user/api/song/' + song.uuid + '/hasReviewerRoleForSong');
+  }
+
+  runMarkSimilarSongsBatch(languageUuid?: string, visibility: 'public' | 'nonPublic' = 'public', nearDuplicateCreatedFrom?: string): Observable<Response> {
+    const vis = visibility === 'nonPublic' ? 'nonPublic' : 'public';
+    let path = languageUuid
+      ? 'admin/markSimilarSongsAndSet/' + languageUuid
+      : 'admin/markSimilarSongsAndSet';
+    path += (path.indexOf('?') >= 0 ? '&' : '?') + 'visibility=' + encodeURIComponent(vis);
+    if (nearDuplicateCreatedFrom != null && nearDuplicateCreatedFrom.trim().length > 0) {
+      path += '&nearDuplicateCreatedFrom=' + encodeURIComponent(nearDuplicateCreatedFrom.trim());
+    }
+    return this.api.getRaw(path);
+  }
+
+  runRemoveDuplicateUploads(languageUuid?: string): Observable<Response> {
+    const path = languageUuid ? 'admin/removeDuplicates/' + languageUuid : 'admin/removeDuplicates';
+    return this.api.getRaw(path);
   }
 }

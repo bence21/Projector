@@ -57,6 +57,10 @@
     <string name="language_of_the_song">Sprache des Liedes</string>
     <string name="successfully_uploaded">Erfolgreich hochgeladen!</string>
     <string name="upload_failed">Hochladen fehlgeschlagen</string>
+    <string name="upload_needs_sign_in_message">Melden Sie sich an, um Lieder auf den Server hochzuladen.</string>
+    <string name="upload_session_expired_message">Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an und versuchen Sie den Upload erneut.</string>
+    <string name="upload_open_login">Anmelden</string>
+    <string name="upload_network_or_server_message">Upload nicht möglich. Prüfen Sie die Verbindung und versuchen Sie es erneut.</string>
     <string name="suggest_edits">Änderungen vorschlagen</string>
     <string name="short_description_of_the_suggestion">Kurze Beschreibung des Vorschlags</string>
     <string name="submit">Absenden</string>

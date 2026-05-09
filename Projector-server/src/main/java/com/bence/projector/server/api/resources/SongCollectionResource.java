@@ -86,13 +86,7 @@ public class SongCollectionResource {
                     continue;
                 }
                 SongCollection collection = new SongCollection(songCollection);
-                ArrayList<SongCollectionElement> songCollectionElements = new ArrayList<>();
-                for (SongCollectionElement collectionElement : songCollection.getSongCollectionElements()) {
-                    if (songId.equals(collectionElement.getSongUuid())) {
-                        songCollectionElements.add(collectionElement);
-                    }
-                }
-                collection.setSongCollectionElements(songCollectionElements);
+                collection.setSongCollectionElements(new ArrayList<>(songCollection.getElementsForSongUuid(songId)));
                 dtoList.add(songCollectionAssembler.createDto(collection));
             }
             return dtoList;

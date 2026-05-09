@@ -57,6 +57,22 @@ public class SongCollection extends AbstractModel {
         this.songCollectionElements = songCollectionElements;
     }
 
+    /**
+     * Elements in this collection whose {@link SongCollectionElement#getSongUuid()} equals {@code songUuid}.
+     */
+    public List<SongCollectionElement> getElementsForSongUuid(String songUuid) {
+        if (songUuid == null) {
+            return new ArrayList<>();
+        }
+        List<SongCollectionElement> matches = new ArrayList<>();
+        for (SongCollectionElement element : getSongCollectionElements()) {
+            if (songUuid.equals(element.getSongUuid())) {
+                matches.add(element);
+            }
+        }
+        return matches;
+    }
+
     public Date getCreatedDate() {
         return createdDate == null ? null : (Date) createdDate.clone();
     }

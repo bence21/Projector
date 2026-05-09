@@ -1,19 +1,31 @@
 package projector.controller;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
 import javafx.geometry.Side;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SingleSelectionModel;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
@@ -26,9 +38,16 @@ import projector.model.CountdownTime;
 import projector.service.CountdownTimeService;
 import projector.service.ServiceManager;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Deque;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -43,6 +62,7 @@ import static projector.utils.KeyEventUtil.getTextFromEvent;
 public class UtilsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(UtilsController.class);
+    public static final int MAX_LINES = 3;
     public ComboBox<String> actionComboBox;
     public ComboBox<ProjectionScreenBunch> projectionScreensComboBox;
     public CheckBox showFinishTimeCheckBox;
@@ -50,6 +70,17 @@ public class UtilsController {
     private Label countDownLabel;
     @FXML
     private TextField timeTextField;
+    @FXML
+    private TextField qrTitleTextField;
+    @FXML
+    private TextArea qrDescriptionTextArea;
+    @FXML
+    private TextField qrContentTextField;
+    @FXML
+    private ImageView qrImageView;
+    @FXML
+    private Button saveQrPngButton;
+    private BufferedImage lastQrBufferedImage;
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private MouseButton lastMouseButton = null;
     private MouseEvent lastMouseEvent = null;
@@ -79,6 +110,281 @@ public class UtilsController {
             }
         });
         thread.start();
+        saveQrPngButton.setDisable(true);
+    }
+
+    public void onGenerateQrButtonEvent() {
+        if (qrContentTextField == null) {
+            return;
+        }
+        String text = qrContentTextField.getText() != null ? qrContentTextField.getText().trim() : "";
+        if (text.isEmpty()) {
+            qrImageView.setImage(null);
+            lastQrBufferedImage = null;
+            saveQrPngButton.setDisable(true);
+            return;
+        }
+        try {
+            int matrixSize = getQrMatrixSideLengthForCaptionedProjection();
+            QRCodeWriter writer = new QRCodeWriter();
+            BitMatrix bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, matrixSize, matrixSize);
+            BufferedImage bufferedImage = MatrixToImageWriter.toBufferedImage(bitMatrix);
+
+            String title = qrTitleTextField != null && qrTitleTextField.getText() != null ? qrTitleTextField.getText().trim() : "";
+            String description = qrDescriptionTextArea != null && qrDescriptionTextArea.getText() != null ? qrDescriptionTextArea.getText().trim() : "";
+            BufferedImage compositeImage = createQrCompositeImage(bufferedImage, title, description);
+
+            lastQrBufferedImage = compositeImage;
+            Image fxImage = SwingFXUtils.toFXImage(compositeImage, null);
+            qrImageView.setImage(fxImage);
+            saveQrPngButton.setDisable(false);
+            projectionScreensUtil.drawImage(fxImage);
+        } catch (WriterException e) {
+            LOG.error(e.getMessage(), e);
+            qrImageView.setImage(null);
+            lastQrBufferedImage = null;
+            saveQrPngButton.setDisable(true);
+        }
+    }
+
+    private int getQrMatrixSideLengthForCaptionedProjection() {
+        int side = projectionScreensUtil.getMaxQrEncodeSideLength();
+        // Reserve some space for caption (projection will scale the final composite to fit the screen).
+        // Keep a minimum size so QR stays scannable even with long captions.
+        int scaled = (int) Math.round(side * 0.85);
+        return Math.max(256, Math.min(side, scaled));
+    }
+
+    private static BufferedImage createQrCompositeImage(BufferedImage qrImage, String title, String description) {
+        if (qrImage == null) {
+            return null;
+        }
+        String safeTitle = title != null ? title.trim() : "";
+        String safeDescription = description != null ? description.trim() : "";
+        boolean hasCaption = !safeTitle.isEmpty() || !safeDescription.isEmpty();
+        if (!hasCaption) {
+            return qrImage;
+        }
+
+        int totalW = qrImage.getWidth();
+        int qrH = qrImage.getHeight();
+
+        int paddingX = Math.max(24, (int) Math.round(totalW * 0.05));
+        int paddingY = Math.max(18, (int) Math.round(totalW * 0.04));
+        int gap = Math.max(10, (int) Math.round(totalW * 0.02));
+
+        int titleFontSize = clamp((int) Math.round(totalW * 0.06), 22, 64);
+        int descFontSize = clamp((int) Math.round(totalW * 0.045), 18, 48);
+        Font titleFont = new Font("SansSerif", Font.BOLD, titleFontSize);
+        Font descFont = new Font("SansSerif", Font.PLAIN, descFontSize);
+
+        BufferedImage measuringImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        Graphics2D mg = measuringImage.createGraphics();
+        mg.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        mg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        int availableTextWidth = Math.max(1, totalW - paddingX * 2);
+        int titleHeight = 0;
+        if (!safeTitle.isEmpty()) {
+            mg.setFont(titleFont);
+            titleHeight = mg.getFontMetrics().getHeight();
+        }
+
+        int descLineHeight = 0;
+        List<String> descLines = List.of();
+        if (!safeDescription.isEmpty()) {
+            mg.setFont(descFont);
+            descLineHeight = mg.getFontMetrics().getHeight();
+            descLines = wrapText(mg, safeDescription, availableTextWidth, MAX_LINES);
+        }
+        mg.dispose();
+
+        int captionHeight = paddingY
+                + (Math.max(titleHeight, 0))
+                + (!safeTitle.isEmpty() && !descLines.isEmpty() ? (int) Math.round(descLineHeight * 0.15) : 0)
+                + (descLines.size() * descLineHeight)
+                + paddingY;
+
+        int totalH = qrH + gap + captionHeight;
+
+        BufferedImage out = new BufferedImage(totalW, totalH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = out.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, totalW, totalH);
+        g.drawImage(qrImage, 0, 0, null);
+
+        int y = qrH + gap + paddingY;
+        g.setColor(Color.WHITE);
+
+        if (!safeTitle.isEmpty()) {
+            g.setFont(titleFont);
+            y += g.getFontMetrics().getAscent();
+            g.drawString(truncateWithEllipsis(g, safeTitle, availableTextWidth), paddingX, y);
+            y += g.getFontMetrics().getDescent();
+            y += (int) Math.round(titleFontSize * 0.20);
+        }
+
+        if (!descLines.isEmpty()) {
+            g.setFont(descFont);
+            for (String line : descLines) {
+                y += g.getFontMetrics().getAscent();
+                g.drawString(line, paddingX, y);
+                y += g.getFontMetrics().getDescent();
+            }
+        }
+
+        g.dispose();
+        return out;
+    }
+
+    private static List<String> wrapText(Graphics2D g, String text, int maxWidth, @SuppressWarnings("SameParameterValue") int maxLines) {
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n').trim();
+        if (normalized.isEmpty()) {
+            return List.of();
+        }
+
+        Deque<String> chunks = new ArrayDeque<>();
+        for (String paragraph : normalized.split("\n")) {
+            String p = paragraph.trim();
+            if (!p.isEmpty()) {
+                chunks.addLast(p);
+            }
+        }
+        if (chunks.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> lines = new ArrayList<>();
+        while (!chunks.isEmpty() && lines.size() < maxLines) {
+            String chunk = chunks.removeFirst();
+            if (chunk.isEmpty()) {
+                continue;
+            }
+
+            // If it fits, take it.
+            if (g.getFontMetrics().stringWidth(chunk) <= maxWidth) {
+                lines.add(chunk);
+                continue;
+            }
+
+            // Greedy word wrap.
+            String[] words = chunk.split("\\s+");
+            StringBuilder current = new StringBuilder();
+            int idx = 0;
+            while (idx < words.length && lines.size() < maxLines) {
+                String word = words[idx];
+                String candidate = current.isEmpty() ? word : current + " " + word;
+                if (g.getFontMetrics().stringWidth(candidate) <= maxWidth) {
+                    current.setLength(0);
+                    current.append(candidate);
+                    idx++;
+                    continue;
+                }
+
+                if (current.isEmpty()) {
+                    // Single very long token; hard cut with ellipsis.
+                    lines.add(truncateWithEllipsis(g, word, maxWidth));
+                    idx++;
+                    break;
+                } else {
+                    lines.add(current.toString());
+                    current.setLength(0);
+                }
+            }
+
+            if (lines.size() < maxLines && !current.isEmpty()) {
+                lines.add(current.toString());
+            }
+
+            if (lines.size() >= maxLines && idx < words.length) {
+                // Put the remaining words back as one chunk for ellipsizing.
+                StringBuilder remaining = new StringBuilder();
+                for (int i = idx; i < words.length; i++) {
+                    if (!remaining.isEmpty()) {
+                        remaining.append(' ');
+                    }
+                    remaining.append(words[i]);
+                }
+                int last = lines.size() - 1;
+                lines.set(last, truncateWithEllipsis(g, lines.get(last) + " " + remaining, maxWidth));
+            }
+        }
+
+        if (lines.size() > maxLines) {
+            return lines.subList(0, maxLines);
+        }
+        if (lines.size() == maxLines && !chunks.isEmpty()) {
+            int last = lines.size() - 1;
+            lines.set(last, truncateWithEllipsis(g, lines.get(last), maxWidth));
+        }
+        return lines;
+    }
+
+    private static String truncateWithEllipsis(Graphics2D g, String text, int maxWidth) {
+        String s = text != null ? text.trim() : "";
+        if (s.isEmpty()) {
+            return "";
+        }
+        if (g.getFontMetrics().stringWidth(s) <= maxWidth) {
+            return s;
+        }
+        String ellipsis = "…";
+        int ellipsisWidth = g.getFontMetrics().stringWidth(ellipsis);
+        if (ellipsisWidth >= maxWidth) {
+            return ellipsis;
+        }
+        int end = s.length();
+        while (end > 0) {
+            String candidate = s.substring(0, end).trim() + ellipsis;
+            if (g.getFontMetrics().stringWidth(candidate) <= maxWidth) {
+                return candidate;
+            }
+            end--;
+        }
+        return ellipsis;
+    }
+
+    private static int clamp(int v, int min, int max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    public void onSaveQrPngButtonEvent() {
+        if (lastQrBufferedImage == null || qrContentTextField == null || qrContentTextField.getScene() == null) {
+            return;
+        }
+        ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle(resourceBundle.getString("SaveQrPng"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG", "*.png"));
+
+        setQrSaveFileChooserInitialDirectory(fileChooser);
+        Stage stage = (Stage) qrContentTextField.getScene().getWindow();
+        File file = fileChooser.showSaveDialog(stage);
+        if (file == null) {
+            return;
+        }
+        if (!file.getName().toLowerCase().endsWith(".png")) {
+            String name = file.getName() + ".png";
+            File parent = file.getParentFile();
+            file = parent != null ? new File(parent, name) : new File(name);
+        }
+        try {
+            ImageIO.write(lastQrBufferedImage, "png", file);
+        } catch (IOException e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
+    private void setQrSaveFileChooserInitialDirectory(FileChooser fileChooser) {
+        File galleryDir = new File(GalleryController.FOLDER_PATH); // same root folder name as GalleryController
+        if (galleryDir.exists() && galleryDir.isDirectory()) {
+            fileChooser.setInitialDirectory(galleryDir);
+            return;
+        }
+        fileChooser.setInitialDirectory(new File(".").getAbsoluteFile()); // fallback
     }
 
     private void initializeActionComboBox() {
