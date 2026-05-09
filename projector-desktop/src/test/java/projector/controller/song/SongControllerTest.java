@@ -5,9 +5,9 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import org.junit.Assert;
 import org.junit.Before;
@@ -125,16 +125,34 @@ public class SongControllerTest extends BaseTest {
     public void checkDoubleSelectedSongVerse() {
         searchForASong();
         final ListView<SongVersePartTextFlow> songListView = find("#songListView");
-        Bounds boundsInScene = songListView.localToScene(songListView.getBoundsInLocal());
-        clickOn("#songListView");
-        final double x = boundsInScene.getMinX() + 10;
-        final double y = boundsInScene.getMinY() + 60;
-        clickOn(x, y).sleep(100).press(KeyCode.SHIFT).clickOn(x + 7, y + 210).release(KeyCode.SHIFT);
-        String activeText = MyController.getInstance().getProjectionScreenController().getActiveText();
+        Platform.runLater(() -> {
+            MultipleSelectionModel<SongVersePartTextFlow> selectionModel = songListView.getSelectionModel();
+            selectionModel.clearSelection();
+            int selectedSongVerseParts = 0;
+            ObservableList<SongVersePartTextFlow> items = songListView.getItems();
+            for (int i = 0; i < items.size(); ++i) {
+                SongVersePartTextFlow songVersePartTextFlow = items.get(i);
+                if (songVersePartTextFlow.getSongVerse() != null) {
+                    selectionModel.select(i);
+                    ++selectedSongVerseParts;
+                    if (selectedSongVerseParts == 2) {
+                        break;
+                    }
+                }
+            }
+        });
+        sleep(300);
+        String activeText = "";
+        for (int i = 0; i < 20; ++i) {
+            activeText = MyController.getInstance().getProjectionScreenController().getActiveText();
+            if (activeText != null && !activeText.isEmpty()) {
+                break;
+            }
+            sleep(100);
+        }
+        Assert.assertNotNull(activeText);
         int activeTextLength = activeText.length();
         int songVerseTextLength2 = SONG_VERSE_TEXT.length() * 2;
-        // System.out.println(activeTextLength);
-        // System.out.println(songVerseTextLength2);
         Assert.assertTrue(activeTextLength > songVerseTextLength2);
     }
 

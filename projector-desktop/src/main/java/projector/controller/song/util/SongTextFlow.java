@@ -5,6 +5,9 @@ import javafx.scene.text.TextFlow;
 import projector.model.Song;
 
 public abstract class SongTextFlow {
+    /**
+     * Null for section-only rows in the schedule (no backing {@link Song}).
+     */
     private final Song song;
     private TextFlow textFlow;
     private Text text;
@@ -35,6 +38,6 @@ public abstract class SongTextFlow {
 
     @Override
     public String toString() {
-        return song.toString();
+        return song != null ? song.toString() : "";
     }
 }

@@ -619,7 +619,7 @@ public class SongController {
         int textLineIndex = 0;
         StringBuilder s = new StringBuilder();
         for (String guideLine : guideLines) {
-            if (s.length() > 0) {
+            if (!s.isEmpty()) {
                 s.append("\n");
             }
             s.append(guideLine);
@@ -2254,6 +2254,13 @@ public class SongController {
         return songs;
     }
 
+    /**
+     * Songs considered when matching pasted schedule lines (same filtering as the search list).
+     */
+    public List<Song> getSongsForScheduleImport() {
+        return getFilteredSongs();
+    }
+
     private List<FavouriteSong> getFavouriteSongs() {
         if (favouriteSongs == null) {
             favouriteSongs = ServiceManager.getFavouriteSongService().findAll();
@@ -3018,6 +3025,7 @@ public class SongController {
         return null;
     }
 
+    @SuppressWarnings("unused")
     public void newSongButtonOnAction() {
         try {
             FXMLLoader loader = new FXMLLoader();
@@ -3429,6 +3437,7 @@ public class SongController {
         scheduleListView.refresh();
     }
 
+    @SuppressWarnings("unused")
     public void importOpenLPFolderButtonOnAction() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Select OpenLP exported folder");

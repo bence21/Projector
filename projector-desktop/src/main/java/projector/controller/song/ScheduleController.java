@@ -46,6 +46,7 @@ import static projector.controller.BibleController.setGeneralTextColor;
 import static projector.controller.song.SongController.setSongCollections;
 import static projector.controller.song.SongController.setTextFlowsText;
 import static projector.utils.ColorUtil.getGeneralTextColor;
+import static projector.utils.ColorUtil.getSubduedTextColor;
 import static projector.utils.ColorUtil.getVisitedTextColor;
 import static projector.utils.ContextMenuUtil.initializeContextMenu;
 
@@ -53,6 +54,7 @@ public class ScheduleController {
     private static final Logger LOG = LoggerFactory.getLogger(ScheduleController.class);
     private final String $id$_ = "$id$ ";
     private final String $uuid$_ = "$uuid$ ";
+    private final String $section$_ = "$section$ ";
     private final String prefix = "scheduleListView:move:";
     private final KeyCombination keyAltUp = new KeyCodeCombination(KeyCode.UP, KeyCombination.ALT_DOWN);
     private final KeyCombination keyAltDown = new KeyCodeCombination(KeyCode.DOWN, KeyCombination.ALT_DOWN);
@@ -82,72 +84,19 @@ public class ScheduleController {
             protected void updateItem(ScheduleSong item, boolean empty) {
                 try {
                     super.updateItem(item, empty);
-                    if (item == null) {
+                    if (empty || item == null) {
                         setGraphic(null);
-                    } else if (empty || item.getSong().getTitle() == null) {
+                    } else if (item.isSection()) {
+                        applySectionRowPresentation(item);
+                        setGraphic(item.getTextFlow());
+                        configureDragAndDropHandlers(this, item, items);
+                    } else if (item.getSong() == null || item.getSong().getTitle() == null) {
                         TextFlow textFlow = setTextFlowsText(item, item.getTextFlow());
                         setGraphic(textFlow);
                         item.setTextFlow(textFlow);
                     } else {
                         Song song = item.getSong();
-                        ListCell<ScheduleSong> thisCell = this;
-                        setOnDragDetected(event -> {
-                            if (getItem() == null) {
-                                return;
-                            }
-                            Dragboard dragboard = startDragAndDrop(TransferMode.MOVE);
-                            ClipboardContent content = new ClipboardContent();
-                            content.putString(prefix + listView.getSelectionModel().getSelectedIndex());
-                            dragboard.setContent(content);
-                        });
-                        setOnDragEntered(event -> {
-                            if (event.getGestureSource() != thisCell &&
-                                    event.getDragboard().hasString()) {
-                                setOpacity(0.3);
-                            }
-                        });
-                        setOnDragExited(event -> {
-                            if (event.getGestureSource() != thisCell &&
-                                    event.getDragboard().hasString()) {
-                                setOpacity(1);
-                            }
-                        });
-                        setOnDragOver(dragEvent -> dragEvent.acceptTransferModes(TransferMode.MOVE, TransferMode.COPY, TransferMode.LINK));
-                        setOnDragDropped(event -> {
-                            if (getItem() == null) {
-                                return;
-                            }
-                            Dragboard dragboard = event.getDragboard();
-                            if (dragboard.hasString()) {
-                                int index = getIndexFromDragBoard(dragboard);
-                                if (index != -1) {
-                                    ScheduleSong scheduleSong = items.get(index);
-                                    int otherIndex = item.getListViewIndex();
-                                    pauseSelectionListener = true;
-                                    if (otherIndex < index) {
-                                        for (int i = index; i > otherIndex; --i) {
-                                            ScheduleSong element = items.get(i - 1);
-                                            element.setListViewIndex(i);
-                                            items.set(i, element);
-                                        }
-                                        scheduleSong.setListViewIndex(otherIndex);
-                                        items.set(otherIndex, scheduleSong);
-                                    } else if (otherIndex > index) {
-                                        for (int i = index; i < otherIndex; ++i) {
-                                            ScheduleSong element = items.get(i + 1);
-                                            element.setListViewIndex(i);
-                                            items.set(i, element);
-                                        }
-                                        scheduleSong.setListViewIndex(otherIndex);
-                                        items.set(otherIndex, scheduleSong);
-                                    }
-                                    listView.getSelectionModel().clearAndSelect(otherIndex);
-                                    pauseSelectionListener = false;
-                                }
-                                event.setDropCompleted(true);
-                            }
-
-                        });
+                        configureDragAndDropHandlers(this, item, items);
 
                         TextFlow textFlow = item.getTextFlow();
                         if (textFlow == null) {
@@ -185,11 +134,10 @@ public class ScheduleController {
             }
             ScheduleSong selectedItem = listView.getSelectionModel().getSelectedItem();
             if (newValue != null) {
-                String text = newValue.getSong().getTitle();
-                if (!text.isEmpty()) {
-                    setTextColor(selectedItem, getVisitedTextColor());
-                    songController.selectSong(newValue.getSong());
-                    handleNextScheduled();
+                if (newValue.isSection()) {
+                    onSectionScheduleRowSelected(selectedItem);
+                } else {
+                    onSongScheduleRowSelected(selectedItem, newValue);
                 }
             }
         });
@@ -200,8 +148,9 @@ public class ScheduleController {
         MenuItem removeMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Remove"));
         MenuItem saveMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Save"));
         MenuItem loadMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Load"));
+        MenuItem importPasteMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Import schedule from clipboard"));
         MenuItem resetHighlightsMenuItem = new MenuItem(Settings.getInstance().getResourceBundle().getString("Reset highlights"));
-        cm.getItems().addAll(moveUpMenuItem, moveDownMenuItem, removeMenuItem, saveMenuItem, loadMenuItem, resetHighlightsMenuItem);
+        cm.getItems().addAll(moveUpMenuItem, moveDownMenuItem, removeMenuItem, saveMenuItem, loadMenuItem, importPasteMenuItem, resetHighlightsMenuItem);
         listView.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.SECONDARY) {
                 cm.show(listView, event.getScreenX(), event.getScreenY());
@@ -230,6 +179,10 @@ public class ScheduleController {
                     ofStream = new FileOutputStream(selectedFile);
                     BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(ofStream, StandardCharsets.UTF_8));
                     for (ScheduleSong i : items) {
+                        if (i.isSection()) {
+                            bw.write($section$_ + i.getSectionLabel() + System.lineSeparator());
+                            continue;
+                        }
                         Song song = i.getSong();
                         if (song.getUuid() == null) {
                             bw.write($id$_ + song.getId() + System.lineSeparator());
@@ -260,6 +213,12 @@ public class ScheduleController {
                     String tmp = br.readLine();
                     List<Song> readSongs = new ArrayList<>();
                     while (tmp != null) {
+                        if (tmp.startsWith($section$_)) {
+                            String label = tmp.substring($section$_.length());
+                            addSectionRow(label);
+                            tmp = br.readLine();
+                            continue;
+                        }
                         Song byId;
                         if (tmp.startsWith($id$_)) {
                             byId = songService.findById(Long.parseLong(tmp.substring($id$_.length())));
@@ -268,7 +227,7 @@ public class ScheduleController {
                         } else {
                             Song byTitle = songService.findByTitle(tmp);
                             if (byTitle != null) {
-                                readSongs.add(byTitle);
+                                addLoadedSong(readSongs, byTitle);
                             }
                             tmp = br.readLine();
                             continue;
@@ -276,24 +235,22 @@ public class ScheduleController {
                         if (byId == null) {
                             Song byTitle = songService.findByTitle(br.readLine());
                             if (byTitle != null) {
-                                readSongs.add(byTitle);
+                                addLoadedSong(readSongs, byTitle);
                             }
                         } else {
                             br.readLine();
-                            readSongs.add(byId);
+                            addLoadedSong(readSongs, byId);
                         }
                         tmp = br.readLine();
                     }
                     br.close();
                     setSongCollections(readSongs);
-                    for (Song song : readSongs) {
-                        addSong(song);
-                    }
                 } catch (IOException e) {
                     LOG.error(e.getMessage(), e);
                 }
             }
         });
+        importPasteMenuItem.setOnAction(event -> SchedulePasteImportDialog.show(this, songController));
         resetHighlightsMenuItem.setOnAction(event -> resetHighlights());
         listView.setOnKeyPressed(event -> {
             if (keyAltUp.match(event)) {
@@ -305,25 +262,117 @@ public class ScheduleController {
 
     }
 
+    private void applySectionRowPresentation(ScheduleSong item) {
+        TextFlow textFlow = item.getTextFlow();
+        if (textFlow == null) {
+            textFlow = new TextFlow();
+            Text text = new Text(item.getSectionLabel());
+            text.setFill(getSubduedTextColor());
+            text.setStyle("-fx-font-style: italic;");
+            textFlow.getChildren().add(text);
+            item.setText(text);
+            item.setTextFlow(textFlow);
+        } else {
+            Text text = item.getText();
+            if (text != null) {
+                text.setText(item.getSectionLabel());
+                text.setFill(getSubduedTextColor());
+                text.setStyle("-fx-font-style: italic;");
+            }
+        }
+    }
+
+    private void configureDragAndDropHandlers(ListCell<ScheduleSong> cell, ScheduleSong item, ObservableList<ScheduleSong> items) {
+        cell.setOnDragDetected(event -> {
+            if (cell.getItem() == null) {
+                return;
+            }
+            Dragboard dragboard = cell.startDragAndDrop(TransferMode.MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(prefix + listView.getSelectionModel().getSelectedIndex());
+            dragboard.setContent(content);
+        });
+        cell.setOnDragEntered(event -> {
+            if (event.getGestureSource() != cell && event.getDragboard().hasString()) {
+                cell.setOpacity(0.3);
+            }
+        });
+        cell.setOnDragExited(event -> {
+            if (event.getGestureSource() != cell && event.getDragboard().hasString()) {
+                cell.setOpacity(1);
+            }
+        });
+        cell.setOnDragOver(dragEvent -> dragEvent.acceptTransferModes(TransferMode.MOVE, TransferMode.COPY, TransferMode.LINK));
+        cell.setOnDragDropped(event -> {
+            if (cell.getItem() == null) {
+                return;
+            }
+            Dragboard dragboard = event.getDragboard();
+            if (dragboard.hasString()) {
+                int index = getIndexFromDragBoard(dragboard);
+                if (index != -1) {
+                    reorderScheduleItems(items, item, index);
+                }
+                event.setDropCompleted(true);
+            }
+        });
+    }
+
+    private void reorderScheduleItems(ObservableList<ScheduleSong> items, ScheduleSong targetItem, int draggedIndex) {
+        ScheduleSong draggedItem = items.get(draggedIndex);
+        int targetIndex = targetItem.getListViewIndex();
+        pauseSelectionListener = true;
+        if (targetIndex < draggedIndex) {
+            for (int i = draggedIndex; i > targetIndex; --i) {
+                ScheduleSong element = items.get(i - 1);
+                element.setListViewIndex(i);
+                items.set(i, element);
+            }
+            draggedItem.setListViewIndex(targetIndex);
+            items.set(targetIndex, draggedItem);
+        } else if (targetIndex > draggedIndex) {
+            for (int i = draggedIndex; i < targetIndex; ++i) {
+                ScheduleSong element = items.get(i + 1);
+                element.setListViewIndex(i);
+                items.set(i, element);
+            }
+            draggedItem.setListViewIndex(targetIndex);
+            items.set(targetIndex, draggedItem);
+        }
+        listView.getSelectionModel().clearAndSelect(targetIndex);
+        pauseSelectionListener = false;
+    }
+
+    private void onSectionScheduleRowSelected(ScheduleSong selectedItem) {
+        setTextColor(selectedItem, getVisitedTextColor());
+        handleNextScheduled();
+    }
+
+    private void onSongScheduleRowSelected(ScheduleSong selectedItem, ScheduleSong row) {
+        Song song = row.getSong();
+        String title = song != null ? song.getTitle() : "";
+        if (title != null && !title.isEmpty()) {
+            setTextColor(selectedItem, getVisitedTextColor());
+            songController.selectSong(song);
+            handleNextScheduled();
+        }
+    }
+
     private void handleNextScheduled() {
         Song nextScheduledSong = getNextScheduledSong();
         ProjectionScreensUtil.getInstance().setNextScheduledSong(nextScheduledSong);
     }
 
     private Song getNextScheduledSong() {
-        ScheduleSong nextScheduled = getNextScheduled();
-        if (nextScheduled != null) {
-            return nextScheduled.getSong();
-        }
-        return null;
-    }
-
-    private ScheduleSong getNextScheduled() {
         int selectedIndex = listView.getSelectionModel().getSelectedIndex();
         ObservableList<ScheduleSong> items = listView.getItems();
         int nextIndex = selectedIndex + 1;
-        if (nextIndex >= 0 && nextIndex < items.size()) {
-            return items.get(nextIndex);
+        while (nextIndex >= 0 && nextIndex < items.size()) {
+            ScheduleSong row = items.get(nextIndex);
+            if (!row.isSection() && row.getSong() != null) {
+                return row.getSong();
+            }
+            nextIndex++;
         }
         return null;
     }
@@ -386,6 +435,22 @@ public class ScheduleController {
             scheduleSong.setListViewIndex(listView.getItems().size());
             listView.getItems().add(scheduleSong);
         }
+    }
+
+    private void addLoadedSong(List<Song> readSongs, Song song) {
+        if (song != null) {
+            readSongs.add(song);
+            addSong(song);
+        }
+    }
+
+    void addSectionRow(String sectionLabel) {
+        if (sectionLabel == null || sectionLabel.isEmpty()) {
+            return;
+        }
+        ScheduleSong row = new ScheduleSong(sectionLabel);
+        row.setListViewIndex(listView.getItems().size());
+        listView.getItems().add(row);
     }
 
     public void setSongController(SongController songController) {
