@@ -96,15 +96,15 @@ public final class ScheduleSongMatcher {
     }
 
     private static Song findFavouriteInSameVersionGroupAndLanguage(String candidate, List<Song> songs, Song selected) {
-        String versionGroup = selected.getVersionGroup();
-        if (versionGroup == null || versionGroup.isBlank()) {
+        String versionGroup = SongVersionGroupUtil.getVersionGroupOrUuid(selected);
+        if (versionGroup == null) {
             return null;
         }
         Language selectedLanguage = selected.getLanguage();
         List<Song> candidates = songs.stream()
                 .filter(Objects::nonNull)
                 .filter(Song::isFavourite)
-                .filter(song -> versionGroup.equals(song.getVersionGroup()))
+                .filter(song -> versionGroup.equals(SongVersionGroupUtil.getVersionGroupOrUuid(song)))
                 .filter(song -> sameLanguage(selectedLanguage, song.getLanguage()))
                 .toList();
         if (candidates.isEmpty()) {

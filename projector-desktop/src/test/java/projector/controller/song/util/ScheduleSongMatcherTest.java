@@ -111,6 +111,21 @@ public class ScheduleSongMatcherTest {
     }
 
     @Test
+    public void selectedSong_withoutVersionGroup_usesUuidAsFallbackGroupForOverride() {
+        Language english = language(1L, "lang-en");
+        Song selected = song("Chain Breaker", null, english, false);
+        selected.setUuid("song-uuid-1");
+        Song favouriteByUuidGroup = song("Chain Breaker (Fav)", "song-uuid-1", english, true);
+
+        ScheduleSongMatcher.Result r = ScheduleSongMatcher.match("Chain Breaker", List.of(selected, favouriteByUuidGroup));
+
+        Assert.assertEquals(ScheduleSongMatcher.MatchStatus.MATCHED, r.status());
+        Assert.assertSame(favouriteByUuidGroup, r.song());
+        Assert.assertTrue(r.selectedFavourite());
+        Assert.assertTrue(r.overriddenToFavourite());
+    }
+
+    @Test
     public void selectedSong_withVersionGroup_doesNotOverrideWhenNoFavouriteInGroup() {
         Language english = language(1L, "lang-en");
         Song selected = song("Build My Life", "vg-build", english, false);

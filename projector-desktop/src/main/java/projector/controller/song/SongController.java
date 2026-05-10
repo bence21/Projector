@@ -80,6 +80,7 @@ import projector.controller.song.util.OrderMethod;
 import projector.controller.song.util.ScheduleSong;
 import projector.controller.song.util.SearchedSong;
 import projector.controller.song.util.SongTextFlow;
+import projector.controller.song.util.SongVersionGroupUtil;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.controller.util.UserService;
@@ -496,17 +497,8 @@ public class SongController {
             selectedSong = selectedSong1;
 
             showVersionsButton.setVisible(false);
-            String versionGroup = selectedSong.getVersionGroup();
-            if (versionGroup == null) {
-                versionGroup = selectedSong.getUuid();
-            }
-            List<Song> allByVersionGroup = null;
-            if (versionGroup != null) {
-                allByVersionGroup = songService.findAllByVersionGroup(versionGroup);
-                if (allByVersionGroup.size() > 1) {
-                    showVersionsButton.setVisible(true);
-                }
-            }
+            List<Song> allByVersionGroup = SongVersionGroupUtil.getVersionAlternatives(selectedSong);
+            showVersionsButton.setVisible(allByVersionGroup.size() > 1);
             checkForFavouriteInVersionGroup(allByVersionGroup, selectedSong);
 
             Scene scene = projectionScreenController.getScene();
@@ -1640,11 +1632,7 @@ public class SongController {
     private void initializeShowVersionsButton() {
         showVersionsButton.setVisible(false);
         showVersionsButton.setOnAction(event -> {
-            String versionGroup = selectedSong.getVersionGroup();
-            String uuid = selectedSong.getUuid();
-            if (versionGroup == null) {
-                versionGroup = uuid;
-            }
+            String versionGroup = SongVersionGroupUtil.getVersionGroupOrUuid(selectedSong);
             List<Song> allByVersionGroup = songService.findAllByVersionGroup(versionGroup);
             int initialCapacity = allByVersionGroup.size();
             final List<Song> songs = new ArrayList<>(initialCapacity);
