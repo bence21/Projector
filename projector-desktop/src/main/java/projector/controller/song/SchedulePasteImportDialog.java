@@ -9,6 +9,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
@@ -18,10 +19,11 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import projector.application.Settings;
@@ -32,6 +34,7 @@ import projector.controller.song.util.TitleSimilarity;
 import projector.model.Song;
 import projector.utils.SceneUtils;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -44,6 +47,7 @@ import java.util.ResourceBundle;
 public final class SchedulePasteImportDialog {
     private static final String FILTER_LISTENER_KEY = "scheduleImportFilterListener";
     private static final String FILTER_UPDATING_KEY = "scheduleImportFilterUpdating";
+    private static final Image FAVOURITE_STAR_IMAGE = loadFavouriteStarImage();
 
     private SchedulePasteImportDialog() {
     }
@@ -138,6 +142,17 @@ public final class SchedulePasteImportDialog {
         combo.setItems(FXCollections.observableArrayList(filtered));
     }
 
+    private static void updateComboEditorText(ComboBox<Song> combo, PreviewRow row) {
+        String editorText;
+        if (row.getFilterText().isBlank()) {
+            Song selectedSong = row.getMatchedSong();
+            editorText = selectedSong == null ? "" : selectedSong.getTitle();
+        } else {
+            editorText = row.getFilterText();
+        }
+        combo.getEditor().setText(editorText);
+    }
+
     @SuppressWarnings("unchecked")
     private static void bindComboEditorFilter(ComboBox<Song> combo, PreviewRow row) {
         ChangeListener<String> previous = (ChangeListener<String>) combo.getProperties().get(FILTER_LISTENER_KEY);
@@ -188,26 +203,58 @@ public final class SchedulePasteImportDialog {
         return topBar;
     }
 
+    private static Image loadFavouriteStarImage() {
+        try (InputStream resourceAsStream = SchedulePasteImportDialog.class.getResourceAsStream("/icons/star.png")) {
+            if (resourceAsStream == null) {
+                return null;
+            }
+            return new Image(resourceAsStream);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static ImageView createFavouriteStarImageView() {
+        if (FAVOURITE_STAR_IMAGE == null) {
+            return null;
+        }
+        ImageView imageView = new ImageView(FAVOURITE_STAR_IMAGE);
+        double fitSize = 16.0;
+        imageView.setFitHeight(fitSize);
+        imageView.setFitWidth(fitSize);
+        imageView.setPickOnBounds(true);
+        imageView.setPreserveRatio(true);
+        return imageView;
+    }
+
     private static TableUi createTableUi(ResourceBundle bundle) {
         TableView<PreviewRow> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         TableColumn<PreviewRow, Integer> numCol = new TableColumn<>("#");
         numCol.setCellValueFactory(new PropertyValueFactory<>("rowNumber"));
-        numCol.setPrefWidth(40);
+        numCol.setPrefWidth(36);
+        numCol.setMinWidth(34);
+        numCol.setMaxWidth(42);
         numCol.setStyle("-fx-alignment: CENTER;");
 
         TableColumn<PreviewRow, String> textCol = new TableColumn<>(bundle.getString("Parsed text"));
         textCol.setCellValueFactory(new PropertyValueFactory<>("parsedText"));
-        textCol.setPrefWidth(220);
+        textCol.setPrefWidth(260);
+        textCol.setMinWidth(220);
         textCol.setStyle("-fx-alignment: CENTER-LEFT;");
 
         TableColumn<PreviewRow, String> statusCol = new TableColumn<>(bundle.getString("Status"));
         statusCol.setCellValueFactory(new PropertyValueFactory<>("statusText"));
-        statusCol.setPrefWidth(100);
+        statusCol.setPrefWidth(96);
+        statusCol.setMinWidth(90);
+        statusCol.setMaxWidth(110);
         configureStatusColumn(statusCol);
 
         TableColumn<PreviewRow, Double> confidenceCol = new TableColumn<>(bundle.getString("Match confidence"));
         confidenceCol.setCellValueFactory(new PropertyValueFactory<>("matchConfidence"));
-        confidenceCol.setPrefWidth(120);
+        confidenceCol.setPrefWidth(112);
+        confidenceCol.setMinWidth(104);
+        confidenceCol.setMaxWidth(126);
         confidenceCol.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(Double item, boolean empty) {
@@ -226,11 +273,49 @@ public final class SchedulePasteImportDialog {
 
         TableColumn<PreviewRow, Song> songCol = new TableColumn<>(bundle.getString("Matched song"));
         songCol.setCellValueFactory(new PropertyValueFactory<>("matchedSong"));
-        songCol.setPrefWidth(260);
+        songCol.setPrefWidth(320);
+        songCol.setMinWidth(260);
+
+        TableColumn<PreviewRow, String> favouriteCol = createFavouriteColumn(bundle);
 
         //noinspection unchecked
-        table.getColumns().setAll(numCol, textCol, songCol, statusCol, confidenceCol);
+        table.getColumns().setAll(numCol, textCol, songCol, favouriteCol, statusCol, confidenceCol);
         return new TableUi(table, songCol);
+    }
+
+    private static TableColumn<PreviewRow, String> createFavouriteColumn(ResourceBundle bundle) {
+        TableColumn<PreviewRow, String> favouriteCol = new TableColumn<>(bundle.getString("Favourite mark"));
+        favouriteCol.setCellValueFactory(new PropertyValueFactory<>("favouriteMarker"));
+        favouriteCol.setPrefWidth(48);
+        favouriteCol.setMinWidth(46);
+        favouriteCol.setMaxWidth(56);
+        favouriteCol.setStyle("-fx-alignment: CENTER;");
+        favouriteCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setAlignment(Pos.CENTER);
+                setText(null);
+                setGraphic(null);
+                if (empty || item == null || item.isBlank()) {
+                    return;
+                }
+                ImageView starImageView = createFavouriteStarImageView();
+                if (starImageView == null) {
+                    setText("+".equals(item) ? "*+" : "*");
+                    return;
+                }
+                if ("+".equals(item)) {
+                    Label plus = new Label("+");
+                    HBox box = new HBox(2, starImageView, plus);
+                    box.setAlignment(Pos.CENTER);
+                    setGraphic(box);
+                    return;
+                }
+                setGraphic(starImageView);
+            }
+        });
+        return favouriteCol;
     }
 
     private static NotFoundUi createNotFoundUi(ResourceBundle bundle) {
@@ -273,7 +358,20 @@ public final class SchedulePasteImportDialog {
             private final ComboBox<Song> combo = new ComboBox<>();
 
             {
+                setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
                 combo.setEditable(true);
+                combo.setMaxWidth(Double.MAX_VALUE);
+                combo.prefWidthProperty().bind(widthProperty().subtract(8));
+                combo.setOnMouseReleased(event -> {
+                    if (!combo.isShowing()) {
+                        combo.show();
+                    }
+                });
+                combo.getEditor().setOnMouseReleased(event -> {
+                    if (!combo.isShowing()) {
+                        combo.show();
+                    }
+                });
                 combo.setConverter(new StringConverter<>() {
                     @Override
                     public String toString(Song s) {
@@ -308,7 +406,7 @@ public final class SchedulePasteImportDialog {
                 runWithFilterGuard(combo, () -> {
                     updateComboItems(combo, row, row.getFilterText());
                     combo.setValue(row.getMatchedSong());
-                    combo.getEditor().setText(row.getFilterText());
+                    updateComboEditorText(combo, row);
                 });
                 bindComboEditorFilter(combo, row);
                 combo.setOnAction(e -> {
@@ -317,12 +415,15 @@ public final class SchedulePasteImportDialog {
                         return;
                     }
                     PreviewRow pr = row1.getItem();
-                    pr.setMatchedSong(combo.getValue());
+                    Song selectedSong = combo.getValue();
+                    if (selectedSong == null || selectedSong == pr.getMatchedSong()) {
+                        return;
+                    }
+                    pr.setMatchedSong(selectedSong);
                     pr.refreshStatusText(pr.getMatchConfidence());
                     table.refresh();
                     refreshNotFound.run();
                 });
-                combo.setPrefWidth(240);
                 setGraphic(combo);
             }
         });
@@ -564,7 +665,6 @@ public final class SchedulePasteImportDialog {
         VBox.setVgrow(table, Priority.ALWAYS);
 
         Stage stage = SceneUtils.getCustomStage3(SchedulePasteImportDialog.class, root);
-        stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle(bundle.getString("Import schedule from clipboard"));
 
         Runnable importRows = createImportRowsRunnable(table, scheduleController, stage);
@@ -594,6 +694,8 @@ public final class SchedulePasteImportDialog {
         private double matchConfidence;
         private String statusText;
         private String filterText = "";
+        private boolean selectedFavourite;
+        private boolean overriddenToFavourite;
 
         private PreviewRow(int rowNumber, SchedulePasteEntry entry, Song matchedSong,
                            double matchConfidence, List<Song> rankedSongs, ResourceBundle bundle) {
@@ -625,6 +727,8 @@ public final class SchedulePasteImportDialog {
             }
             PreviewRow row = new PreviewRow(rowNumber, entry, song, confidence,
                     TitleSimilarity.rankSongs(entry.getText(), sourceSongs), bundle);
+            row.selectedFavourite = result.selectedFavourite();
+            row.overriddenToFavourite = result.overriddenToFavourite();
             row.refreshStatusText(confidence);
             return row;
         }
@@ -663,11 +767,24 @@ public final class SchedulePasteImportDialog {
         public void setMatchedSong(Song matchedSong) {
             this.matchedSong = matchedSong;
             this.matchConfidence = matchedSong != null ? TitleSimilarity.score(entry.getText(), matchedSong) : 0;
+            this.selectedFavourite = matchedSong != null && matchedSong.isFavourite();
+            this.overriddenToFavourite = false;
         }
 
         @SuppressWarnings("unused")
         public String getStatusText() {
             return statusText;
+        }
+
+        @SuppressWarnings("unused")
+        public String getFavouriteMarker() {
+            if (overriddenToFavourite) {
+                return "+";
+            }
+            if (selectedFavourite) {
+                return "favourite";
+            }
+            return "";
         }
 
         public double getMatchConfidence() {
