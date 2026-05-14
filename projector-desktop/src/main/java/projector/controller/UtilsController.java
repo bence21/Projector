@@ -79,6 +79,8 @@ public class UtilsController {
     @FXML
     private ImageView qrImageView;
     @FXML
+    private Button projectQrButton;
+    @FXML
     private Button saveQrPngButton;
     private BufferedImage lastQrBufferedImage;
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
@@ -111,8 +113,13 @@ public class UtilsController {
         });
         thread.start();
         saveQrPngButton.setDisable(true);
+        if (projectQrButton != null) {
+            projectQrButton.setDisable(true);
+        }
+        addQrRegenerationListeners();
     }
 
+    @SuppressWarnings("unused")
     public void onGenerateQrButtonEvent() {
         if (qrContentTextField == null) {
             return;
@@ -122,6 +129,7 @@ public class UtilsController {
             qrImageView.setImage(null);
             lastQrBufferedImage = null;
             saveQrPngButton.setDisable(true);
+            projectQrButton.setDisable(true);
             return;
         }
         try {
@@ -138,12 +146,43 @@ public class UtilsController {
             Image fxImage = SwingFXUtils.toFXImage(compositeImage, null);
             qrImageView.setImage(fxImage);
             saveQrPngButton.setDisable(false);
-            projectionScreensUtil.drawImage(fxImage);
+            projectQrButton.setDisable(false);
         } catch (WriterException e) {
             LOG.error(e.getMessage(), e);
             qrImageView.setImage(null);
             lastQrBufferedImage = null;
             saveQrPngButton.setDisable(true);
+            projectQrButton.setDisable(true);
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public void onProjectQrButtonEvent() {
+        if (qrImageView == null) {
+            return;
+        }
+        Image qrImage = qrImageView.getImage();
+        if (qrImage == null) {
+            return;
+        }
+        projectionScreensUtil.drawImage(qrImage);
+    }
+
+    private void addQrRegenerationListeners() {
+        if (qrContentTextField != null) {
+            qrContentTextField.textProperty().addListener((obs, oldValue, newValue) -> disableProjectQrButton());
+        }
+        if (qrTitleTextField != null) {
+            qrTitleTextField.textProperty().addListener((obs, oldValue, newValue) -> disableProjectQrButton());
+        }
+        if (qrDescriptionTextArea != null) {
+            qrDescriptionTextArea.textProperty().addListener((obs, oldValue, newValue) -> disableProjectQrButton());
+        }
+    }
+
+    private void disableProjectQrButton() {
+        if (projectQrButton != null) {
+            projectQrButton.setDisable(true);
         }
     }
 
@@ -351,6 +390,7 @@ public class UtilsController {
         return Math.max(min, Math.min(max, v));
     }
 
+    @SuppressWarnings("unused")
     public void onSaveQrPngButtonEvent() {
         if (lastQrBufferedImage == null || qrContentTextField == null || qrContentTextField.getScene() == null) {
             return;
@@ -689,6 +729,7 @@ public class UtilsController {
         }
     }
 
+    @SuppressWarnings("unused")
     public void onShowCountDownButtonEvent() {
         AutomaticAction selectedAction = getSelectedAction();
         ProjectionScreenController selectedProjectionScreenController = getSelectedProjectionScreenController();
