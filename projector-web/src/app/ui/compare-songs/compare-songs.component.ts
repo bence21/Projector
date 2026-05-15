@@ -4,6 +4,18 @@ import { SongListComponent } from '../song-list/song-list.component';
 import { SongCollection } from '../../models/songCollection';
 import { SongCollectionDataService } from '../../services/song-collection-data.service';
 import { AuthService } from '../../services/auth.service';
+import {
+  buildComparisonSequence,
+  buildOrigIndexToSeqIndex,
+  charactersEqual,
+  CompareNormalizeOptions,
+  CompareSongsSettings,
+  ComparisonSequence,
+  getEffectiveNormalizeOptions,
+  highestCommonStrings,
+  loadCompareSongsSettings,
+  saveCompareSongsSettings,
+} from './compare-normalize.util';
 
 @Component({
   selector: 'app-compare-songs',
@@ -16,7 +28,7 @@ export class CompareSongsComponent implements OnChanges {
   m_secondSong: Song;
   originalSong1: Song;
   originalSong2: Song;
-  repeatChorus: boolean;
+  compareSettings: CompareSongsSettings;
   percentage = 0;
   @ViewChildren("leftLineCompares") leftLineComparesElements: QueryList<ElementRef>;
   @ViewChildren("rightLineCompares") rightLineComparesElements: QueryList<ElementRef>;
@@ -32,17 +44,26 @@ export class CompareSongsComponent implements OnChanges {
   rightCollections: SongCollection[] = [];
   hasReviewerRoleForAnySong = false;
 
+  private alignCompareSequence = '';
+  private alignOrigToSeq = new Map<number, number>();
+  private alignNormalizeOptions: CompareNormalizeOptions;
+
   constructor(
     public auth: AuthService,
     private songService: SongService,
     private songCollectionService: SongCollectionDataService
   ) {
-    const text = localStorage.getItem("repeatChorus");
-    if (text === undefined || text == null || text.trim().length == 0) {
-      this.repeatChorus = false;
-    } else {
-      this.repeatChorus = JSON.parse(text);
-    }
+    this.compareSettings = loadCompareSongsSettings();
+    this.alignNormalizeOptions = getEffectiveNormalizeOptions(this.compareSettings);
+  }
+
+  private currentNormalizeOptions(): CompareNormalizeOptions {
+    return getEffectiveNormalizeOptions(this.compareSettings);
+  }
+
+  private persistSettingsAndRecalculate(): void {
+    saveCompareSongsSettings(this.compareSettings);
+    this.calculateDifferences(this.compareSettings.repeatChorus);
   }
 
   @Input()
@@ -70,60 +91,6 @@ export class CompareSongsComponent implements OnChanges {
   isCompareDescriptionLabel() {
     return this.m_descriptionLabelLeft != undefined ||
       this.m_descriptionLabelRight != undefined;
-  }
-
-  public static highestCommonStrings(a: string, b: string) {
-    let t = [];
-    let i, j;
-    for (i = 0; i < a.length + 2; ++i) {
-      t[i] = [];
-      t[i][0] = 0;
-    }
-    for (j = 1; j < b.length + 2; ++j) {
-      t[0][j] = 0;
-    }
-    let c;
-    for (i = 0; i < a.length; ++i) {
-      c = a.charAt(i);
-      for (j = 0; j < b.length; ++j) {
-        if (c == b.charAt(j)) {
-          t[i + 1][j + 1] = t[i][j] + 1;
-        } else if (t[i + 1][j] > t[i][j + 1]) {
-          t[i + 1][j + 1] = t[i + 1][j];
-        } else {
-          t[i + 1][j + 1] = t[i][j + 1];
-        }
-      }
-    }
-    let r = [];
-    i = a.length;
-    j = b.length;
-    let strings = [];
-    while (i != 0 && j != 0) {
-      if (t[i - 1][j] + 1 == t[i][j] && t[i][j] == t[i][j - 1] + 1) {
-        r.push(a.charAt(i - 1));
-        --i;
-        --j;
-      } else {
-        if (r.length > 0) {
-          for (let letter of CompareSongsComponent.getTextFromReverseLetters(r)) {
-            strings.push(letter);
-          }
-          r = [];
-        }
-        if (t[i][j - 1] > t[i - 1][j]) {
-          --j;
-        } else {
-          --i;
-        }
-      }
-    }
-    if (r.length > 0) {
-      for (let letter of CompareSongsComponent.getTextFromReverseLetters(r)) {
-        strings.push(letter);
-      }
-    }
-    return strings.reverse();
   }
 
   static highestCommonLines(leftSongLines: string[], rightSongLines: string[]): string[] {
@@ -501,7 +468,7 @@ export class CompareSongsComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     this.refreshCollectionsAndRoles();
-    this.calculateDifferences(this.repeatChorus);
+    this.calculateDifferences(this.compareSettings.repeatChorus);
   }
 
   conditionForShowingCollection() {
@@ -550,9 +517,52 @@ export class CompareSongsComponent implements OnChanges {
   }
 
   changeRepeatChorus() {
-    this.repeatChorus = !this.repeatChorus;
-    this.calculateDifferences(this.repeatChorus);
-    localStorage.setItem("repeatChorus", JSON.stringify(this.repeatChorus));
+    this.compareSettings.repeatChorus = !this.compareSettings.repeatChorus;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeStrictDiff(checked: boolean) {
+    this.compareSettings.strictDiff = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeIgnoreCase(checked: boolean) {
+    this.compareSettings.ignoreCase = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeIgnoreAccents(checked: boolean) {
+    this.compareSettings.ignoreAccents = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeIgnorePunctuation(checked: boolean) {
+    this.compareSettings.ignorePunctuation = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeIgnoreAnnotations(checked: boolean) {
+    this.compareSettings.ignoreAnnotations = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeIgnoreNumbers(checked: boolean) {
+    this.compareSettings.ignoreNumbers = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeNormalizeWhitespace(checked: boolean) {
+    this.compareSettings.normalizeWhitespace = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  changeNormalizeQuotes(checked: boolean) {
+    this.compareSettings.normalizeQuotes = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
+  normalizationOptionsDisabled(): boolean {
+    return this.compareSettings.strictDiff;
   }
 
   private static getCommonWordsByCommonCharacter(leftSongWords: string[], rightSongWords: string[], commonCharacters: string[]): string[] {
@@ -611,34 +621,44 @@ export class CompareSongsComponent implements OnChanges {
   private bestCombination: number[];
 
   private getCommonStringsAndSetPercentage() {
-    let a = CompareSongsComponent.getText(this.m_song);
-    let b = CompareSongsComponent.getText(this.m_secondSong);
-    let commonStrings = CompareSongsComponent.highestCommonStrings(a, b);
-    let x = commonStrings.length;
-    x = x / a.length;
-    let y = commonStrings.length;
-    y = y / b.length;
-    this.percentage = (x + y) / 2;
+    const a = CompareSongsComponent.getText(this.m_song);
+    const b = CompareSongsComponent.getText(this.m_secondSong);
+    const normalizeOpts = this.currentNormalizeOptions();
+    const seqA = buildComparisonSequence(a, normalizeOpts);
+    const seqB = buildComparisonSequence(b, normalizeOpts);
+    const commonStrings = highestCommonStrings(seqA.sequence, seqB.sequence, normalizeOpts);
+    const lenA = Math.max(1, seqA.sequence.length);
+    const lenB = Math.max(1, seqB.sequence.length);
+    this.percentage = (commonStrings.length / lenA + commonStrings.length / lenB) / 2;
 
-    this.setColorTextByCommonStringToSong(commonStrings, a, this.m_song);
-    this.setColorTextByCommonStringToSong(commonStrings, b, this.m_secondSong);
+    this.setColorTextByCommonStringToSong(commonStrings, a, this.m_song, seqA, normalizeOpts);
+    this.setColorTextByCommonStringToSong(commonStrings, b, this.m_secondSong, seqB, normalizeOpts);
   }
 
   private commonString;
   private minK;
   private maxK;
   private maxI;
-  private textString;
   private MAX_POINT = 999999;
   private bestCombinationChangePoint = this.MAX_POINT;
   private bestCombinationDiffPoint = this.MAX_POINT;
 
-  private setColorTextByCommonStringToSong(commonStrings: any[], a: string, song: Song) {
+  private setColorTextByCommonStringToSong(
+    commonStrings: string[],
+    a: string,
+    song: Song,
+    seqPack: ComparisonSequence,
+    options: CompareNormalizeOptions,
+  ) {
+    const origToSeq = buildOrigIndexToSeqIndex(seqPack.indexMap);
+    this.alignCompareSequence = seqPack.sequence;
+    this.alignOrigToSeq = origToSeq;
+    this.alignNormalizeOptions = options;
     let firstLine = true;
     let k = 0;
     let characterCount = 0;
-    let characterIndexByLeft: number[] = [];
-    let characterIndexByRight: number[] = [];
+    const characterIndexByLeft: number[] = [];
+    const characterIndexByRight: number[] = [];
     for (let i = 0; i < commonStrings.length; ++i) {
       characterIndexByLeft.push(-1);
       characterIndexByRight.push(-1);
@@ -662,7 +682,11 @@ export class CompareSongsComponent implements OnChanges {
             const colorText = new ColorText();
             colorText.text = c;
             wordCompare.text += c;
-            colorText.color = (k < commonStrings.length) && (c == commonStrings[k]);
+            const si = origToSeq.get(characterCount);
+            const inSeq = si !== undefined;
+            const seqChar = inSeq ? seqPack.sequence.charAt(si) : '';
+            colorText.color = inSeq && k < commonStrings.length
+              && charactersEqual(seqChar, commonStrings[k], options);
             if (colorText.color) {
               characterIndexByLeft[k] = characterCount;
               colorText.forwardIndexK = k;
@@ -691,7 +715,11 @@ export class CompareSongsComponent implements OnChanges {
           let charactersI = wordCompare.characters.length - 1;
           while (charactersI >= 0) {
             const colorText = wordCompare.characters[charactersI];
-            colorText.backwardColor = (0 <= k) && (colorText.text == commonStrings[k]);
+            const si = origToSeq.get(characterCount);
+            const inSeq = si !== undefined;
+            const seqChar = inSeq ? seqPack.sequence.charAt(si) : '';
+            colorText.backwardColor = inSeq && 0 <= k
+              && charactersEqual(seqChar, commonStrings[k], options);
             if (colorText.backwardColor) {
               characterIndexByRight[k] = characterCount;
               --k;
@@ -717,7 +745,6 @@ export class CompareSongsComponent implements OnChanges {
       this.bestCombination[lastSameIndex] = characterIndexByLeft[lastSameIndex];
     }
     let nextSameIndex = this.getNextSame(lastSameIndex + 1, characterIndexByLeft, characterIndexByRight);
-    this.textString = a;
     this.commonString = commonStrings;
     this.getBestCombination(lastSameIndex + 1, nextSameIndex - 1, characterIndexByLeft, characterIndexByRight);
     while (nextSameIndex >= 0 && nextSameIndex < characterIndexByLeft.length) {
@@ -746,12 +773,16 @@ export class CompareSongsComponent implements OnChanges {
           let charactersI = wordCompare.characters.length - 1;
           while (charactersI >= 0) {
             const colorText = wordCompare.characters[charactersI];
-            colorText.color = (0 <= k) && characterCount == this.bestCombination[k];
-            if (colorText.color) {
-              --k;
+            if (seqPack.ignoredOrigIndices.has(characterCount)) {
+              colorText.color = true;
             } else {
-              wordCompare.color = false;
-              lineCompare.color = false;
+              colorText.color = (0 <= k) && characterCount == this.bestCombination[k];
+              if (colorText.color) {
+                --k;
+              } else {
+                wordCompare.color = false;
+                lineCompare.color = false;
+              }
             }
             --characterCount;
             --charactersI;
@@ -797,7 +828,9 @@ export class CompareSongsComponent implements OnChanges {
 
   private back(k: number, i: number) {
     for (; i <= this.maxI - (this.maxK - k); ++i) {
-      if (this.commonString[k] == this.textString[i]) {
+      const si = this.alignOrigToSeq.get(i);
+      if (si !== undefined
+        && charactersEqual(this.commonString[k], this.alignCompareSequence.charAt(si), this.alignNormalizeOptions)) {
         this.v[k] = i;
         if (k == this.maxK) {
           let changePoint = this.getCombinationChangePoint();

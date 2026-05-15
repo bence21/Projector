@@ -1037,6 +1037,7 @@ public class SongResource {
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/api/songs/versionGroup/{id}")
+    @Transactional
     public List<SongDTO> getSongsByVersionGroup(@PathVariable("id") String id) {
         List<Song> allByVersionGroup = songService.findAllByVersionGroup(id);
         return songAssembler.createDtoList(allByVersionGroup);

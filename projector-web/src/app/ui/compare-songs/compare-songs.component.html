@@ -1,7 +1,57 @@
-<mat-checkbox [checked]="repeatChorus" (change)="changeRepeatChorus()">
-  Repeat chorus
-</mat-checkbox>
-<h4>Matches: {{percentage*100 | number :'1.0-2'}}%</h4>
+<div class="compare-controls-row">
+  <mat-slide-toggle class="exact-diff-toggle" [checked]="compareSettings.strictDiff"
+                    (change)="changeStrictDiff($event.checked)" color="primary">
+    Exact diff
+  </mat-slide-toggle>
+  <span class="match-percent">Matches: {{percentage*100 | number :'1.0-2'}}%</span>
+  <mat-expansion-panel class="compare-options-panel">
+    <mat-expansion-panel-header>
+      <mat-panel-title>Compare options</mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <div class="compare-options-body">
+      <mat-checkbox class="full-width-option" [checked]="compareSettings.repeatChorus" (change)="changeRepeatChorus()">
+        Repeat chorus
+      </mat-checkbox>
+
+      <h5 class="compare-options-subtitle">Text matching</h5>
+      <div class="compare-options-grid">
+        <mat-checkbox [checked]="compareSettings.ignoreCase" [disabled]="normalizationOptionsDisabled()"
+                      (change)="changeIgnoreCase($event.checked)">
+          Ignore case
+        </mat-checkbox>
+        <mat-checkbox [checked]="compareSettings.ignoreAccents" [disabled]="normalizationOptionsDisabled()"
+                      (change)="changeIgnoreAccents($event.checked)">
+          Ignore accents
+        </mat-checkbox>
+        <mat-checkbox [checked]="compareSettings.ignorePunctuation" [disabled]="normalizationOptionsDisabled()"
+                      (change)="changeIgnorePunctuation($event.checked)">
+          Ignore punctuation
+        </mat-checkbox>
+        <mat-checkbox [checked]="compareSettings.ignoreAnnotations" [disabled]="normalizationOptionsDisabled()"
+                      (change)="changeIgnoreAnnotations($event.checked)">
+          Ignore annotations
+        </mat-checkbox>
+        <mat-checkbox [checked]="compareSettings.ignoreNumbers" [disabled]="normalizationOptionsDisabled()"
+                      (change)="changeIgnoreNumbers($event.checked)">
+          Ignore numbers
+        </mat-checkbox>
+        <mat-checkbox [checked]="compareSettings.normalizeWhitespace" [disabled]="normalizationOptionsDisabled()"
+                      (change)="changeNormalizeWhitespace($event.checked)">
+          Normalize whitespace
+        </mat-checkbox>
+        <mat-checkbox class="grid-span-2" [checked]="compareSettings.normalizeQuotes"
+                      [disabled]="normalizationOptionsDisabled()" (change)="changeNormalizeQuotes($event.checked)">
+          Normalize apostrophes / quotes
+        </mat-checkbox>
+      </div>
+    </div>
+  </mat-expansion-panel>
+</div>
+<p *ngIf="compareSettings.strictDiff" class="compare-hint">
+  Normalization options are paused. Turn off Exact diff to use them again.
+</p>
+
 <mat-grid-list cols="2" rowHeight="700px">
   <mat-grid-tile [colspan]="1" [rowspan]="1">
     <mat-card class="example-card">
@@ -53,10 +103,10 @@
           {{m_secondSong.title + " - "}}<a href="/#/song/{{m_secondSong.uuid}}" target="_blank">{{'Open'}}</a>
         </mat-card-title>
       </mat-card-header>
-      <div *ngIf="conditionForShowingCollection() && rightCollections != undefined">
-        <app-song-collection-lines [collections]="rightCollections"></app-song-collection-lines>
-      </div>
       <mat-card-content [style.overflow]="'auto'" [style.height.px]="'600'">
+        <div *ngIf="conditionForShowingCollection() && rightCollections != undefined">
+          <app-song-collection-lines [collections]="rightCollections"></app-song-collection-lines>
+        </div>
         <mat-card *ngFor="let songVerse of m_secondSong.getVerses()">
           <mat-card-content>
             <div *ngFor="let lineCompare of songVerse.lineCompareLines">
