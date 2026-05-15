@@ -48,6 +48,20 @@ public interface SongRepository extends CrudRepository<Song, Long> {
             @Param("modified") Date modified,
             @Param("ids") Collection<Long> ids);
 
+    @Modifying(clearAutomatically = true)
+    @Query("update Song s set s.views = :views, s.lastIncrementViewDate = :lastIncrementViewDate where s.uuid = :uuid")
+    void updateViews(
+            @Param("uuid") String uuid,
+            @Param("views") long views,
+            @Param("lastIncrementViewDate") Date lastIncrementViewDate);
+
+    @Modifying(clearAutomatically = true)
+    @Query("update Song s set s.favourites = :favourites, s.lastIncrementFavouritesDate = :lastIncrementFavouritesDate where s.uuid = :uuid")
+    void updateFavourites(
+            @Param("uuid") String uuid,
+            @Param("favourites") long favourites,
+            @Param("lastIncrementFavouritesDate") Date lastIncrementFavouritesDate);
+
     @Query(value = "SELECT DISTINCT s.* FROM song s " +
             "JOIN song_verse v ON s.id = v.song_id " +
             "WHERE (s.is_back_up <> 1 or s.is_back_up is null)" +

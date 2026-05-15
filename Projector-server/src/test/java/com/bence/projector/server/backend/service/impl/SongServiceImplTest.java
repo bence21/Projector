@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 public class SongServiceImplTest extends BaseServiceTest {
 
@@ -35,10 +36,10 @@ public class SongServiceImplTest extends BaseServiceTest {
 
     private static Language getLanguage(LanguageService languageService) {
         Language language = new Language();
-        language.setEnglishName("Test language");
-        language.setNativeName("Teszt");
-        languageService.save(language);
-        return languageService.findAll().get(0);
+        String suffix = UUID.randomUUID().toString();
+        language.setEnglishName("Test language " + suffix);
+        language.setNativeName("Teszt " + suffix.substring(0, 8));
+        return languageService.save(language);
     }
 
     public static List<SongVerse> getSongVerses() {
@@ -62,16 +63,47 @@ public class SongServiceImplTest extends BaseServiceTest {
         Assert.assertEquals(0, songs.size());
     }
 
+    @Test
     public void testDeleteByUuid() {
+        Song song = getASong(languageService);
+        songService.save(song);
+        String uuid = song.getUuid();
+        Assert.assertNotNull(uuid);
+        songService.deleteByUuid(uuid);
+        Assert.assertNull(songService.findOneByUuid(uuid));
     }
 
+    @Test
     public void testDelete() {
+        Song song = getASong(languageService);
+        Song saved = songService.save(song);
+        Long id = saved.getId();
+        Assert.assertNotNull(id);
+        songService.delete(id);
+        Assert.assertNull(songService.findOne(id));
     }
 
+    @Test
     public void testFindOne() {
+        Song song = getASong(languageService);
+        Song saved = songService.save(song);
+        Song found = songService.findOne(saved.getId());
+        Assert.assertNotNull(found);
+        Assert.assertEquals(saved.getUuid(), found.getUuid());
+        Assert.assertEquals(song.getTitle(), found.getTitle());
+        songService.deleteByUuid(saved.getUuid());
     }
 
+    @Test
     public void testFindOneByUuid() {
+        Song song = getASong(languageService);
+        Song saved = songService.save(song);
+        String uuid = saved.getUuid();
+        Song found = songService.findOneByUuid(uuid);
+        Assert.assertNotNull(found);
+        Assert.assertEquals(saved.getId(), found.getId());
+        Assert.assertEquals(song.getTitle(), found.getTitle());
+        songService.deleteByUuid(uuid);
     }
 
     @Test

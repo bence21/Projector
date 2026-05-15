@@ -216,6 +216,14 @@ public class Song extends AbstractModel {
         return views;
     }
 
+    public void setViews(long views) {
+        this.views = views;
+    }
+
+    public Date getLastIncrementViewDate() {
+        return lastIncrementViewDate == null ? null : (Date) lastIncrementViewDate.clone();
+    }
+
     public void setLastIncrementViewDate(Date lastIncrementViewDate) {
         this.lastIncrementViewDate = lastIncrementViewDate;
     }
@@ -282,6 +290,10 @@ public class Song extends AbstractModel {
         this.youtubeUrl = youtubeUrl;
     }
 
+    public Date getLastIncrementFavouritesDate() {
+        return lastIncrementFavouritesDate == null ? null : (Date) lastIncrementFavouritesDate.clone();
+    }
+
     public void setLastIncrementFavouritesDate(Date lastIncrementFavouritesDate) {
         this.lastIncrementFavouritesDate = lastIncrementFavouritesDate;
     }
@@ -292,6 +304,10 @@ public class Song extends AbstractModel {
 
     public long getFavourites() {
         return favourites;
+    }
+
+    public void setFavourites(long favourites) {
+        this.favourites = favourites;
     }
 
     public String getVerseOrder() {
@@ -316,6 +332,9 @@ public class Song extends AbstractModel {
         for (String s : split) {
             short index = 0;
             List<SongVerse> songVerses = getVerses();
+            if (songVerses == null) {
+                continue;
+            }
             for (SongVerse songVerse : songVerses) {
                 String type = songVerse.getType();
                 if (type != null && type.equalsIgnoreCase(s)) {
@@ -355,9 +374,14 @@ public class Song extends AbstractModel {
 
     public List<Short> getVerseOrderList() {
         if (verses != null && verseOrderWasSaved()) {
+            List<SongVerseOrderListItem> orderItems = getSongVerseOrderListItems();
+            if (orderItems == null) {
+                orderItems = new ArrayList<>();
+                setSongVerseOrderListItems(orderItems);
+            }
             for (short index = 0; index < verses.size(); ++index) {
                 if (!containsIndex(index)) {
-                    addToVerseOrderList(index, verseOrderList);
+                    addToVerseOrderList(index, orderItems);
                 }
             }
         } else if (verseOrderWasNotSaved()) {

@@ -35,6 +35,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -229,20 +230,34 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (oneByUuid == null) {
             return;
         }
-        deleteNotFavouriteFavouriteSongs(oneByUuid);
-        handleDeleteForBackup(oneByUuid);
         delete(oneByUuid.getId());
+    }
+
+    @Override
+    public void delete(Long id) {
+        if (id == null) {
+            return;
+        }
+        Optional<Song> optional = songRepository.findById(id);
+        if (optional.isEmpty()) {
+            return;
+        }
+        Song song = optional.get();
+        String uuid = song.getUuid();
+        deleteNotFavouriteFavouriteSongs(song);
+        handleDeleteForBackup(song);
+        songVerseOrderListItemRepository.deleteBySong(song);
+        songVerseService.deleteBySong(song);
+        super.delete(id);
         ConcurrentHashMap<String, Song> songsHashMap = getSongsHashMap();
-        if (songsHashMap != null) {
-            if (songsHashMap.containsKey(id)) {
-                Song song = songsHashMap.get(id);
-                Language language = song.getLanguage();
-                if (language != null) {
-                    ConcurrentHashMap<String, Song> songsHashMapByLanguage = getSongsHashMapByLanguage(language);
-                    songsHashMapByLanguage.remove(id);
-                }
-                songsHashMap.remove(id);
+        if (songsHashMap != null && songsHashMap.containsKey(uuid)) {
+            Song cached = songsHashMap.get(uuid);
+            Language language = cached.getLanguage();
+            if (language != null) {
+                ConcurrentHashMap<String, Song> byLanguage = getSongsHashMapByLanguage(language);
+                byLanguage.remove(uuid);
             }
+            songsHashMap.remove(uuid);
         }
     }
 
@@ -882,6 +897,57 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     @Override
+    public Song findOneByUuidWithFreshCounters(String uuid) {
+        if (uuid == null) {
+            return null;
+        }
+        Song persisted = songRepository.findOneByUuid(uuid);
+        if (persisted == null) {
+            return null;
+        }
+        Song song = getFromMapOrPutInMap(persisted);
+        if (song != persisted) {
+            syncCounterFieldsFromDatabase(persisted, song);
+        }
+        return song;
+    }
+
+    private static void syncCounterFieldsFromDatabase(Song persisted, Song target) {
+        target.setViews(persisted.getViews());
+        target.setFavourites(persisted.getFavourites());
+        target.setLastIncrementViewDate(persisted.getLastIncrementViewDate());
+        target.setLastIncrementFavouritesDate(persisted.getLastIncrementFavouritesDate());
+    }
+
+    @Override
+    @Transactional
+    public Song incrementViews(String uuid) {
+        Song song = findOneByUuidWithFreshCounters(uuid);
+        if (song == null) {
+            return null;
+        }
+        song.incrementViews();
+        Date now = new Date();
+        song.setLastIncrementViewDate(now);
+        songRepository.updateViews(uuid, song.getViews(), now);
+        return song;
+    }
+
+    @Override
+    @Transactional
+    public Song incrementFavourites(String uuid) {
+        Song song = findOneByUuidWithFreshCounters(uuid);
+        if (song == null) {
+            return null;
+        }
+        song.incrementFavourites();
+        Date now = new Date();
+        song.setLastIncrementFavouritesDate(now);
+        songRepository.updateFavourites(uuid, song.getFavourites(), now);
+        return song;
+    }
+
+    @Override
     public void startThreadFindForSong(String uuid) {
         if (uuid == null) {
             return;
@@ -918,12 +984,32 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return filtered;
     }
 
+    /**
+     * If the song is already cached by UUID, returns that cached instance; otherwise returns the passed-in {@code song}.
+     * Does not insert into the map (bulk callers like {@link #getAllServiceSongs}) for now.
+     */
     private Song getFromMapOrAddToMap(Song song) {
         ConcurrentHashMap<String, Song> songsHashMap = getSongsHashMap();
         String id = song.getUuid();
         if (songsHashMap.containsKey(id)) {
             return songsHashMap.get(id);
         }
+        return song;
+    }
+
+    /**
+     * Returns the cached song when present; otherwise adds {@code song} to the in-memory map.
+     */
+    private Song getFromMapOrPutInMap(Song song) {
+        if (song == null || song.getUuid() == null) {
+            return song;
+        }
+        ConcurrentHashMap<String, Song> songsHashMap = getSongsHashMap();
+        Song cached = songsHashMap.get(song.getUuid());
+        if (cached != null) {
+            return cached;
+        }
+        putInMapAndCheckLastModifiedDate(song);
         return song;
     }
 
@@ -936,13 +1022,14 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
 
         // Canonicalize Unicode for verse text
         for (SongVerse verse : songVerses) {
-            if (verse.getText() != null) {
+            if (verse != null && verse.getText() != null) {
                 verse.setText(UnicodeTextNormalizer.canonicalizeForPersistence(verse.getText()));
             }
         }
     }
 
     @Override
+    @Transactional
     public Song save(Song song) {
         if (song.getTitle() == null || song.getTitle().trim().isEmpty()) {
             throw new ServiceException("No title", HttpStatus.PRECONDITION_FAILED);
@@ -969,6 +1056,9 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         try {
             List<SongVerse> verses = new ArrayList<>(songVerses);
             List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
+            if (songVerseOrderListItems == null) {
+                songVerseOrderListItems = new ArrayList<>();
+            }
             songRepository.save(song);
             songVerseService.deleteBySong(song);
             songVerseService.save(verses);

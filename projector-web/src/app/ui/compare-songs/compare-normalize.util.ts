@@ -4,6 +4,7 @@ export interface CompareNormalizeOptions {
   ignoreCase: boolean;
   ignoreAccents: boolean;
   ignorePunctuation: boolean;
+  ignoreSlashPipeBackslash: boolean;
   ignoreAnnotations: boolean;
   ignoreNumbers: boolean;
   normalizeWhitespace: boolean;
@@ -17,6 +18,7 @@ export interface CompareSongsSettings {
   ignoreCase: boolean;
   ignoreAccents: boolean;
   ignorePunctuation: boolean;
+  ignoreSlashPipeBackslash: boolean;
   ignoreAnnotations: boolean;
   ignoreNumbers: boolean;
   normalizeWhitespace: boolean;
@@ -38,6 +40,7 @@ export function defaultCompareSongsSettings(): CompareSongsSettings {
     ignoreCase: true,
     ignoreAccents: true,
     ignorePunctuation: false,
+    ignoreSlashPipeBackslash: false,
     ignoreAnnotations: false,
     ignoreNumbers: false,
     normalizeWhitespace: true,
@@ -51,6 +54,7 @@ export function getEffectiveNormalizeOptions(settings: CompareSongsSettings): Co
       ignoreCase: false,
       ignoreAccents: false,
       ignorePunctuation: false,
+      ignoreSlashPipeBackslash: false,
       ignoreAnnotations: false,
       ignoreNumbers: false,
       normalizeWhitespace: false,
@@ -61,6 +65,7 @@ export function getEffectiveNormalizeOptions(settings: CompareSongsSettings): Co
     ignoreCase: settings.ignoreCase,
     ignoreAccents: settings.ignoreAccents,
     ignorePunctuation: settings.ignorePunctuation,
+    ignoreSlashPipeBackslash: settings.ignoreSlashPipeBackslash,
     ignoreAnnotations: settings.ignoreAnnotations,
     ignoreNumbers: settings.ignoreNumbers,
     normalizeWhitespace: settings.normalizeWhitespace,
@@ -137,6 +142,12 @@ function isIgnorablePunctuation(c: string): boolean {
   return PUNCTUATION_CHARS.has(c);
 }
 
+const SLASH_PIPE_BACKSLASH = new Set<string>(['/', '|', '\\']);
+
+function isSlashPipeOrBackslash(c: string): boolean {
+  return SLASH_PIPE_BACKSLASH.has(c);
+}
+
 function stripAccentsChar(c: string): string {
   return c.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
@@ -188,6 +199,12 @@ export function buildComparisonSequence(text: string, options: CompareNormalizeO
     }
 
     if (options.ignorePunctuation && isIgnorablePunctuation(c)) {
+      ignoredOrigIndices.add(i);
+      i++;
+      continue;
+    }
+
+    if (options.ignoreSlashPipeBackslash && isSlashPipeOrBackslash(c)) {
       ignoredOrigIndices.add(i);
       i++;
       continue;

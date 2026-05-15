@@ -901,11 +901,8 @@ public class SongResource {
     @RequestMapping(method = RequestMethod.PUT, value = "/api/song/{songId}/incViews")
     public ResponseEntity<Object> incrementViews(@PathVariable("songId") String songId, HttpServletRequest httpServletRequest) {
         saveStatistics(httpServletRequest, statisticsService);
-        Song song = songRepository.findOneByUuid(songId);
+        Song song = songService.incrementViews(songId);
         if (song != null) {
-            song.incrementViews();
-            song.setLastIncrementViewDate(new Date());
-            songService.save(song);
             return new ResponseEntity<>(songAssembler.createDto(song), HttpStatus.ACCEPTED);
         }
         return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);
@@ -914,11 +911,8 @@ public class SongResource {
     @RequestMapping(method = RequestMethod.PUT, value = "/api/song/{songId}/incFavourites")
     public ResponseEntity<Object> incrementFavourites(@PathVariable("songId") String songId, HttpServletRequest httpServletRequest) {
         saveStatistics(httpServletRequest, statisticsService);
-        Song song = songRepository.findOneByUuid(songId);
+        Song song = songService.incrementFavourites(songId);
         if (song != null) {
-            song.incrementFavourites();
-            song.setLastIncrementFavouritesDate(new Date());
-            songService.save(song);
             return new ResponseEntity<>(songAssembler.createDto(song), HttpStatus.ACCEPTED);
         }
         return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);

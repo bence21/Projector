@@ -28,6 +28,10 @@
                       (change)="changeIgnorePunctuation($event.checked)">
           Ignore punctuation
         </mat-checkbox>
+        <mat-checkbox [checked]="compareSettings.ignoreSlashPipeBackslash" [disabled]="normalizationOptionsDisabled()"
+                      (change)="changeIgnoreSlashPipeBackslash($event.checked)">
+          Ignore / | &#92;
+        </mat-checkbox>
         <mat-checkbox [checked]="compareSettings.ignoreAnnotations" [disabled]="normalizationOptionsDisabled()"
                       (change)="changeIgnoreAnnotations($event.checked)">
           Ignore annotations

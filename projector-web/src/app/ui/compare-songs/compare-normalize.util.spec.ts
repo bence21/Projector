@@ -11,6 +11,7 @@ describe('compare-normalize.util', () => {
     ignoreCase: false,
     ignoreAccents: false,
     ignorePunctuation: false,
+    ignoreSlashPipeBackslash: false,
     ignoreAnnotations: false,
     ignoreNumbers: false,
     normalizeWhitespace: false,
@@ -67,6 +68,14 @@ describe('compare-normalize.util', () => {
       expect(lcs.length).toBe(1);
     });
 
+    it('marks slash, pipe, and backslash as ignored when enabled', () => {
+      const seq = buildComparisonSequence('a/b|c\\d', { ...none(), ignoreSlashPipeBackslash: true });
+      expect(seq.sequence).toBe('abcd');
+      expect(seq.ignoredOrigIndices.has(1)).toBe(true);
+      expect(seq.ignoredOrigIndices.has(3)).toBe(true);
+      expect(seq.ignoredOrigIndices.has(5)).toBe(true);
+    });
+
     it('marks punctuation as ignored when ignorePunctuation is enabled', () => {
       const seq = buildComparisonSequence('Hello, world!', { ...none(), ignorePunctuation: true });
       expect(seq.sequence).toBe('Hello world');
@@ -86,6 +95,7 @@ describe('compare-normalize.util', () => {
       const off = getEffectiveNormalizeOptions(s);
       expect(off.ignoreCase).toBe(false);
       expect(off.ignoreAccents).toBe(false);
+      expect(off.ignoreSlashPipeBackslash).toBe(false);
     });
   });
 });

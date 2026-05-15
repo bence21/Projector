@@ -594,8 +594,13 @@ public class SetLanguages {
 
     public static void addWordsInCollection(Song song, Collection<SongWord> words) {
         List<SongVerse> songVerses = song.getVerses();
+        if (songVerses == null) {
+            return;
+        }
         for (SongVerse songVerse : songVerses) {
-            addWordsFromSongVerse(words, songVerse);
+            if (songVerse != null) {
+                addWordsFromSongVerse(words, songVerse);
+            }
         }
     }
 

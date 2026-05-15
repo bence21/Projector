@@ -65,6 +65,9 @@ public class NormalizedWordBunchCacheServiceImpl implements NormalizedWordBunchC
 
     @Override
     public Map<String, ReviewedWord> getReviewedWordMapForLanguage(Language language) {
+        if (language == null || language.getUuid() == null) {
+            return Map.of();
+        }
         String languageUuid = language.getUuid();
         Map<String, ReviewedWord> cached = reviewedWordMapCache.get(languageUuid);
         if (cached != null) {

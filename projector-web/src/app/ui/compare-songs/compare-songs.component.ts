@@ -541,6 +541,11 @@ export class CompareSongsComponent implements OnChanges {
     this.persistSettingsAndRecalculate();
   }
 
+  changeIgnoreSlashPipeBackslash(checked: boolean) {
+    this.compareSettings.ignoreSlashPipeBackslash = checked;
+    this.persistSettingsAndRecalculate();
+  }
+
   changeIgnoreAnnotations(checked: boolean) {
     this.compareSettings.ignoreAnnotations = checked;
     this.persistSettingsAndRecalculate();

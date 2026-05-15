@@ -71,6 +71,23 @@ public interface SongService extends BaseService<Song> {
 
     Song findOneByUuid(String uuid);
 
+    /**
+     * Loads counter fields (views, favourites and their last-increment dates) from the database.
+     * When the song is cached in memory, those fields are refreshed on the cached instance so
+     * subsequent #save(Song) updates both DB and cache with accurate values.
+     */
+    Song findOneByUuidWithFreshCounters(String uuid);
+
+    /**
+     * Increments view count using fresh DB values, persists only counter fields, and updates the in-memory cache.
+     */
+    Song incrementViews(String uuid);
+
+    /**
+     * Increments favourite count using fresh DB values, persists only counter fields, and updates the in-memory cache.
+     */
+    Song incrementFavourites(String uuid);
+
     void startThreadFindForSong(String uuid);
 
     Song reloadSong(Song song);
