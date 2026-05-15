@@ -16,3 +16,14 @@ ul {
 .meta-column {
   flex: 1 1 0;
 }
+
+.quick-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.quick-review-actions .secondary-action {
+  margin-right: 0;
+}

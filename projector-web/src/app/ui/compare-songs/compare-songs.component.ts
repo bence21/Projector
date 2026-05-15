@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges, ViewChildren, QueryList, ElementRef } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { ColorText, Song, SongService, LineCompare, LineWord, WordCompare } from "../../services/song-service.service";
 import { SongListComponent } from '../song-list/song-list.component';
 import { SongCollection } from '../../models/songCollection';
@@ -24,6 +24,9 @@ import {
 })
 export class CompareSongsComponent implements OnChanges {
 
+  /** True when normalized lyrics match under current compare settings (LCS covers both sequences). */
+  @Output() textsMatchChange = new EventEmitter<boolean>();
+
   m_song: Song;
   m_secondSong: Song;
   originalSong1: Song;
@@ -47,6 +50,7 @@ export class CompareSongsComponent implements OnChanges {
   private alignCompareSequence = '';
   private alignOrigToSeq = new Map<number, number>();
   private alignNormalizeOptions: CompareNormalizeOptions;
+  private lastEmittedTextsMatch: boolean | undefined;
 
   constructor(
     public auth: AuthService,
@@ -638,6 +642,13 @@ export class CompareSongsComponent implements OnChanges {
 
     this.setColorTextByCommonStringToSong(commonStrings, a, this.m_song, seqA, normalizeOpts);
     this.setColorTextByCommonStringToSong(commonStrings, b, this.m_secondSong, seqB, normalizeOpts);
+
+    const textsMatch =
+      commonStrings.length === seqA.sequence.length && commonStrings.length === seqB.sequence.length;
+    if (this.lastEmittedTextsMatch !== textsMatch) {
+      this.lastEmittedTextsMatch = textsMatch;
+      this.textsMatchChange.emit(textsMatch);
+    }
   }
 
   private commonString;
