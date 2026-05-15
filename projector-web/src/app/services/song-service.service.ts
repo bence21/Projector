@@ -165,7 +165,7 @@ export class Song extends BaseModel {
   commonCharacterCount = 0;
   repeatChorus: boolean = true;
   reviewerErased: boolean = false;
-  hasUnsolvedWords: boolean = false;
+  hasUnsolvedWords?: boolean;
   /** When true, song is not public (banned/rejected words) */
   hasBlockingWordIssues?: boolean;
   wordQualityScore?: number;

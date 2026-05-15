@@ -55,3 +55,92 @@
   background-color: #f0f8ff; /* Light blue */
   font-weight: bold;
 }
+
+.word-quality-summary-row {
+  cursor: pointer;
+}
+
+.word-quality-summary-row:hover .word-quality-summary-text {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.word-quality-summary-cell {
+  padding-top: 0.25em;
+  padding-bottom: 0.25em;
+}
+
+.word-quality-summary-text {
+  font-size: 0.9em;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.word-quality-chevron {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  margin-left: 0.25em;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.word-quality-details-row td {
+  padding-top: 0;
+}
+
+.word-quality-details-cell {
+  padding-left: 0.5em;
+}
+
+.word-quality-details {
+  width: 100%;
+  font-size: 0.9em;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.word-quality-details td {
+  padding: 0.35em 0.5em 0.35em 0;
+  vertical-align: top;
+}
+
+.word-quality-details td:first-child {
+  color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  padding-right: 1em;
+}
+
+.word-quality-muted {
+  color: rgba(0, 0, 0, 0.54);
+  font-style: italic;
+}
+
+.word-quality-edit-hint {
+  display: block;
+  font-size: 0.85em;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.45);
+  margin-top: 0.2em;
+}
+
+.word-quality-detail-tier {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 0.9em;
+}
+
+.word-quality-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 0.35em;
+  max-width: 200px;
+}
+
+.word-quality-track-detail .word-quality-fill {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.word-quality-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.35s ease;
+}

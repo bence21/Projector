@@ -17,6 +17,9 @@ import { SongCollectionElementComponent } from '../song-collection-element/song.
 import { checkAuthenticationError, ErrorUtil, generalError, openAuthenticateDialog } from '../../util/error-util';
 import { YoutubeIdCheckResult, YoutubeIdCheckResultType } from '../youtube-id-check/youtube-id-check.component';
 import { extractYouTubeVideoId } from '../../util/youtube.util';
+import { SongWordValidationService } from '../../services/song-word-validation.service';
+import { SongWordValidationResult } from '../../models/songWordValidationResult';
+import { ReviewedWordStatus } from '../../models/reviewedWord';
 
 @Component({
   selector: 'app-song',
@@ -49,6 +52,9 @@ export class SongComponent implements OnInit, OnDestroy {
   hasReviewerRoleForSong: boolean;
   routerSubscription: Subscription;
   songsByVersionGroupSet: Set<""> = null;
+  liveWordValidation: SongWordValidationResult = null;
+  wordQualityLoading = false;
+  wordQualityDetailsExpanded = false;
 
   constructor(private activatedRoute: ActivatedRoute,
     private songService: SongService,
@@ -60,7 +66,8 @@ export class SongComponent implements OnInit, OnDestroy {
     private songCollectionService: SongCollectionDataService,
     private suggestionDataService: SuggestionDataService,
     private meta: Meta,
-    public sanitizer: DomSanitizer) {
+    public sanitizer: DomSanitizer,
+    private songWordValidationService: SongWordValidationService) {
     auth.getUserFromLocalStorage();
     setInterval(() => this.refreshMergeSong(), 2000);
     this.refreshMergeSong();
@@ -502,6 +509,9 @@ export class SongComponent implements OnInit, OnDestroy {
     this.songService.hasReviewerRoleForSong(this.song).subscribe(
       (booleanResponse) => {
         this.hasReviewerRoleForSong = booleanResponse.response;
+        if (this.hasReviewerRoleForSong) {
+          this.loadLiveWordQuality();
+        }
         this.showSimilarOnStart();
       },
       (err) => {
@@ -531,5 +541,145 @@ export class SongComponent implements OnInit, OnDestroy {
 
   hasPermissionToAddSongsToCollection(): Boolean {
     return this.auth.getUser().isAdmin() || this.hasReviewerRoleForSong;
+  }
+
+  loadLiveWordQuality(): void {
+    if (!this.song || !this.song.languageDTO || !this.hasReviewerRoleForSong) {
+      return;
+    }
+    if (!this.songHasText()) {
+      this.liveWordValidation = null;
+      return;
+    }
+    this.wordQualityLoading = true;
+    this.songWordValidationService.validateWords(this.song).subscribe(
+      (result) => {
+        this.liveWordValidation = result;
+        this.wordQualityLoading = false;
+      },
+      () => {
+        this.wordQualityLoading = false;
+      }
+    );
+  }
+
+  private songHasText(): boolean {
+    const verses = this.song.songVerseDTOS;
+    if (!verses || verses.length === 0) {
+      return false;
+    }
+    return verses.some(v => v.text && v.text.trim().length > 0);
+  }
+
+  getUnreviewedWordCount(): number | null {
+    if (!this.liveWordValidation || !this.liveWordValidation.wordsWithStatus) {
+      return null;
+    }
+    return this.liveWordValidation.wordsWithStatus.filter(
+      w => w.status === ReviewedWordStatus.UNREVIEWED
+    ).length;
+  }
+
+  getDisplayBlockingWordIssues(): boolean | null | undefined {
+    if (this.liveWordValidation != null) {
+      return this.liveWordValidation.hasBlockingIssues;
+    }
+    return this.song.hasBlockingWordIssues;
+  }
+
+  getDisplayWordQualityScore(): number | null | undefined {
+    if (this.liveWordValidation != null && this.liveWordValidation.wordQualityScore != null) {
+      return this.liveWordValidation.wordQualityScore;
+    }
+    return this.song.wordQualityScore;
+  }
+
+  getWordQualitySummary(): string {
+    if (this.wordQualityLoading) {
+      return 'Words: checking…';
+    }
+    let status: string;
+    if (this.getDisplayBlockingWordIssues() === true) {
+      status = 'publication blocked';
+    } else {
+      const unreviewed = this.getUnreviewedWordCount();
+      if (unreviewed !== null && unreviewed > 0) {
+        status = unreviewed === 1 ? '1 needs review' : unreviewed + ' need review';
+      } else if (unreviewed !== null && unreviewed === 0) {
+        status = 'OK';
+      } else if (this.song.hasUnsolvedWords === true) {
+        status = 'needs review';
+      } else if (this.song.hasUnsolvedWords === false) {
+        status = 'OK';
+      } else {
+        status = 'not checked yet';
+      }
+    }
+    const score = this.getDisplayWordQualityScore();
+    if (score != null) {
+      return 'Words: ' + status + ' · quality ' + score + '/100';
+    }
+    return 'Words: ' + status;
+  }
+
+  formatUnsolvedWordsStatus(): string {
+    if (this.wordQualityLoading) {
+      return 'Checking…';
+    }
+    const count = this.getUnreviewedWordCount();
+    if (count !== null) {
+      if (count > 0) {
+        return count === 1 ? '1 word still needs review' : count + ' words still need review';
+      }
+      return 'All words reviewed';
+    }
+    if (this.song.hasUnsolvedWords === true) {
+      return 'Some words still need review';
+    }
+    if (this.song.hasUnsolvedWords === false) {
+      return 'All words reviewed';
+    }
+    return 'Not checked yet';
+  }
+
+  formatBlockingWordIssuesStatus(): string {
+    if (this.wordQualityLoading) {
+      return 'Checking…';
+    }
+    const blocking = this.getDisplayBlockingWordIssues();
+    if (blocking === true) {
+      return 'Banned or rejected words found — blocks publication';
+    }
+    if (blocking === false) {
+      return 'No banned or rejected words';
+    }
+    return 'Not checked yet';
+  }
+
+  getWordQualityScoreValue(score: number | null | undefined): number {
+    if (score == null) {
+      return 0;
+    }
+    return Math.min(Song.WORD_QUALITY_SCORE_SCALE_MAX, Math.max(0, score));
+  }
+
+  getWordQualityScoreLabel(score: number | null | undefined): string {
+    if (score == null) {
+      return '';
+    }
+    const value = this.getWordQualityScoreValue(score);
+    if (value >= 80) {
+      return 'Excellent';
+    }
+    if (value >= 60) {
+      return 'Good';
+    }
+    if (value >= 40) {
+      return 'Fair';
+    }
+    if (value >= 20) {
+      return 'Needs attention';
+    }
+    return 'Low';
   }
 }
