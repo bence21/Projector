@@ -80,6 +80,7 @@ import projector.controller.song.util.OrderMethod;
 import projector.controller.song.util.ScheduleSong;
 import projector.controller.song.util.SearchedSong;
 import projector.controller.song.util.SongTextFlow;
+import projector.controller.song.util.SongVersionGroupUtil;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.controller.util.UserService;
@@ -496,17 +497,8 @@ public class SongController {
             selectedSong = selectedSong1;
 
             showVersionsButton.setVisible(false);
-            String versionGroup = selectedSong.getVersionGroup();
-            if (versionGroup == null) {
-                versionGroup = selectedSong.getUuid();
-            }
-            List<Song> allByVersionGroup = null;
-            if (versionGroup != null) {
-                allByVersionGroup = songService.findAllByVersionGroup(versionGroup);
-                if (allByVersionGroup.size() > 1) {
-                    showVersionsButton.setVisible(true);
-                }
-            }
+            List<Song> allByVersionGroup = SongVersionGroupUtil.getVersionAlternatives(selectedSong);
+            showVersionsButton.setVisible(allByVersionGroup.size() > 1);
             checkForFavouriteInVersionGroup(allByVersionGroup, selectedSong);
 
             Scene scene = projectionScreenController.getScene();
@@ -619,7 +611,7 @@ public class SongController {
         int textLineIndex = 0;
         StringBuilder s = new StringBuilder();
         for (String guideLine : guideLines) {
-            if (s.length() > 0) {
+            if (!s.isEmpty()) {
                 s.append("\n");
             }
             s.append(guideLine);
@@ -1640,11 +1632,7 @@ public class SongController {
     private void initializeShowVersionsButton() {
         showVersionsButton.setVisible(false);
         showVersionsButton.setOnAction(event -> {
-            String versionGroup = selectedSong.getVersionGroup();
-            String uuid = selectedSong.getUuid();
-            if (versionGroup == null) {
-                versionGroup = uuid;
-            }
+            String versionGroup = SongVersionGroupUtil.getVersionGroupOrUuid(selectedSong);
             List<Song> allByVersionGroup = songService.findAllByVersionGroup(versionGroup);
             int initialCapacity = allByVersionGroup.size();
             final List<Song> songs = new ArrayList<>(initialCapacity);
@@ -2252,6 +2240,13 @@ public class SongController {
         setFavouriteSongs(songs);
         songs = filterSongsByFavourites(songs);
         return songs;
+    }
+
+    /**
+     * Songs considered when matching pasted schedule lines (same filtering as the search list).
+     */
+    public List<Song> getSongsForScheduleImport() {
+        return getFilteredSongs();
     }
 
     private List<FavouriteSong> getFavouriteSongs() {
@@ -3018,6 +3013,7 @@ public class SongController {
         return null;
     }
 
+    @SuppressWarnings("unused")
     public void newSongButtonOnAction() {
         try {
             FXMLLoader loader = new FXMLLoader();
@@ -3429,6 +3425,7 @@ public class SongController {
         scheduleListView.refresh();
     }
 
+    @SuppressWarnings("unused")
     public void importOpenLPFolderButtonOnAction() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Select OpenLP exported folder");

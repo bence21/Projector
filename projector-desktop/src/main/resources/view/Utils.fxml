@@ -56,6 +56,8 @@
                         </HBox>
                         <HBox alignment="CENTER_LEFT" spacing="10.0">
                             <Button mnemonicParsing="false" onAction="#onGenerateQrButtonEvent" text="%GenerateQr"/>
+                            <Button fx:id="projectQrButton" disable="true" mnemonicParsing="false"
+                                    onAction="#onProjectQrButtonEvent" text="%Display"/>
                             <Button fx:id="saveQrPngButton" disable="true" mnemonicParsing="false"
                                     onAction="#onSaveQrPngButtonEvent" text="%SaveQrPng"/>
                         </HBox>

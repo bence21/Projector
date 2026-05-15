@@ -182,7 +182,7 @@ public class Song extends BaseEntity {
 
     public void setTitle(String title) {
         this.title = trimLongString100(title);
-        strippedTitle = stripAccents(this.title.toLowerCase());
+        strippedTitle = buildStrippedTitle(this.title);
     }
 
     public void setFileText(String fileText) {
@@ -352,7 +352,14 @@ public class Song extends BaseEntity {
     }
 
     public void stripTitle() {
-        strippedTitle = stripAccents(title.toLowerCase());
+        strippedTitle = buildStrippedTitle(title);
+    }
+
+    private static String buildStrippedTitle(String title) {
+        if (title == null) {
+            return "";
+        }
+        return stripAccents(title.toLowerCase()).trim().replaceAll("\\s+", " ");
     }
 
     public String getVersionGroup() {
