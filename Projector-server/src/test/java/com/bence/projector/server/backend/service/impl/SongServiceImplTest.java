@@ -80,6 +80,8 @@ public class SongServiceImplTest extends BaseServiceTest {
         songService.save(song);
         Song song1 = songService.findAll().get(0);
         Assert.assertEquals(song.getTitle(), song1.getTitle());
+        Assert.assertNotNull(song1.getWordQualityScore());
+        Assert.assertTrue(song1.getWordQualityScore() >= 0 && song1.getWordQualityScore() <= 100);
     }
 
     @Test

@@ -23,8 +23,12 @@ public class SongDTO extends BaseDTO {
     private String backUpSongId;
     private Boolean isBackUp;
     private String lastModifiedByUserEmail;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private String verseOrder;
     private Boolean reviewerErased;
+    private Boolean hasUnsolvedWords;
+    private Boolean hasBlockingWordIssues;
+    private Integer wordQualityScore;
 
     public SongDTO() {
     }
@@ -199,5 +203,29 @@ public class SongDTO extends BaseDTO {
 
     public void setReviewerErased(boolean reviewerErased) {
         this.reviewerErased = reviewerErased;
+    }
+
+    public Boolean getHasUnsolvedWords() {
+        return hasUnsolvedWords;
+    }
+
+    public void setHasUnsolvedWords(Boolean hasUnsolvedWords) {
+        this.hasUnsolvedWords = hasUnsolvedWords;
+    }
+
+    public Boolean getHasBlockingWordIssues() {
+        return hasBlockingWordIssues;
+    }
+
+    public void setHasBlockingWordIssues(Boolean hasBlockingWordIssues) {
+        this.hasBlockingWordIssues = hasBlockingWordIssues;
+    }
+
+    public Integer getWordQualityScore() {
+        return wordQualityScore;
+    }
+
+    public void setWordQualityScore(Integer wordQualityScore) {
+        this.wordQualityScore = wordQualityScore;
     }
 }

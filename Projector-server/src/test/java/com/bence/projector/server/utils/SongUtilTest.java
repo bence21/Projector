@@ -274,6 +274,8 @@ public class SongUtilTest {
         song.setReviewerErased(null);
         song.setIsBackUp(null);
         song.setHasUnsolvedWords(null);
+        song.setHasBlockingWordIssues(null);
+        song.setWordQualityScore(null);
         song.setModifiedDate(new Date());
         song.setCreatedDate(new Date());
         song.setVerses(new ArrayList<>());
@@ -282,7 +284,7 @@ public class SongUtilTest {
 
     private static Song nonPublicSong(Long id, String uuid) {
         Song song = publicSong(id, uuid);
-        song.setHasUnsolvedWords(true);
+        song.setHasBlockingWordIssues(true);
         return song;
     }
 

@@ -120,8 +120,10 @@ export function validateWordsAndSave(config: WordValidationConfig): void {
   validationService.validateWords(song).subscribe(
     (validationResult) => {
       const hasBlockingIssues =
-        (validationResult.bannedWords && validationResult.bannedWords.length > 0) ||
-        (validationResult.rejectedWords && validationResult.rejectedWords.length > 0);
+        typeof validationResult.hasBlockingIssues === 'boolean'
+          ? validationResult.hasBlockingIssues
+          : ((validationResult.bannedWords && validationResult.bannedWords.length > 0) ||
+              (validationResult.rejectedWords && validationResult.rejectedWords.length > 0));
 
       if (validationResult.hasIssues) {
         // If song is already public and user is trying to publish, just ask for confirmation

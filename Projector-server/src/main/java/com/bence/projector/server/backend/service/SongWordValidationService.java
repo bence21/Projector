@@ -79,11 +79,14 @@ public class SongWordValidationService {
                 ? computeMixedLanguageMetrics(categories.wordsWithStatus, categories.unreviewedWords, language)
                 : EMPTY_MIXED_LANGUAGE_METRICS;
 
+        int wordQualityScore = SongWordQualityScorer.computeTotalScore(categories.wordsWithStatus);
         return new SongWordValidationResult(
                 categories.unreviewedWords,
                 categories.bannedWords,
                 categories.rejectedWords,
                 categories.hasIssues(),
+                categories.hasBlockingIssues(),
+                wordQualityScore,
                 categories.wordsWithStatus,
                 mixedLanguageMetrics.hasWarning,
                 mixedLanguageMetrics.foreignWordCount,
@@ -103,6 +106,8 @@ public class SongWordValidationService {
                 new ArrayList<>(),
                 new ArrayList<>(),
                 false,
+                false,
+                0,
                 new ArrayList<>(),
                 false,
                 0,
@@ -314,7 +319,11 @@ public class SongWordValidationService {
         final List<WordWithStatus> wordsWithStatus = new ArrayList<>();
 
         boolean hasIssues() {
-            return !unreviewedWords.isEmpty() || !bannedWords.isEmpty() || !rejectedWords.isEmpty();
+            return hasBlockingIssues() || !unreviewedWords.isEmpty();
+        }
+
+        boolean hasBlockingIssues() {
+            return !bannedWords.isEmpty() || !rejectedWords.isEmpty();
         }
     }
 

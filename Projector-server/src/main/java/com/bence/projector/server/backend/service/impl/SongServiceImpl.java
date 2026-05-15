@@ -4,7 +4,6 @@ import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.common.model.SectionType;
 import com.bence.projector.server.backend.model.FavouriteSong;
 import com.bence.projector.server.backend.model.Language;
-import com.bence.projector.server.backend.model.Role;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.model.SongVerseOrderListItem;
@@ -19,14 +18,11 @@ import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongVerseOrderListItemService;
 import com.bence.projector.server.backend.service.SongVerseService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
-import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.utils.StringUtils;
 import com.bence.projector.server.utils.UnicodeTextNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,8 +71,6 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     private FavouriteSongService favouriteSongService;
     @Autowired
     private SongWordValidationService songWordValidationService;
-    @Autowired
-    private UserService userService;
 
     private static boolean containsFavourite(List<FavouriteSong> favouriteSongs) {
         for (FavouriteSong favouriteSong : favouriteSongs) {
@@ -627,7 +621,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     private static String getSelectSongFields() {
-        return "select uuid, title, deleted, is_back_up, reviewer_erased, has_unsolved_words, text, section_type, song_id";
+        return "select uuid, title, deleted, is_back_up, reviewer_erased, has_unsolved_words, has_blocking_word_issues, word_quality_score, text, section_type, song_id";
     }
 
     private String getConditionSqlByLanguage(Language language, String sql) {
@@ -635,7 +629,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (language != null) {
             sql += " and language_id = " + language.getId();
         }
-        sql += " and is_back_up is null";
+        sql += " and (is_back_up is null or is_back_up = 0)";
         sql += " and ((reviewer_erased is null) or (reviewer_erased = 0))";
         return sql;
     }
@@ -650,7 +644,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         if (language != null) {
             sql += " and language_id = " + language.getId();
         }
-        sql += " and is_back_up is null";
+        sql += " and (is_back_up is null or is_back_up = 0)";
         sql += " and ((reviewer_erased is null) or (reviewer_erased = 0))";
         return sql;
     }
@@ -659,14 +653,14 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
      * SQL that is true for a {@code song} row exactly when {@link Song#isPublic()} would be true
      * for a hydrated {@link Song} (same column semantics; use {@code song.} prefix for joins).
      * <p>
-     * Mirrors: {@code !isReviewerErased() && !isDeleted() && !isBackUp() && !hasUnsolvedWords()} with
+     * Mirrors: {@code !isReviewerErased() && !isDeleted() && !isBackUp() && !hasBlockingWordIssues()} with
      * {@link Song#isDeleted()}{@code = deleted || isBackUp() || isReviewerErased()}.
      */
     private static String sqlSongRowMatchesIsPublic() {
         return "(song.reviewer_erased is null or song.reviewer_erased = 0)"
                 + " and song.deleted = 0"
-                + " and song.is_back_up is null"
-                + " and (song.has_unsolved_words is null or song.has_unsolved_words = 0)";
+                + " and (song.is_back_up is null or song.is_back_up = 0)"
+                + " and (song.has_blocking_word_issues is null or song.has_blocking_word_issues = 0)";
     }
 
     private String getConditionSqlByLanguage(Language language, String sql, SongPublicScope similarVisibility) {
@@ -714,6 +708,8 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
                 song.setIsBackUp(getBooleanFromResultSet(resultSet, "is_back_up"));
                 song.setReviewerErased(getBooleanFromResultSet(resultSet, "reviewer_erased"));
                 song.setHasUnsolvedWords(getBooleanFromResultSet(resultSet, "has_unsolved_words"));
+                song.setHasBlockingWordIssues(getBooleanFromResultSet(resultSet, "has_blocking_word_issues"));
+                song.setWordQualityScore(getIntegerFromResultSet(resultSet, "word_quality_score"));
                 if (withVersionGroup) {
                     song.setVersionGroupUuid(resultSet.getString("version_group_id"));
                 }
@@ -733,6 +729,15 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         boolean b = resultSet.getBoolean(columnName);
         if (!resultSet.wasNull()) {
             return b;
+        }
+        return null;
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private Integer getIntegerFromResultSet(ResultSet resultSet, String columnName) throws SQLException {
+        int v = resultSet.getInt(columnName);
+        if (!resultSet.wasNull()) {
+            return v;
         }
         return null;
     }
@@ -956,12 +961,10 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             throw new ServiceException("No language", HttpStatus.PRECONDITION_FAILED);
         }
 
-        // Validate words and set hasUnsolvedWords flag only for admins
-        // Songs with unsolved words will be filtered out from being public via isPublic() method
-        if (isCurrentUserAdmin()) {
-            SongWordValidationResult validationResult = songWordValidationService.validateWords(song);
-            song.setHasUnsolvedWords(validationResult.isHasIssues());
-        }
+        SongWordValidationResult validationResult = songWordValidationService.validateWords(song);
+        song.setHasUnsolvedWords(validationResult.isHasIssues());
+        song.setHasBlockingWordIssues(validationResult.isHasBlockingIssues());
+        song.setWordQualityScore(validationResult.getWordQualityScore());
 
         try {
             List<SongVerse> verses = new ArrayList<>(songVerses);
@@ -978,21 +981,6 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             throw e;
         }
         return song;
-    }
-
-    private boolean isCurrentUserAdmin() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || authentication.getName() == null) {
-                return false;
-            }
-            String email = authentication.getName();
-            User user = userService.findByEmail(email);
-            return user != null && user.getRole() == Role.ROLE_ADMIN;
-        } catch (Exception e) {
-            // If there's any error getting the user, assume not admin
-            return false;
-        }
     }
 
     @Override
