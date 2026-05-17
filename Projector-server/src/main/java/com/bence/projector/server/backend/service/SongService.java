@@ -101,4 +101,10 @@ public interface SongService extends BaseService<Song> {
      * Used when merging version groups so corrupt/stale verse-order associations cannot break persistence.
      */
     void updateVersionGroupForSongs(List<Song> songs, Song versionGroup, Date modifiedDate);
+
+    /**
+     * Removes {@code song} from its version group (admin remove-from-group, hard-delete head prep, etc.).
+     * Same logic as {com.bence.projector.server.api.resources.SongResource#applyRemoveFromSongVersionGroup}.
+     */
+    void removeFromVersionGroup(Song song);
 }

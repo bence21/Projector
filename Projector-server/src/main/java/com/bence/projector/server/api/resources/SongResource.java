@@ -63,7 +63,6 @@ import static com.bence.projector.server.mailsending.MailSenderService.getDateFo
 import static com.bence.projector.server.utils.SetLanguages.getLanguageWords;
 import static com.bence.projector.server.utils.SetLanguages.setLanguagesForUnknown;
 import static com.bence.projector.server.utils.SongModerationUtil.markSongForReviewQueue;
-import static com.bence.projector.server.utils.SongUtil.getLastModifiedSong;
 import static com.bence.projector.server.utils.SongUtil.markSimilarSongsAndSet;
 
 @RestController
@@ -155,11 +154,6 @@ public class SongResource {
         Date now = new Date();
         Date beforeOneWeak = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7);
         return song.getCreatedDate().after(beforeOneWeak);
-    }
-
-    private static void setVersionGroupAndDate(Song song, Date date, Song versionGroup) {
-        song.setVersionGroup(versionGroup);
-        song.setModifiedDate(date);
     }
 
     public static void createBackUpSong(Song song, SongService songService) {
@@ -1001,26 +995,12 @@ public class SongResource {
             return new ResponseEntity<>("Null", HttpStatus.NO_CONTENT);
         }
         saveStatistics(httpServletRequest, statisticsService);
-        String songVersionGroup = getUuidFromVersionGroupSong(song);
-        Date date = new Date();
-        if (songVersionGroup != null) {
-            setVersionGroupAndDate(song, date, null);
-            songRepository.save(song);
-        } else {
-            List<Song> allByVersionGroup = songService.findAllByVersionGroup(song.getUuid());
-            Song lastModifiedSong = getLastModifiedSong(allByVersionGroup);
-            List<Song> modifiedSongs = new ArrayList<>();
-            for (Song aSong : allByVersionGroup) {
-                if (!aSong.equals(song) && !aSong.equals(lastModifiedSong)) {
-                    setVersionGroupAndDate(aSong, date, lastModifiedSong);
-                    modifiedSongs.add(aSong);
-                }
-            }
-            setVersionGroupAndDate(lastModifiedSong, date, null);
-            modifiedSongs.add(lastModifiedSong);
-            songService.saveAllByRepository(modifiedSongs);
-        }
+        applyRemoveFromSongVersionGroup(song);
         return new ResponseEntity<>("Removed", HttpStatus.ACCEPTED);
+    }
+
+    private void applyRemoveFromSongVersionGroup(Song song) {
+        songService.removeFromVersionGroup(song);
     }
 
     private static String getUuidFromVersionGroupSong(Song song) {

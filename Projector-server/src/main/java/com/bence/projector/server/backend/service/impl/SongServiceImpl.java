@@ -18,6 +18,7 @@ import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongVerseOrderListItemService;
 import com.bence.projector.server.backend.service.SongVerseService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
+import com.bence.projector.server.utils.SongUtil;
 import com.bence.projector.server.utils.StringUtils;
 import com.bence.projector.server.utils.UnicodeTextNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -234,6 +235,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         if (id == null) {
             return;
@@ -246,6 +248,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         String uuid = song.getUuid();
         deleteNotFavouriteFavouriteSongs(song);
         handleDeleteForBackup(song);
+        removeFromVersionGroup(song, true);
         songVerseOrderListItemRepository.deleteBySong(song);
         songVerseService.deleteBySong(song);
         super.delete(id);
@@ -1054,7 +1057,7 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         song.setWordQualityScore(validationResult.getWordQualityScore());
 
         try {
-            List<SongVerse> verses = new ArrayList<>(songVerses);
+            List<SongVerse> verses = copyVersesForRecreate(song, songVerses);
             List<SongVerseOrderListItem> songVerseOrderListItems = getCopyOfSongVerseOrderListItems(song);
             if (songVerseOrderListItems == null) {
                 songVerseOrderListItems = new ArrayList<>();
@@ -1071,6 +1074,19 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             throw e;
         }
         return song;
+    }
+
+    /**
+     * Recreate verse rows during save to avoid Hibernate trying to merge entities that were deleted in the same transaction.
+     */
+    private List<SongVerse> copyVersesForRecreate(Song song, List<SongVerse> sourceVerses) {
+        List<SongVerse> copied = new ArrayList<>(sourceVerses.size());
+        for (SongVerse verse : sourceVerses) {
+            SongVerse newVerse = new SongVerse(verse);
+            newVerse.setSong(song);
+            copied.add(newVerse);
+        }
+        return copied;
     }
 
     @Override
@@ -1096,6 +1112,63 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         }
         songRepository.updateVersionGroupAndModifiedDate(versionGroup, modifiedDate, ids);
         removeSongsFromHashMap(songs);
+    }
+
+    @Override
+    @Transactional
+    public void removeFromVersionGroup(Song song) {
+        removeFromVersionGroup(song, false);
+    }
+
+    /**
+     * @param hardDelete when true, membership is cleared in memory only (row is deleted next); head children are still reassigned in DB.
+     */
+    private void removeFromVersionGroup(Song song, boolean hardDelete) {
+        if (song == null) {
+            return;
+        }
+        Date date = new Date();
+        if (song.getVersionGroupUuid() != null) {
+            song.setVersionGroup(null);
+            song.setModifiedDate(date);
+            if (!hardDelete) {
+                songRepository.save(song);
+                removeSongFromHashMap(song);
+            }
+        }
+        List<Song> allByVersionGroup = findAllByVersionGroup(song.getUuid());
+        if (allByVersionGroup.isEmpty()) {
+            allByVersionGroup = new ArrayList<>(songRepository.findAllByVersionGroup(song));
+        }
+        if (allByVersionGroup.isEmpty()) {
+            return;
+        }
+        List<Song> headCandidates = new ArrayList<>();
+        for (Song aSong : allByVersionGroup) {
+            if (!aSong.equals(song)) {
+                headCandidates.add(aSong);
+            }
+        }
+        List<Song> lastModifiedPickFrom = hardDelete || headCandidates.isEmpty()
+                ? headCandidates
+                : allByVersionGroup;
+        if (lastModifiedPickFrom.isEmpty()) {
+            return;
+        }
+        Song lastModifiedSong = SongUtil.getLastModifiedSong(lastModifiedPickFrom);
+        List<Song> modifiedSongs = new ArrayList<>();
+        for (Song aSong : allByVersionGroup) {
+            if (!aSong.equals(song) && !aSong.equals(lastModifiedSong)) {
+                aSong.setVersionGroup(lastModifiedSong);
+                aSong.setModifiedDate(date);
+                modifiedSongs.add(aSong);
+            }
+        }
+        lastModifiedSong.setVersionGroup(null);
+        lastModifiedSong.setModifiedDate(date);
+        modifiedSongs.add(lastModifiedSong);
+        saveAllByRepository(modifiedSongs);
+        removeSongsFromHashMap(modifiedSongs);
     }
 
     private void removeSongsFromHashMap(List<Song> songs) {
