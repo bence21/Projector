@@ -1185,12 +1185,22 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         songsHashMap.remove(uuid);
     }
 
+    /**
+     * Fresh entities for re-insert after {@link SongVerseOrderListItemRepository#deleteBySong(Song)}.
+     * A shallow copy would keep Hibernate-managed rows that are deleted in the same transaction and fail merge.
+     */
     private ArrayList<SongVerseOrderListItem> getCopyOfSongVerseOrderListItems(Song song) {
         List<SongVerseOrderListItem> songVerseOrderListItems = song.getSongVerseOrderListItems();
         if (songVerseOrderListItems == null) {
             return null;
         }
-        return new ArrayList<>(songVerseOrderListItems);
+        ArrayList<SongVerseOrderListItem> copied = new ArrayList<>(songVerseOrderListItems.size());
+        for (SongVerseOrderListItem item : songVerseOrderListItems) {
+            SongVerseOrderListItem newItem = new SongVerseOrderListItem(item);
+            newItem.setSong(song);
+            copied.add(newItem);
+        }
+        return copied;
     }
 
     @Override
