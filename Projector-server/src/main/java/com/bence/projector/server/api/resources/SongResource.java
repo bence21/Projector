@@ -158,7 +158,7 @@ public class SongResource {
 
     public static void createBackUpSong(Song song, SongService songService) {
         Song backUpSong = createBackUpSongWithoutSave(song);
-        songService.save(backUpSong);
+        songService.persistBackUpSnapshot(backUpSong);
     }
 
     public static Song createBackUpSongWithoutSave(Song song) {

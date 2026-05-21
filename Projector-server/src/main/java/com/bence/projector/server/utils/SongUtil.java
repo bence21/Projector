@@ -411,7 +411,9 @@ public class SongUtil {
             song.setLastModifiedBy(result);
             backUpSongs.add(song.getBackUp());
         }
-        songService.save(backUpSongs);
+        for (Song backUpSong : backUpSongs) {
+            songService.persistBackUpSnapshot(backUpSong);
+        }
         songService.save(modifiedSongs);
         System.out.println("Done! " + modifiedSongs.size());
     }

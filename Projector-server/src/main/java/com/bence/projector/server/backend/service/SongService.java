@@ -107,4 +107,10 @@ public interface SongService extends BaseService<Song> {
      * Same logic as {com.bence.projector.server.api.resources.SongResource#applyRemoveFromSongVersionGroup}.
      */
     void removeFromVersionGroup(Song song);
+
+    /**
+     * Persists a backup snapshot in its own transaction so the managed parent song is not auto-flushed
+     * while it still references an unsaved {@link Song#getBackUp()}.
+     */
+    void persistBackUpSnapshot(Song backUpSong);
 }

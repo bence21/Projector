@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
@@ -1032,6 +1033,12 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void persistBackUpSnapshot(Song backUpSong) {
+        save(backUpSong);
+    }
+
+    @Override
     @Transactional
     public Song save(Song song) {
         if (song.getTitle() == null || song.getTitle().trim().isEmpty()) {
@@ -1051,10 +1058,12 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             throw new ServiceException("No language", HttpStatus.PRECONDITION_FAILED);
         }
 
-        SongWordValidationResult validationResult = songWordValidationService.validateWords(song);
-        song.setHasUnsolvedWords(validationResult.isHasIssues());
-        song.setHasBlockingWordIssues(validationResult.isHasBlockingIssues());
-        song.setWordQualityScore(validationResult.getWordQualityScore());
+        if (!song.isBackUp()) {
+            SongWordValidationResult validationResult = songWordValidationService.validateWords(song);
+            song.setHasUnsolvedWords(validationResult.isHasIssues());
+            song.setHasBlockingWordIssues(validationResult.isHasBlockingIssues());
+            song.setWordQualityScore(validationResult.getWordQualityScore());
+        }
 
         try {
             List<SongVerse> verses = copyVersesForRecreate(song, songVerses);
