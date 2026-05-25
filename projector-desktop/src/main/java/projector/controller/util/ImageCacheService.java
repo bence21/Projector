@@ -21,9 +21,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static projector.controller.GalleryController.isMediaFile;
 import static projector.controller.util.PdfService.isPdfFile;
@@ -32,9 +37,22 @@ public class ImageCacheService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ImageCacheService.class);
     private static final String CACHE_FOLDER = ".cache";
+    private static final String VIDEO_CACHE_EXTENSION = "png";
     private static ImageCacheService instance = null;
     private static final String DIVIDER = "_";
+    private static final Object VIDEO_THUMBNAIL_LOCK = new Object();
+    private static final long VIDEO_THUMBNAIL_TIMEOUT_SECONDS = 4;
     private final HashMap<String, Boolean> hashMap = new HashMap<>(100);
+    private final ExecutorService imageLoadExecutor = Executors.newFixedThreadPool(2, r -> {
+        Thread t = new Thread(r, "image-cache-load");
+        t.setDaemon(true);
+        return t;
+    });
+    private final ConcurrentLinkedQueue<VideoThumbnailRequest> videoThumbnailQueue = new ConcurrentLinkedQueue<>();
+    private final AtomicBoolean videoThumbnailScheduled = new AtomicBoolean(false);
+
+    private record VideoThumbnailRequest(String filePath, int width, int height, Consumer<Image> onReady) {
+    }
 
     private ImageCacheService() {
     }
@@ -69,9 +87,13 @@ public class ImageCacheService {
     private static String getCacheImagePath(File file, int width, int height) {
         String fileName = file.getName();
         String fileExtension = getFileExtension(fileName);
-        String s = "." + fileExtension;
-        String name = replaceLast(fileName, s, "");
-        return CACHE_FOLDER + "/" + name + DIVIDER + width + DIVIDER + height + DIVIDER + file.lastModified() + s;
+        String sourceSuffix = fileExtension.isEmpty() ? "" : "." + fileExtension;
+        String name = sourceSuffix.isEmpty() ? fileName : replaceLast(fileName, sourceSuffix, "");
+        String cacheExtension = isMediaFile(file.getAbsolutePath()) ? VIDEO_CACHE_EXTENSION : fileExtension;
+        if (cacheExtension.isEmpty()) {
+            cacheExtension = VIDEO_CACHE_EXTENSION;
+        }
+        return CACHE_FOLDER + "/" + name + DIVIDER + width + DIVIDER + height + DIVIDER + file.lastModified() + "." + cacheExtension;
     }
 
     private static boolean areDimensionsInValid(int width, int height) {
@@ -120,7 +142,7 @@ public class ImageCacheService {
         if (image == null) {
             hashMap.remove(cacheImagePath);
             if (isMediaFile(filePath)) {
-                image = getVideoThumbnail(filePath, width, height);
+                image = getVideoThumbnailSafely(filePath, width, height);
             } else if (isPdfFile(filePath)) {
                 image = getPdfThumbnail(filePath, width, height);
             } else {
@@ -133,6 +155,128 @@ public class ImageCacheService {
         return image;
     }
 
+    public boolean hasCachedImage(String filePath, int width, int height) {
+        if (areDimensionsInValid(width, height) || filePath == null) {
+            return false;
+        }
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return false;
+        }
+        return getImageFromFile(getCacheImagePath(file, width, height)) != null;
+    }
+
+    /**
+     * Loads an image without blocking the JavaFX thread. The callback always runs on the FX thread.
+     *
+     * @param generateVideoThumbnailIfMissing when false, uncached video files return null without using MediaPlayer
+     */
+    public void loadImageAsync(String filePath, int width, int height, Consumer<Image> onReady,
+                               boolean generateVideoThumbnailIfMissing) {
+        if (onReady == null) {
+            return;
+        }
+        if (areDimensionsInValid(width, height) || filePath == null) {
+            Platform.runLater(() -> onReady.accept(null));
+            return;
+        }
+        File file = new File(filePath);
+        if (!file.exists()) {
+            Platform.runLater(() -> onReady.accept(null));
+            return;
+        }
+        String cacheImagePath = getCacheImagePath(file, width, height);
+        Image cached = getImageFromFile(cacheImagePath);
+        if (cached != null) {
+            Platform.runLater(() -> onReady.accept(cached));
+            return;
+        }
+        hashMap.remove(cacheImagePath);
+        if (isMediaFile(filePath)) {
+            if (!generateVideoThumbnailIfMissing) {
+                Platform.runLater(() -> onReady.accept(null));
+                return;
+            }
+            scheduleVideoThumbnailAsync(filePath, width, height, image -> {
+                if (image != null) {
+                    createCache(image, width, height, cacheImagePath);
+                }
+                onReady.accept(image);
+            });
+            return;
+        }
+        imageLoadExecutor.execute(() -> {
+            Image image;
+            try {
+                if (isPdfFile(filePath)) {
+                    image = getPdfThumbnail(filePath, width, height);
+                } else {
+                    image = getImageFromFile(filePath);
+                }
+                if (image != null) {
+                    createCache(image, width, height, cacheImagePath);
+                }
+            } catch (Exception e) {
+                LOG.error("Error loading image asynchronously", e);
+                image = null;
+            }
+            Image result = image;
+            Platform.runLater(() -> onReady.accept(result));
+        });
+    }
+
+    private Image getVideoThumbnailSafely(String filePath, int width, int height) {
+        if (Platform.isFxApplicationThread()) {
+            scheduleVideoThumbnailAsync(filePath, width, height, image -> {
+                if (image != null) {
+                    File file = new File(filePath);
+                    if (file.exists()) {
+                        createCache(image, width, height, getCacheImagePath(file, width, height));
+                    }
+                }
+            });
+            return null;
+        }
+        return getVideoThumbnail(filePath, width, height);
+    }
+
+    private void scheduleVideoThumbnailAsync(String filePath, int width, int height, Consumer<Image> onReady) {
+        videoThumbnailQueue.add(new VideoThumbnailRequest(filePath, width, height, onReady));
+        if (videoThumbnailScheduled.compareAndSet(false, true)) {
+            imageLoadExecutor.execute(this::processVideoThumbnailQueueOnBackground);
+        }
+    }
+
+    private void processVideoThumbnailQueueOnBackground() {
+        VideoThumbnailRequest request = videoThumbnailQueue.poll();
+        if (request == null) {
+            videoThumbnailScheduled.set(false);
+            if (!videoThumbnailQueue.isEmpty() && videoThumbnailScheduled.compareAndSet(false, true)) {
+                imageLoadExecutor.execute(this::processVideoThumbnailQueueOnBackground);
+            }
+            return;
+        }
+        Image image = null;
+        try {
+            image = getVideoThumbnail(request.filePath(), request.width(), request.height());
+        } catch (Exception e) {
+            LOG.error("Error creating video thumbnail for {}", request.filePath(), e);
+        }
+        Image result = image;
+        Platform.runLater(() -> {
+            try {
+                request.onReady().accept(result);
+            } catch (Exception e) {
+                LOG.error("Video thumbnail callback failed for {}", request.filePath(), e);
+            }
+            imageLoadExecutor.execute(this::processVideoThumbnailQueueOnBackground);
+        });
+    }
+
+    /**
+     * Generates a video thumbnail. Must be called from a background thread; blocks that thread until
+     * the snapshot is ready or {@link #VIDEO_THUMBNAIL_TIMEOUT_SECONDS} elapses.
+     */
     private Image getVideoThumbnail(String filePath, int width, int height) {
         if (!isMediaFile(filePath)) {
             return null;
@@ -141,75 +285,80 @@ public class ImageCacheService {
         if (!file.exists()) {
             return null;
         }
+        if (Platform.isFxApplicationThread()) {
+            LOG.warn("getVideoThumbnail must not run on the JavaFX thread: {}", filePath);
+            return null;
+        }
 
-        try {
-            // Create Media and MediaPlayer
-            Media media = new Media(file.toURI().toString());
-            MediaPlayer mediaPlayer = new MediaPlayer(media);
-            MediaView mediaView = new MediaView(mediaPlayer);
-
-            CountDownLatch latch = new CountDownLatch(1);
-            AtomicReference<WritableImage> snapshotImage = new AtomicReference<>(new WritableImage(width, height)); // Placeholder for initialization
-            AtomicReference<Double> seekTime = new AtomicReference<>((double) 1000);
-            mediaPlayer.setOnReady(() -> {
-                try {
-                    // Get the dimensions from the media metadata
-                    int videoWidth = media.getWidth();
-                    int videoHeight = media.getHeight();
-
-                    // Adjust the MediaView size
-                    mediaView.setFitWidth(videoWidth);
-                    mediaView.setFitHeight(videoHeight);
-
-                    // Prepare the snapshot image with the correct size
-                    if (videoWidth < 1 || videoHeight < 1) {
-                        snapshotImage.set(null);
-                        beforeVideoThumbnailResult(latch, mediaPlayer);
-                        return;
-                    }
-                    snapshotImage.set(new WritableImage(videoWidth, videoHeight));
-
-                    double millis = mediaPlayer.getTotalDuration().toMillis();
-                    double calculatedSeekTime = Math.min(seekTime.get(), Math.max(millis - 100, 0));
-                    seekTime.set(calculatedSeekTime);
-                    // Seek to 1 second in the video
-                    mediaPlayer.seek(javafx.util.Duration.seconds(calculatedSeekTime));
-
-                    Platform.runLater(() -> {
-                        try {
-                            mediaPlayer.pause();
-                            mediaView.snapshot(new SnapshotParameters(), snapshotImage.get());
-                            beforeVideoThumbnailResult(latch, mediaPlayer);
-                        } catch (Exception e) {
-                            LOG.error("Error creating video thumbnail", e);
-                            beforeVideoThumbnailResult(latch, mediaPlayer);
-                        }
-                    });
-                } catch (Exception e) {
-                    LOG.error("Error creating video thumbnail", e);
-                    beforeVideoThumbnailResult(latch, mediaPlayer);
-                }
-            });
-            mediaPlayer.setMute(true);
-
-            // Start playback to trigger loading of the frame
-            mediaPlayer.play();
-
-            // Wait for the snapshot to be ready
+        synchronized (VIDEO_THUMBNAIL_LOCK) {
             try {
-                if (!latch.await(1000L, TimeUnit.MILLISECONDS)) {
+                Media media = new Media(file.toURI().toString());
+                MediaPlayer mediaPlayer = new MediaPlayer(media);
+                MediaView mediaView = new MediaView(mediaPlayer);
+
+                CountDownLatch latch = new CountDownLatch(1);
+                AtomicReference<WritableImage> snapshotImage = new AtomicReference<>(new WritableImage(width, height));
+
+                mediaPlayer.setOnError(() -> {
+                    if (mediaPlayer.getError() != null) {
+                        LOG.error("MediaPlayer error creating thumbnail for {}: {}", filePath, mediaPlayer.getError());
+                    }
+                    beforeVideoThumbnailResult(latch, mediaPlayer);
+                });
+
+                mediaPlayer.setOnReady(() -> {
+                    try {
+                        int videoWidth = media.getWidth();
+                        int videoHeight = media.getHeight();
+
+                        mediaView.setFitWidth(videoWidth);
+                        mediaView.setFitHeight(videoHeight);
+
+                        if (videoWidth < 1 || videoHeight < 1) {
+                            snapshotImage.set(null);
+                            beforeVideoThumbnailResult(latch, mediaPlayer);
+                            return;
+                        }
+                        snapshotImage.set(new WritableImage(videoWidth, videoHeight));
+
+                        double millis = mediaPlayer.getTotalDuration().toMillis();
+                        double seekMillis = Math.min(1000, Math.max(millis - 100, 0));
+                        mediaPlayer.seek(javafx.util.Duration.millis(seekMillis));
+
+                        Platform.runLater(() -> {
+                            try {
+                                mediaPlayer.pause();
+                                mediaView.snapshot(new SnapshotParameters(), snapshotImage.get());
+                            } catch (Exception e) {
+                                LOG.error("Error creating video thumbnail snapshot", e);
+                            }
+                            beforeVideoThumbnailResult(latch, mediaPlayer);
+                        });
+                    } catch (Exception e) {
+                        LOG.error("Error creating video thumbnail", e);
+                        beforeVideoThumbnailResult(latch, mediaPlayer);
+                    }
+                });
+                mediaPlayer.setMute(true);
+                mediaPlayer.play();
+
+                try {
+                    if (!latch.await(VIDEO_THUMBNAIL_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                        LOG.warn("Video thumbnail generation timed out for {}", filePath);
+                        stopMediaPlayer(mediaPlayer);
+                        return null;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     stopMediaPlayer(mediaPlayer);
                     return null;
                 }
-            } catch (InterruptedException e) {
+
+                return snapshotImage.get();
+            } catch (Exception e) {
+                LOG.error("Error creating video thumbnail", e);
                 return null;
             }
-
-            return snapshotImage.get();
-
-        } catch (Exception e) {
-            LOG.error("Error creating video thumbnail", e);
-            return null;
         }
     }
 
@@ -366,11 +515,25 @@ public class ImageCacheService {
             return;
         }
         File outputFile = new File(savePath);
+        String format = getImageIoWriteFormat(savePath);
         try {
-            ImageIO.write(image, getFileExtension(savePath), outputFile);
+            if (!ImageIO.write(image, format, outputFile)) {
+                LOG.warn("ImageIO.write returned false for {} (format={})", savePath, format);
+            }
         } catch (IOException e) {
             LOG.error(e.getMessage(), e);
         }
+    }
+
+    private static String getImageIoWriteFormat(String savePath) {
+        String extension = getFileExtension(savePath);
+        if (!extension.isEmpty() && ImageIO.getImageWritersBySuffix(extension).hasNext()) {
+            return extension;
+        }
+        if (!extension.isEmpty()) {
+            LOG.debug("No ImageIO writer for extension '{}', using png for {}", extension, savePath);
+        }
+        return VIDEO_CACHE_EXTENSION;
     }
 
     private Image getImageFromFile(String imagePath) {

@@ -1,5 +1,6 @@
 package projector.controller;
 
+import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -22,7 +23,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.MainDesktop;
 import projector.application.ApplicationVersion;
+import projector.application.PdfViewerTabState;
 import projector.application.ProjectorState;
+import projector.application.SessionAutosave;
+import projector.application.VideoViewerTabState;
+import projector.controller.util.PdfService;
 import projector.application.Settings;
 import projector.controller.song.ScheduleController;
 import projector.controller.song.SongController;
@@ -39,7 +44,9 @@ import projector.utils.scene.text.SongVersePartTextFlow;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
@@ -47,6 +54,15 @@ import java.util.logging.Level;
 import static projector.utils.SceneUtils.getCustomStage;
 
 public class MyController {
+
+    public static final String TAB_SONGS = "songs";
+    public static final String TAB_BIBLE_SEARCH = "bibleSearch";
+    public static final String TAB_BIBLE = "bible";
+    public static final String TAB_RECENT = "recent";
+    public static final String TAB_GALLERY = "gallery";
+    public static final String TAB_PROJECTION_SCREENS = "projectionScreens";
+    public static final String TAB_PDF_PREFIX = "pdf:";
+    public static final String TAB_VIDEO_PREFIX = "video:";
 
     private static final Logger LOG = LoggerFactory.getLogger(MyController.class);
     private static MyController instance = null;
@@ -190,6 +206,9 @@ public class MyController {
         lockButton.setFocusTraversable(false);
         previewButton.setFocusTraversable(false);
         blankButton.setSelected(false);
+        blankButton.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            SessionAutosave.getInstance().notifySessionChanged();
+        });
         SingleSelectionModel<Tab> tabPaneSelectionModel = tabPane.getSelectionModel();
         tabPaneSelectionModel.selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue.equals(4)) {
@@ -197,6 +216,7 @@ public class MyController {
             }
         });
         tabPaneSelectionModel.selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            SessionAutosave.getInstance().notifySessionChanged();
             if (newValue.equals(songsTab)) {
                 songController.lazyInitialize();
             } else if (newValue.equals(bibleSearchTab)) {
@@ -451,13 +471,196 @@ public class MyController {
     public void updateProjectorState(ProjectorState projectorState) {
         try {
             projectorState.setBlank(blankButton.isSelected());
+            if (scheduleController != null) {
+                scheduleController.updateProjectorState(projectorState);
+            }
+            if (bibleController != null) {
+                bibleController.updateProjectorState(projectorState);
+            }
+            if (galleryController != null) {
+                galleryController.updateProjectorState(projectorState);
+            }
+            savePdfVideoTabsToState(projectorState);
+            projectorState.setSelectedTabId(tabToId(tabPane.getSelectionModel().getSelectedItem()));
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
     }
 
+    public void restoreScheduleFromProjectorState(ProjectorState projectorState) {
+        if (scheduleController != null) {
+            scheduleController.restoreFromProjectorState(projectorState);
+        }
+    }
+
+    public void restoreGalleryFromProjectorState(ProjectorState projectorState) {
+        if (galleryController != null) {
+            galleryController.setByProjectorState(projectorState);
+        }
+    }
+
+    private void savePdfVideoTabsToState(ProjectorState projectorState) {
+        List<PdfViewerTabState> pdfTabStates = new ArrayList<>();
+        PdfService pdfService = PdfService.getInstance();
+        for (String path : openPdfTabs.keySet()) {
+            PdfViewerTabState tabState = new PdfViewerTabState();
+            tabState.setFilePath(path);
+            if (pdfService.hasCurrentPage(path)) {
+                tabState.setPageIndex(pdfService.getCurrentPage(path));
+            } else {
+                tabState.setPageIndex(-1);
+            }
+            PdfViewerController controller = openPdfControllers.get(path);
+            if (controller != null) {
+                tabState.setScrollVvalue(controller.getScrollVvalue());
+            }
+            pdfTabStates.add(tabState);
+        }
+        projectorState.setOpenPdfTabs(pdfTabStates);
+        projectorState.setOpenPdfPaths(new ArrayList<>(openPdfTabs.keySet()));
+
+        List<VideoViewerTabState> videoTabStates = new ArrayList<>();
+        for (String path : openVideoTabs.keySet()) {
+            VideoViewerController controller = openVideoControllers.get(path);
+            if (controller != null) {
+                videoTabStates.add(controller.captureSessionState(path));
+            } else {
+                VideoViewerTabState tabState = new VideoViewerTabState();
+                tabState.setFilePath(path);
+                videoTabStates.add(tabState);
+            }
+        }
+        projectorState.setOpenVideoTabs(videoTabStates);
+        projectorState.setOpenVideoPaths(new ArrayList<>(openVideoTabs.keySet()));
+    }
+
     public void setByProjectorState(ProjectorState projectorState) {
         setBlank(projectorState.isBlank());
+        restoreTabsFromProjectorState(projectorState);
+    }
+
+    private String tabToId(Tab tab) {
+        if (tab == null) {
+            return TAB_SONGS;
+        }
+        if (tab == songsTab) {
+            return TAB_SONGS;
+        }
+        if (tab == bibleSearchTab) {
+            return TAB_BIBLE_SEARCH;
+        }
+        if (tab == bibleTab) {
+            return TAB_BIBLE;
+        }
+        if (tab == recentTab) {
+            return TAB_RECENT;
+        }
+        if (tab == galleryTab) {
+            return TAB_GALLERY;
+        }
+        if (tab == projectionScreensTab) {
+            return TAB_PROJECTION_SCREENS;
+        }
+        for (Map.Entry<String, Tab> entry : openPdfTabs.entrySet()) {
+            if (entry.getValue() == tab) {
+                return TAB_PDF_PREFIX + entry.getKey();
+            }
+        }
+        for (Map.Entry<String, Tab> entry : openVideoTabs.entrySet()) {
+            if (entry.getValue() == tab) {
+                return TAB_VIDEO_PREFIX + entry.getKey();
+            }
+        }
+        return TAB_SONGS;
+    }
+
+    private Tab idToTab(String tabId) {
+        if (tabId == null) {
+            return songsTab;
+        }
+        if (TAB_SONGS.equals(tabId)) {
+            return songsTab;
+        }
+        if (TAB_BIBLE_SEARCH.equals(tabId)) {
+            return bibleSearchTab;
+        }
+        if (TAB_BIBLE.equals(tabId)) {
+            return bibleTab;
+        }
+        if (TAB_RECENT.equals(tabId)) {
+            return recentTab;
+        }
+        if (TAB_GALLERY.equals(tabId)) {
+            return galleryTab;
+        }
+        if (TAB_PROJECTION_SCREENS.equals(tabId)) {
+            return projectionScreensTab;
+        }
+        if (tabId.startsWith(TAB_PDF_PREFIX)) {
+            return openPdfTabs.get(tabId.substring(TAB_PDF_PREFIX.length()));
+        }
+        if (tabId.startsWith(TAB_VIDEO_PREFIX)) {
+            return openVideoTabs.get(tabId.substring(TAB_VIDEO_PREFIX.length()));
+        }
+        return songsTab;
+    }
+
+    private void restoreTabsFromProjectorState(ProjectorState projectorState) {
+        List<PdfViewerTabState> pdfTabStates = projectorState.getOpenPdfTabs();
+        if (pdfTabStates != null && !pdfTabStates.isEmpty()) {
+            for (PdfViewerTabState tabState : pdfTabStates) {
+                restorePdfTab(tabState);
+            }
+        } else {
+            List<String> pdfPaths = projectorState.getOpenPdfPaths();
+            if (pdfPaths != null) {
+                for (String path : pdfPaths) {
+                    openPdfViewerTab(path);
+                }
+            }
+        }
+        List<VideoViewerTabState> videoTabStates = projectorState.getOpenVideoTabs();
+        if (videoTabStates != null && !videoTabStates.isEmpty()) {
+            for (VideoViewerTabState tabState : videoTabStates) {
+                restoreVideoTab(tabState);
+            }
+        } else {
+            List<String> videoPaths = projectorState.getOpenVideoPaths();
+            if (videoPaths != null) {
+                for (String path : videoPaths) {
+                    openVideoViewerTab(path);
+                }
+            }
+        }
+        Tab tab = idToTab(projectorState.getSelectedTabId());
+        if (tab != null && tabPane.getTabs().contains(tab)) {
+            tabPane.getSelectionModel().select(tab);
+        }
+    }
+
+    private void restorePdfTab(PdfViewerTabState tabState) {
+        if (tabState == null || tabState.getFilePath() == null) {
+            return;
+        }
+        String path = tabState.getFilePath();
+        if (tabState.getPageIndex() >= 0) {
+            PdfService.getInstance().setCurrentPage(path, tabState.getPageIndex());
+        }
+        openPdfViewerTab(path);
+        if (tabState.getScrollVvalue() >= 0) {
+            PdfViewerController controller = openPdfControllers.get(path);
+            if (controller != null) {
+                double scrollVvalue = tabState.getScrollVvalue();
+                Platform.runLater(() -> controller.setScrollVvalue(scrollVvalue));
+            }
+        }
+    }
+
+    private void restoreVideoTab(VideoViewerTabState tabState) {
+        if (tabState == null || tabState.getFilePath() == null) {
+            return;
+        }
+        openVideoViewerTab(tabState.getFilePath(), tabState);
     }
 
     public void clearButtonOnAction() {
@@ -486,6 +689,7 @@ public class MyController {
             openPdfTabs.put(filePath, pdfTab);
             tabPane.getTabs().add(pdfTab);
             tabPane.getSelectionModel().select(pdfTab);
+            SessionAutosave.getInstance().notifySessionChanged();
         } catch (Exception e) {
             LOG.error("Error opening PDF viewer tab for: {}", filePath, e);
         }
@@ -509,11 +713,16 @@ public class MyController {
             projector.controller.util.PdfService.getInstance().closeDocument(filePath);
             openPdfTabs.remove(filePath);
             openPdfControllers.remove(filePath);
+            SessionAutosave.getInstance().notifySessionChanged();
         });
         return pdfTab;
     }
 
     public void openVideoViewerTab(String filePath) {
+        openVideoViewerTab(filePath, null);
+    }
+
+    public void openVideoViewerTab(String filePath, VideoViewerTabState restoreState) {
         if (!GalleryController.isMediaFile(filePath)) {
             return;
         }
@@ -530,18 +739,22 @@ public class MyController {
             loader.setLocation(getClass().getResource("/view/VideoViewer.fxml"));
             loader.setResources(Settings.getInstance().getResourceBundle());
             Pane root = loader.load();
-            Tab videoTab = getVideoTab(filePath, loader, root);
+            Tab videoTab = getVideoTab(filePath, loader, root, restoreState);
 
             openVideoTabs.put(filePath, videoTab);
             tabPane.getTabs().add(videoTab);
             tabPane.getSelectionModel().select(videoTab);
+            SessionAutosave.getInstance().notifySessionChanged();
         } catch (Exception e) {
             LOG.error("Error opening video viewer tab for: {}", filePath, e);
         }
     }
 
-    private Tab getVideoTab(String filePath, FXMLLoader loader, Pane root) {
+    private Tab getVideoTab(String filePath, FXMLLoader loader, Pane root, VideoViewerTabState restoreState) {
         VideoViewerController controller = loader.getController();
+        if (restoreState != null) {
+            controller.setPendingSessionRestore(restoreState);
+        }
         controller.setVideoFile(filePath);
 
         File file = new File(filePath);
@@ -557,6 +770,7 @@ public class MyController {
             controller.cleanup();
             openVideoTabs.remove(filePath);
             openVideoControllers.remove(filePath);
+            SessionAutosave.getInstance().notifySessionChanged();
         });
         return videoTab;
     }

@@ -36,6 +36,8 @@ import javafx.stage.Screen;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
+import projector.application.ProjectorState;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.controller.util.ImageCacheService;
 import projector.controller.util.ImageContainer;
@@ -61,6 +63,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.DoubleConsumer;
@@ -91,6 +94,11 @@ public class GalleryController {
     private static final javafx.scene.paint.Color FOLDER_TAB_COLOR = javafx.scene.paint.Color.rgb(255, 220, 100);
     private static final javafx.scene.paint.Color FOLDER_OUTLINE_COLOR = javafx.scene.paint.Color.rgb(200, 150, 50);
     private static final javafx.scene.paint.Color FOLDER_TEXT_COLOR = javafx.scene.paint.Color.BLACK;
+
+    // Video placeholder constants (no MediaPlayer)
+    private static final double VIDEO_PLACEHOLDER_PADDING = 40.0;
+    private static final javafx.scene.paint.Color VIDEO_PLACEHOLDER_BG = javafx.scene.paint.Color.rgb(48, 48, 52);
+    private static final javafx.scene.paint.Color VIDEO_PLACEHOLDER_ICON = javafx.scene.paint.Color.rgb(200, 200, 210);
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     public BorderPane borderPane;
     private ImageContainer selectedImageContainer; // to keep track of the selected image container
@@ -831,39 +839,74 @@ public class GalleryController {
         ObservableList<Node> flowPaneChildren = flowPane.getChildren();
 
         for (String path : paths) {
-            StackPane itemPane = createGalleryItem(path, executorService);
+            StackPane itemPane = createGalleryItem(path);
             flowPaneChildren.add(itemPane);
+            if (!containerHolders.isEmpty()) {
+                ImageContainer imageContainer = containerHolders.get(containerHolders.size() - 1);
+                if (!imageContainer.isFolder()
+                        && imageContainer.getContainer().getCenter() instanceof Canvas canvas) {
+                    boolean allowVideoGeneration = !isMediaFile(path);
+                    executorService.submit(() -> loadItemThumbnail(path, canvas, allowVideoGeneration));
+                }
+            }
         }
 
         executorService.shutdown();
     }
 
-    private StackPane createGalleryItem(String path, ExecutorService executorService) {
+    private StackPane createGalleryItem(String path) {
         File file = new File(path);
         boolean isFolder = file.isDirectory();
         int itemCount = isFolder ? countItemsInFolder(path) : 0;
 
-        Canvas canvas = createItemCanvas(path, isFolder, itemCount, executorService);
+        Canvas canvas = createItemCanvas(path, isFolder, itemCount);
         ImageContainer imageContainer = createImageContainer(path, canvas, isFolder);
         return createItemStackPane(path, imageContainer, isFolder);
     }
 
-    private Canvas createItemCanvas(String path, boolean isFolder, int itemCount, ExecutorService executorService) {
+    private Canvas createItemCanvas(String path, boolean isFolder, int itemCount) {
         Canvas canvas = new Canvas(200, 200);
 
         if (isFolder) {
             renderFolderIcon(canvas, itemCount);
-        } else {
-            executorService.submit(() -> {
-                try {
-                    loadImagePathToCanvas(path, canvas);
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                }
-            });
+        } else if (isMediaFile(path)) {
+            ThumbnailSize thumbnailSize = getItemThumbnailSize(canvas);
+            if (!ImageCacheService.getInstance().hasCachedImage(path, thumbnailSize.width(), thumbnailSize.height())) {
+                renderVideoPlaceholder(canvas);
+            }
         }
 
         return canvas;
+    }
+
+    private record ThumbnailSize(int width, int height) {
+    }
+
+    private ThumbnailSize getItemThumbnailSize(Canvas canvas) {
+        double scale = getScale();
+        return new ThumbnailSize(
+                (int) (canvas.getWidth() * scale),
+                (int) (canvas.getHeight() * scale));
+    }
+
+    private void loadItemThumbnail(String path, Canvas canvas, boolean allowVideoGeneration) {
+        ThumbnailSize size = getItemThumbnailSize(canvas);
+        ImageCacheService.getInstance().loadImageAsync(path, size.width(), size.height(),
+                image -> drawImageOnCanvas(image, canvas), allowVideoGeneration);
+    }
+
+    private void loadVideoItemThumbnailIfNeeded(ImageContainer imageContainer) {
+        if (imageContainer == null || imageContainer.isFolder()) {
+            return;
+        }
+        String path = imageContainer.getFileImagePath();
+        if (!isMediaFile(path)) {
+            return;
+        }
+        if (!(imageContainer.getContainer().getCenter() instanceof Canvas canvas)) {
+            return;
+        }
+        loadItemThumbnail(path, canvas, true);
     }
 
     private ImageContainer createImageContainer(String path, Canvas canvas, boolean isFolder) {
@@ -903,7 +946,7 @@ public class GalleryController {
                 if (isFolder) {
                     navigateToFolder(path);
                 } else {
-                    selectImageContainer(imageContainer);
+                    selectImageContainer(imageContainer, true);
                 }
             } finally {
                 pauseSelectByFocus = false;
@@ -917,7 +960,7 @@ public class GalleryController {
                 return;
             }
             if (newValue != null && newValue && !isFolder && selectedImageContainer != imageContainer) {
-                selectImageContainer(imageContainer);
+                selectImageContainer(imageContainer, true);
             }
         });
     }
@@ -932,12 +975,61 @@ public class GalleryController {
         return scrollPane;
     }
 
-    private void navigateToFolder(String folderPath) {
+    public void navigateToFolder(String folderPath) {
         currentFolderPath = folderPath;
         selectedImageContainer = null;
         toolHBox = null; // Force recreation to update back button
         breadcrumbBar = null; // Force recreation to update breadcrumb
         onTabOpened();
+        if (!SessionAutosave.getInstance().isRestoring()) {
+            SessionAutosave.getInstance().notifySessionChanged();
+        }
+    }
+
+    public static boolean shouldProjectSelectedImageOnRestore(ProjectorState state, String imagePath) {
+        if (state == null || imagePath == null || imagePath.isEmpty()) {
+            return false;
+        }
+        return state.getProjectionType() == ProjectionType.IMAGE
+                && Objects.equals(imagePath, state.getProjectionFileImagePath());
+    }
+
+    public void updateProjectorState(ProjectorState projectorState) {
+        if (currentFolderPath != null) {
+            projectorState.setGalleryFolderPath(currentFolderPath);
+        }
+        String selectedImagePath = null;
+        if (selectedImageContainer != null && !selectedImageContainer.isFolder()) {
+            selectedImagePath = selectedImageContainer.getFileImagePath();
+        }
+        projectorState.setGallerySelectedImagePath(selectedImagePath);
+    }
+
+    public void setByProjectorState(ProjectorState projectorState) {
+        String folderPath = projectorState.getGalleryFolderPath();
+        if (folderPath != null && !folderPath.isEmpty()) {
+            File folder = new File(folderPath);
+            if (folder.exists() && folder.isDirectory()) {
+                navigateToFolder(folderPath);
+            }
+        }
+        String imagePath = projectorState.getGallerySelectedImagePath();
+        if (imagePath != null && !imagePath.isEmpty() && new File(imagePath).exists()) {
+            boolean projectToScreens = shouldProjectSelectedImageOnRestore(projectorState, imagePath);
+            Platform.runLater(() -> selectImageByPath(imagePath, projectToScreens));
+        }
+    }
+
+    public void selectImageByPath(String path, boolean projectToScreens) {
+        if (path == null || containerHolders == null) {
+            return;
+        }
+        for (ImageContainer imageContainer : containerHolders) {
+            if (path.equals(imageContainer.getFileImagePath())) {
+                selectImageContainer(imageContainer, projectToScreens);
+                return;
+            }
+        }
     }
 
     @SuppressWarnings("unused")
@@ -956,6 +1048,10 @@ public class GalleryController {
     }
 
     private boolean selectImageContainer(ImageContainer imageContainer) {
+        return selectImageContainer(imageContainer, true);
+    }
+
+    private boolean selectImageContainer(ImageContainer imageContainer, boolean projectToScreens) {
         try {
             // Skip folders - only images can be selected
             if (imageContainer.isFolder()) {
@@ -967,20 +1063,32 @@ public class GalleryController {
             if (selectedImageContainer != imageContainer) {
                 imageContainer.getHighlightRect().setVisible(true);
                 selectedImageContainer = imageContainer;
-                String nextFileImagePath = getNextFileImagePath();
                 String fileImagePath = imageContainer.getFileImagePath();
                 setLastAccessTime(Path.of(fileImagePath));
+                loadVideoItemThumbnailIfNeeded(imageContainer);
 
-                if (openMultiPagePdfIfNeeded(fileImagePath)) {
-                    return true;
+                if (projectToScreens) {
+                    if (openMultiPagePdfIfNeeded(fileImagePath)) {
+                        if (!SessionAutosave.getInstance().isRestoring()) {
+                            SessionAutosave.getInstance().notifySessionChanged();
+                        }
+                        return true;
+                    }
+
+                    if (openVideoIfNeeded(fileImagePath)) {
+                        if (!SessionAutosave.getInstance().isRestoring()) {
+                            SessionAutosave.getInstance().notifySessionChanged();
+                        }
+                        return true;
+                    }
+
+                    String nextFileImagePath = getNextFileImagePath();
+                    projectionScreensUtil.setImage(fileImagePath, ProjectionType.IMAGE, nextFileImagePath);
                 }
-
-                if (openVideoIfNeeded(fileImagePath)) {
-                    return true;
-                }
-
-                projectionScreensUtil.setImage(fileImagePath, ProjectionType.IMAGE, nextFileImagePath);
                 loadImagePathToPreviewCanvas(fileImagePath);
+                if (!SessionAutosave.getInstance().isRestoring()) {
+                    SessionAutosave.getInstance().notifySessionChanged();
+                }
                 return true;
             } else {
                 selectedImageContainer = null;
@@ -1055,6 +1163,25 @@ public class GalleryController {
         return (int) Arrays.stream(files)
                 .filter(file -> isImageFile(file.getName()))
                 .count();
+    }
+
+    private void renderVideoPlaceholder(Canvas canvas) {
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        double width = canvas.getWidth();
+        double height = canvas.getHeight();
+        gc.clearRect(0, 0, width, height);
+        gc.setFill(VIDEO_PLACEHOLDER_BG);
+        gc.fillRect(0, 0, width, height);
+
+        double cx = width / 2;
+        double cy = height / 2;
+        double size = Math.min(width, height) - 2 * VIDEO_PLACEHOLDER_PADDING;
+        double half = size / 2;
+        gc.setFill(VIDEO_PLACEHOLDER_ICON);
+        gc.fillPolygon(
+                new double[]{cx - half * 0.4, cx - half * 0.4, cx + half * 0.7},
+                new double[]{cy - half * 0.55, cy + half * 0.55, cy},
+                3);
     }
 
     private void renderFolderIcon(Canvas canvas, int itemCount) {
@@ -1269,7 +1396,7 @@ public class GalleryController {
             }
             ImageContainer imageContainer = getImageContainer(index);
             if (imageContainer != null && !imageContainer.isFolder()) {
-                if (selectImageContainer(imageContainer)) {
+                if (selectImageContainer(imageContainer, true)) {
                     Bounds boundsInParent = stackPane.getBoundsInParent();
                     double yPos = boundsInParent.getMinY();
                     double scrollHeight = flowPane.getHeight() - scrollPane.getHeight();

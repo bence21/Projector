@@ -22,6 +22,7 @@ import javafx.scene.shape.Rectangle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.controller.util.PdfService;
 import projector.controller.util.ProjectionScreensUtil;
@@ -66,6 +67,7 @@ public class PdfViewerController {
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private ExecutorService executorService;
     private volatile boolean isClosed = false;
+    private boolean suppressScrollAutosave = false;
 
     public void initialize() {
         pageContainers = new ArrayList<>();
@@ -80,6 +82,33 @@ public class PdfViewerController {
         // Initialize text field state
         if (pageNumberTextField != null) {
             pageNumberTextField.setDisable(true);
+        }
+
+        if (scrollPane != null) {
+            scrollPane.vvalueProperty().addListener((observable, oldValue, newValue) -> {
+                if (!suppressScrollAutosave) {
+                    SessionAutosave.getInstance().notifySessionChanged();
+                }
+            });
+        }
+    }
+
+    public double getScrollVvalue() {
+        if (scrollPane == null) {
+            return -1;
+        }
+        return scrollPane.getVvalue();
+    }
+
+    public void setScrollVvalue(double scrollVvalue) {
+        if (scrollPane == null || scrollVvalue < 0) {
+            return;
+        }
+        suppressScrollAutosave = true;
+        try {
+            scrollPane.setVvalue(Math.max(0, Math.min(1, scrollVvalue)));
+        } finally {
+            suppressScrollAutosave = false;
         }
     }
 
@@ -512,6 +541,7 @@ public class PdfViewerController {
 
         // Update projection screen
         projectionScreensUtil.setImage(filePath, ProjectionType.IMAGE, null);
+        SessionAutosave.getInstance().notifySessionChanged();
     }
 
     /**
