@@ -52,6 +52,9 @@ public class SongAssembler implements GeneralAssembler<Song, SongDTO> {
         songDTO.setVerseOrderList(song.getVerseOrderListWithOld());
         songDTO.setAuthor(song.getAuthor());
         songDTO.setReviewerErased(song.isReviewerErased());
+        songDTO.setHasUnsolvedWords(song.getHasUnsolvedWords());
+        songDTO.setHasBlockingWordIssues(song.getHasBlockingWordIssues());
+        songDTO.setWordQualityScore(song.getWordQualityScore());
         Song backUp = song.getBackUp();
         if (backUp != null) {
             songDTO.setBackUpSongId(backUp.getUuid());

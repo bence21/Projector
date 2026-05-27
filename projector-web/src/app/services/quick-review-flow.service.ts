@@ -5,8 +5,12 @@ import { Language } from '../models/language';
 import { SongWordValidationService } from './song-word-validation.service';
 import {
   QuickReviewSummaryDialogComponent,
-  QuickReviewSummaryDialogData
+  QuickReviewSummaryDialogData,
+  QuickReviewSummaryDialogResult
 } from '../ui/quick-review-summary-dialog/quick-review-summary-dialog.component';
+import { SongCollectionDataService } from './song-collection-data.service';
+import { AuthService } from './auth.service';
+import { SongCollection, SongCollectionElement } from '../models/songCollection';
 import { SongWordValidationDialogComponent } from '../ui/song-word-validation-dialog/song-word-validation-dialog.component';
 import { ConfirmActionDialogComponent } from '../ui/confirm-action-dialog/confirm-action-dialog.component';
 import { SongWordValidationResult } from '../models/songWordValidationResult';
@@ -28,6 +32,8 @@ export class QuickReviewFlowService {
   constructor(
     private songService: SongService,
     private songWordValidationService: SongWordValidationService,
+    private songCollectionDataService: SongCollectionDataService,
+    private auth: AuthService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
   ) {
@@ -70,8 +76,12 @@ export class QuickReviewFlowService {
       newSong: fullSong,
       notes: ['Checks are running: similarity, then word validation.'],
       loadingMessage: 'Preparing quick review...',
-      footerHint: 'Saves the new song (published / not deleted) and merges its version group with the top similar song.',
+      footerHintMerge: 'Publish & merge: saves this song (published / not deleted) and merges its version group with the top similar song.',
       confirmText: 'Publish & merge',
+      mergeText: 'Publish & merge',
+      replaceDuplicateText: 'Copy collections & erase',
+      footerHintReplace:
+        'Copy collections & erase: copies this song\'s collection memberships to the top similar song, then permanently erases this duplicate.',
       cancelText: 'Cancel',
       canConfirm: false
     };
@@ -214,14 +224,131 @@ export class QuickReviewFlowService {
     setBusy: (busy: boolean) => void,
     onMerged: () => void
   ): void {
-    state.dialogRef.afterClosed().subscribe((confirmed) => {
+    state.dialogRef.afterClosed().subscribe((result: false | QuickReviewSummaryDialogResult) => {
       state.dialogClosed = true;
-      if (!confirmed || !state.topSimilar) {
+      if (!result || !state.topSimilar) {
         setBusy(false);
         return;
       }
-      this.saveAndMergeQuickReviewSongs(fullSong, state.topSimilar, setBusy, onMerged);
+      if (result.action === 'replaceDuplicate') {
+        this.copyCollectionsThenEraseQuickReviewSong(fullSong, state.topSimilar, setBusy, onMerged);
+      } else {
+        this.saveAndMergeQuickReviewSongs(fullSong, state.topSimilar, setBusy, onMerged);
+      }
     });
+  }
+
+  /** PUT songCollectionElement exists only under admin/ and reviewer/; getRolePath() can be "user", which 404s. */
+  private songCollectionWriteRole(): string | null {
+    const user = this.auth.getUser();
+    if (!user) {
+      return null;
+    }
+    if (user.isAdmin()) {
+      return 'admin';
+    }
+    if (user.isReviewer()) {
+      return 'reviewer';
+    }
+    return null;
+  }
+
+  private copyCollectionsThenEraseQuickReviewSong(
+    fullSong: Song,
+    topSimilar: Song,
+    setBusy: (busy: boolean) => void,
+    onMerged: () => void
+  ): void {
+    const collectionRole = this.songCollectionWriteRole();
+    if (collectionRole == null) {
+      setBusy(false);
+      this.snackBar.open(
+        'Copying song collection memberships requires an admin or reviewer account.',
+        'Close',
+        { duration: 6000 }
+      );
+      return;
+    }
+    const user = this.auth.getUser();
+    const eraseRole = user != null ? user.getRolePath() : '';
+    if (!eraseRole) {
+      setBusy(false);
+      this.snackBar.open('You must be logged in to erase a song.', 'Close', { duration: 5000 });
+      return;
+    }
+    const copyAndErase = () => {
+      this.songCollectionDataService.getAllBySongId(fullSong.uuid).subscribe(
+        (collections) => {
+          const pairs: { collection: SongCollection; element: SongCollectionElement }[] = [];
+          for (const collection of collections || []) {
+            const elements = collection.songCollectionElements || [];
+            for (const element of elements) {
+              pairs.push({ collection, element });
+            }
+          }
+          const runPut = (index: number) => {
+            if (index >= pairs.length) {
+              this.songService.eraseById(eraseRole, fullSong.uuid).subscribe(
+                () => {
+                  setBusy(false);
+                  this.snackBar.open(
+                    `Collection links copied to "${topSimilar.title}"; "${fullSong.title}" was erased.`,
+                    'Close',
+                    { duration: 5000 }
+                  );
+                  onMerged();
+                },
+                (err) => {
+                  setBusy(false);
+                  if (ErrorUtil.errorIsNeededLogin(err)) {
+                    checkAuthenticationError(copyAndErase, this, err, this.dialog);
+                  } else {
+                    console.log(err);
+                    const body = err._body != null ? err._body : 'Erase failed';
+                    this.snackBar.open(body, 'Close', { duration: 5000 });
+                  }
+                }
+              );
+              return;
+            }
+            const pair = pairs[index];
+            const collection = pair.collection;
+            const collectionUuid = collection.uuid || collection.id;
+            if (!collectionUuid) {
+              setBusy(false);
+              this.snackBar.open('Song collection is missing an id; cannot copy memberships.', 'Close', { duration: 5000 });
+              return;
+            }
+            if (!collection.uuid) {
+              collection.uuid = collectionUuid;
+            }
+            const songCollectionElement = new SongCollectionElement();
+            songCollectionElement.ordinalNumber = pair.element.ordinalNumber;
+            songCollectionElement.songUuid = topSimilar.uuid;
+            this.songCollectionDataService.putInCollection(collection, songCollectionElement, collectionRole).subscribe(
+              () => runPut(index + 1),
+              (err) => {
+                setBusy(false);
+                if (ErrorUtil.errorIsNeededLogin(err)) {
+                  checkAuthenticationError(copyAndErase, this, err, this.dialog);
+                } else {
+                  console.log(err);
+                  const body = err._body != null ? err._body : 'Copy to collection failed';
+                  this.snackBar.open(body, 'Close', { duration: 5000 });
+                }
+              }
+            );
+          };
+          runPut(0);
+        },
+        (err) => {
+          setBusy(false);
+          console.error(err);
+          this.snackBar.open('Could not load song collections. Try again or use the song page.', 'Close', { duration: 5000 });
+        }
+      );
+    };
+    copyAndErase();
   }
 
   private saveAndMergeQuickReviewSongs(

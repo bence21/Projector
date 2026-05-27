@@ -9,6 +9,14 @@ public class SongWordValidationResult {
     private List<String> bannedWords;
     private List<RejectedWordSuggestion> rejectedWords;
     private boolean hasIssues;
+    /**
+     * True when banned or rejected words are present (blocks publication).
+     */
+    private boolean hasBlockingIssues;
+    /**
+     * Sum of tier-weighted word scores; higher means better reviewed quality.
+     */
+    private int wordQualityScore;
     private List<WordWithStatus> wordsWithStatus;
     private boolean hasMixedLanguageWarning;
     private int foreignWordCount;
@@ -43,10 +51,23 @@ public class SongWordValidationResult {
                                     List<WordWithStatus> wordsWithStatus, boolean hasMixedLanguageWarning,
                                     int foreignWordCount, int totalReviewedWordCount, double foreignWordRatio,
                                     List<String> foreignLanguages) {
+        this(unreviewedWords, bannedWords, rejectedWords, hasIssues, false, 0,
+                wordsWithStatus, hasMixedLanguageWarning, foreignWordCount, totalReviewedWordCount, foreignWordRatio,
+                foreignLanguages);
+    }
+
+    public SongWordValidationResult(List<String> unreviewedWords, List<String> bannedWords,
+                                    List<RejectedWordSuggestion> rejectedWords, boolean hasIssues,
+                                    boolean hasBlockingIssues, int wordQualityScore,
+                                    List<WordWithStatus> wordsWithStatus, boolean hasMixedLanguageWarning,
+                                    int foreignWordCount, int totalReviewedWordCount, double foreignWordRatio,
+                                    List<String> foreignLanguages) {
         this.unreviewedWords = unreviewedWords;
         this.bannedWords = bannedWords;
         this.rejectedWords = rejectedWords;
         this.hasIssues = hasIssues;
+        this.hasBlockingIssues = hasBlockingIssues;
+        this.wordQualityScore = wordQualityScore;
         this.wordsWithStatus = wordsWithStatus;
         this.hasMixedLanguageWarning = hasMixedLanguageWarning;
         this.foreignWordCount = foreignWordCount;
@@ -85,6 +106,22 @@ public class SongWordValidationResult {
 
     public void setHasIssues(boolean hasIssues) {
         this.hasIssues = hasIssues;
+    }
+
+    public boolean isHasBlockingIssues() {
+        return hasBlockingIssues;
+    }
+
+    public void setHasBlockingIssues(boolean hasBlockingIssues) {
+        this.hasBlockingIssues = hasBlockingIssues;
+    }
+
+    public int getWordQualityScore() {
+        return wordQualityScore;
+    }
+
+    public void setWordQualityScore(int wordQualityScore) {
+        this.wordQualityScore = wordQualityScore;
     }
 
     public List<WordWithStatus> getWordsWithStatus() {

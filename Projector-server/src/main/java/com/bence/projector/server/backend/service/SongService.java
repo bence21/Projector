@@ -71,6 +71,23 @@ public interface SongService extends BaseService<Song> {
 
     Song findOneByUuid(String uuid);
 
+    /**
+     * Loads counter fields (views, favourites and their last-increment dates) from the database.
+     * When the song is cached in memory, those fields are refreshed on the cached instance so
+     * subsequent #save(Song) updates both DB and cache with accurate values.
+     */
+    Song findOneByUuidWithFreshCounters(String uuid);
+
+    /**
+     * Increments view count using fresh DB values, persists only counter fields, and updates the in-memory cache.
+     */
+    Song incrementViews(String uuid);
+
+    /**
+     * Increments favourite count using fresh DB values, persists only counter fields, and updates the in-memory cache.
+     */
+    Song incrementFavourites(String uuid);
+
     void startThreadFindForSong(String uuid);
 
     Song reloadSong(Song song);
@@ -84,4 +101,16 @@ public interface SongService extends BaseService<Song> {
      * Used when merging version groups so corrupt/stale verse-order associations cannot break persistence.
      */
     void updateVersionGroupForSongs(List<Song> songs, Song versionGroup, Date modifiedDate);
+
+    /**
+     * Removes {@code song} from its version group (admin remove-from-group, hard-delete head prep, etc.).
+     * Same logic as {com.bence.projector.server.api.resources.SongResource#applyRemoveFromSongVersionGroup}.
+     */
+    void removeFromVersionGroup(Song song);
+
+    /**
+     * Persists a backup snapshot in its own transaction so the managed parent song is not auto-flushed
+     * while it still references an unsaved {@link Song#getBackUp()}.
+     */
+    void persistBackUpSnapshot(Song backUpSong);
 }

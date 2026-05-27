@@ -65,6 +65,7 @@ import projector.api.SongApiBean;
 import projector.api.assembler.SongAssembler;
 import projector.application.ProjectionType;
 import projector.application.ProjectorState;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.application.SongVerseTime;
 import projector.application.SongVerseTimeService;
@@ -239,6 +240,8 @@ public class SongController {
     private long timeStart;
     private List<SongVerseTime> previousSongVerseTimeList;
     private int previousSelectedVerseIndex;
+    private int pendingSongVerseSelectedIndex = -1;
+    private boolean skipProjectionOnVerseSelection = false;
     private ScheduledExecutorService opacityScheduler;
     private SongVerseTimeService songVerseTimeService;
     private MyController mainController;
@@ -463,7 +466,10 @@ public class SongController {
                     }
                 }
             });
-            searchedSongListView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> onSongSelectFromListView());
+            searchedSongListView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+                onSongSelectFromListView();
+                SessionAutosave.getInstance().notifySessionChanged();
+            });
             initialization2();
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -815,6 +821,54 @@ public class SongController {
         settingTheAuthor(selectedSong);
         settingTheVerseOrder(selectedSong);
         settingTheStarButtonBySong(selectedSong);
+        applyPendingSongVerseSelection(songListViewItems);
+    }
+
+    private void applyPendingSongVerseSelection(ObservableList<SongVersePartTextFlow> songListViewItems) {
+        if (pendingSongVerseSelectedIndex < 0) {
+            skipProjectionOnVerseSelection = false;
+            return;
+        }
+        int index = pendingSongVerseSelectedIndex;
+        pendingSongVerseSelectedIndex = -1;
+        //noinspection ConstantValue
+        if (index >= 0 && index < songListViewItems.size()) {
+            skipProjectionOnVerseSelection = true;
+            try {
+                songListView.getSelectionModel().clearAndSelect(index);
+            } finally {
+                skipProjectionOnVerseSelection = false;
+            }
+        }
+    }
+
+    /**
+     * After session restore, push the currently selected verse to projection screens
+     * (same path as the verse list listener). Returns false if nothing was projected.
+     */
+    public boolean reprojectSelectedVerseAfterRestore() {
+        if (selectedSong == null || songListView == null) {
+            return false;
+        }
+        ObservableList<Integer> selectedIndices = songListView.getSelectionModel().getSelectedIndices();
+        if (selectedIndices.size() != 1) {
+            return false;
+        }
+        int selectedIndex = selectedIndices.get(0);
+        if (selectedIndex < 0 || selectedIndex >= songListView.getItems().size()) {
+            return false;
+        }
+        SongVersePartTextFlow songVersePartTextFlow = songListView.getItems().get(selectedIndex);
+        String text = songVersePartTextFlow.getMyTextFlow().getRawText();
+        text = getWithSecondText(songVersePartTextFlow, text);
+        setSongVerseProjection1(songVersePartTextFlow, text, selectedSong);
+        if (selectedIndex + 1 == songListView.getItems().size()) {
+            projectionScreensUtil.songEnding();
+            projectionScreensUtil.setProgress(0);
+        } else {
+            projectionScreensUtil.setProgress((double) selectedIndex / (songListView.getItems().size() - 2));
+        }
+        return true;
     }
 
     private double getEstimatedSecondsForSongVersePart(SongVersePartTextFlow songVersePartTextFlow) {
@@ -886,6 +940,9 @@ public class SongController {
                 markSelected();
                 ObservableList<Integer> ob = songListViewSelectionModel.getSelectedIndices();
                 synchronizedSelectVerseOrderListView(ob);
+                if (SessionAutosave.getInstance().isRestoring() || skipProjectionOnVerseSelection) {
+                    return;
+                }
                 if (ob.size() == 1) {
                     int selectedIndex = ob.get(0);
                     if (selectedIndex < 0) {
@@ -927,6 +984,7 @@ public class SongController {
                     recentController.addRecentSong(activeSongVerseTime.getSongTitle(), ProjectionType.SONG);
                 }
                 opacityForSongVerse(ob);
+                SessionAutosave.getInstance().notifySessionChanged();
             } catch (Exception e) {
                 LOG.error(e.getMessage(), e);
             }
@@ -1799,6 +1857,7 @@ public class SongController {
                 readSongs();
                 addAllSongs();
                 addSongCollections();
+                SessionAutosave.getInstance().notifySessionChanged();
             });
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -3481,23 +3540,36 @@ public class SongController {
 
     public void updateProjectorState(ProjectorState projectorState) {
         projectorState.setSelectedSong(selectedSong);
-        projectorState.setSelectedLanguage(languageComboBox.getSelectionModel().getSelectedItem());
+        if (languageComboBox != null) {
+            projectorState.setSelectedLanguage(languageComboBox.getSelectionModel().getSelectedItem());
+        }
+        if (songListView != null) {
+            int verseIndex = songListView.getSelectionModel().getSelectedIndex();
+            if (verseIndex < 0 && !songListView.getSelectionModel().getSelectedIndices().isEmpty()) {
+                verseIndex = songListView.getSelectionModel().getSelectedIndices().get(0);
+            }
+            projectorState.setSongVerseSelectedIndex(verseIndex);
+        }
     }
 
     public void setByProjectorState(ProjectorState projectorState) {
         try {
+            skipProjectionOnVerseSelection = true;
+            pendingSongVerseSelectedIndex = projectorState.getSongVerseSelectedIndex();
             Language selectedLanguage = projectorState.getSelectedLanguage();
             if (selectedLanguage != null) {
                 Language languageInCombo = getLanguageFromList(selectedLanguage, languageComboBox.getItems());
                 languageComboBox.getSelectionModel().select(languageInCombo);
             }
-            Song selectedSong = projectorState.getSelectedSong();
-            SearchedSong searchedSong = getSearchedSongBySong(selectedSong, searchedSongListView.getItems());
-            if (searchedSong != null) {
-                searchedSongListView.getSelectionModel().select(searchedSong);
+            Song song = projectorState.getSelectedSong();
+            if (song != null) {
+                selectSong(song);
+            } else {
+                skipProjectionOnVerseSelection = false;
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
+            skipProjectionOnVerseSelection = false;
         }
     }
 

@@ -43,6 +43,8 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -52,6 +54,7 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.ResourceBundle;
 
+import static projector.utils.monitors.Monitor.makeFilenameSafe;
 import static projector.utils.ContextMenuUtil.getDeleteMenuItem;
 import static projector.utils.ContextMenuUtil.initializeContextMenu;
 import static projector.utils.ContextMenuUtil.setContextMenuHideAction;
@@ -63,6 +66,8 @@ public class UtilsController {
 
     private static final Logger LOG = LoggerFactory.getLogger(UtilsController.class);
     public static final int MAX_LINES = 3;
+    private static final int QR_SAVE_FILE_NAME_MAX_LENGTH = 80;
+    private static final String QR_SAVE_FILE_NAME_FALLBACK = "qr-code";
     public ComboBox<String> actionComboBox;
     public ComboBox<ProjectionScreenBunch> projectionScreensComboBox;
     public CheckBox showFinishTimeCheckBox;
@@ -401,6 +406,7 @@ public class UtilsController {
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG", "*.png"));
 
         setQrSaveFileChooserInitialDirectory(fileChooser);
+        fileChooser.setInitialFileName(buildSuggestedQrSaveFileName());
         Stage stage = (Stage) qrContentTextField.getScene().getWindow();
         File file = fileChooser.showSaveDialog(stage);
         if (file == null) {
@@ -425,6 +431,149 @@ public class UtilsController {
             return;
         }
         fileChooser.setInitialDirectory(new File(".").getAbsoluteFile()); // fallback
+    }
+
+    private String buildSuggestedQrSaveFileName() {
+        String baseName = deriveQrSaveBaseName();
+        File initialDirectory = resolveQrSaveInitialDirectory();
+        return ensureUniqueQrSaveFileName(initialDirectory, baseName) + ".png";
+    }
+
+    private File resolveQrSaveInitialDirectory() {
+        File galleryDir = new File(GalleryController.FOLDER_PATH);
+        if (galleryDir.exists() && galleryDir.isDirectory()) {
+            return galleryDir;
+        }
+        return new File(".").getAbsoluteFile();
+    }
+
+    private String deriveQrSaveBaseName() {
+        String fromTitle = sanitizeQrSaveBaseName(getTrimmedText(qrTitleTextField));
+        if (fromTitle != null) {
+            return fromTitle;
+        }
+
+        String content = getTrimmedText(qrContentTextField);
+        if (content != null) {
+            String fromUrl = sanitizeQrSaveBaseName(fileNameFromUrl(content));
+            if (fromUrl != null) {
+                return fromUrl;
+            }
+            String fromContent = sanitizeQrSaveBaseName(content);
+            if (fromContent != null) {
+                return fromContent;
+            }
+        }
+
+        String fromDescription = sanitizeQrSaveBaseName(getFirstLine(getTrimmedTextArea(qrDescriptionTextArea)));
+        if (fromDescription != null) {
+            return fromDescription;
+        }
+
+        return QR_SAVE_FILE_NAME_FALLBACK;
+    }
+
+    private static String getTrimmedText(TextField textField) {
+        if (textField == null || textField.getText() == null) {
+            return null;
+        }
+        String trimmed = textField.getText().trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String getTrimmedTextArea(TextArea textArea) {
+        if (textArea == null || textArea.getText() == null) {
+            return null;
+        }
+        String trimmed = textArea.getText().trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String getFirstLine(String text) {
+        if (text == null) {
+            return null;
+        }
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        int newlineIndex = normalized.indexOf('\n');
+        String firstLine = newlineIndex >= 0 ? normalized.substring(0, newlineIndex) : normalized;
+        firstLine = firstLine.trim();
+        return firstLine.isEmpty() ? null : firstLine;
+    }
+
+    private static String sanitizeQrSaveBaseName(String text) {
+        if (text == null) {
+            return null;
+        }
+        String normalized = text.replaceAll("\\s+", " ").trim();
+        if (normalized.length() > QR_SAVE_FILE_NAME_MAX_LENGTH) {
+            normalized = normalized.substring(0, QR_SAVE_FILE_NAME_MAX_LENGTH).trim();
+        }
+        String safe = makeFilenameSafe(normalized).replaceAll(" +", " ").trim();
+        return safe.isEmpty() ? null : safe;
+    }
+
+    private static String fileNameFromUrl(String content) {
+        URI uri = parseAsUri(content);
+        if (uri == null) {
+            return null;
+        }
+        String host = uri.getHost();
+        if (host == null || host.isEmpty()) {
+            return null;
+        }
+        if (host.startsWith("www.")) {
+            host = host.substring(4);
+        }
+
+        String path = uri.getPath();
+        if (path == null || path.isEmpty() || "/".equals(path)) {
+            return host;
+        }
+
+        String trimmedPath = path.replaceAll("/+$", "");
+        int lastSlash = trimmedPath.lastIndexOf('/');
+        String lastSegment = lastSlash >= 0 ? trimmedPath.substring(lastSlash + 1) : trimmedPath;
+        if (lastSegment.isEmpty()) {
+            return host;
+        }
+        return host + "-" + lastSegment;
+    }
+
+    private static URI parseAsUri(String content) {
+        try {
+            URI uri = new URI(content);
+            if (uri.getScheme() != null && uri.getHost() != null) {
+                return uri;
+            }
+        } catch (URISyntaxException ignored) {
+            // fall through to https prefix attempt
+        }
+        try {
+            URI uri = new URI("https://" + content);
+            if (uri.getHost() != null && uri.getHost().contains(".")) {
+                return uri;
+            }
+        } catch (URISyntaxException ignored) {
+            return null;
+        }
+        return null;
+    }
+
+    private static String ensureUniqueQrSaveFileName(File directory, String baseName) {
+        if (directory == null || !directory.isDirectory()) {
+            return baseName;
+        }
+        File candidate = new File(directory, baseName + ".png");
+        if (!candidate.exists()) {
+            return baseName;
+        }
+        for (int i = 2; i < 1000; i++) {
+            String numberedBaseName = baseName + " (" + i + ")";
+            if (!new File(directory, numberedBaseName + ".png").exists()) {
+                return numberedBaseName;
+            }
+        }
+        return baseName + " (" + System.currentTimeMillis() + ")";
     }
 
     private void initializeActionComboBox() {

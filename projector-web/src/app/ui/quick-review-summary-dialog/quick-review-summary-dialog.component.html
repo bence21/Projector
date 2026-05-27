@@ -14,7 +14,8 @@
       [song]="data.newSong"
       [secondSong]="data.similarSong"
       [descriptionLabelLeft]="'Current song:'"
-      [descriptionLabelRight]="'Top similar:'">
+      [descriptionLabelRight]="'Top similar:'"
+      (textsMatchChange)="onTextsMatchChange($event)">
     </app-compare-songs>
   </div>
   <div class="meta-wrapper" *ngIf="data.newSong">
@@ -27,11 +28,40 @@
       <app-song-meta-table [song]="data.similarSong"></app-song-meta-table>
     </div>
   </div>
-  <p *ngIf="data.footerHint">{{ data.footerHint }}</p>
+  <p *ngIf="displayedFooterHint">{{ displayedFooterHint }}</p>
 </mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-button [mat-dialog-close]="false">{{ data.cancelText || 'Cancel' }}</button>
-  <button mat-button [mat-dialog-close]="true" color="primary" [disabled]="!data.canConfirm">
-    {{ data.confirmText || 'Confirm' }}
+<mat-dialog-actions class="quick-review-actions" align="end">
+  <button mat-button (click)="dialogRef.close(false)">{{ data.cancelText || 'Cancel' }}</button>
+  <button
+          *ngIf="primaryIsReplaceDuplicate"
+          mat-raised-button
+          color="primary"
+          [disabled]="!data.canConfirm"
+          (click)="onPrimaryReplace()">
+    {{ replaceLabel() }}
+  </button>
+  <button
+          *ngIf="!primaryIsReplaceDuplicate"
+          mat-stroked-button
+          class="secondary-action"
+          [disabled]="!data.canConfirm"
+          (click)="onSecondaryReplace()">
+    {{ replaceLabel() }}
+  </button>
+  <button
+          *ngIf="!primaryIsReplaceDuplicate"
+          mat-raised-button
+          color="primary"
+          [disabled]="!data.canConfirm"
+          (click)="onPrimaryMerge()">
+    {{ mergeLabel() }}
+  </button>
+  <button
+          *ngIf="primaryIsReplaceDuplicate"
+          mat-stroked-button
+          class="secondary-action"
+          [disabled]="!data.canConfirm"
+          (click)="onSecondaryMerge()">
+    {{ mergeLabel() }}
   </button>
 </mat-dialog-actions>

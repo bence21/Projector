@@ -178,6 +178,10 @@ export class SongWordValidationDialogComponent implements OnInit {
   }
 
   get hasBlockingIssues(): boolean {
+    const explicit = this.validationResult.hasBlockingIssues;
+    if (explicit === true || explicit === false) {
+      return explicit;
+    }
     return this.getBannedCount() > 0 || this.getRejectedCount() > 0;
   }
 
@@ -333,11 +337,15 @@ export class SongWordValidationDialogComponent implements OnInit {
   }
 
   private updateHasIssues() {
-    this.validationResult.hasIssues = 
+    this.validationResult.hasIssues =
       (this.validationResult.unreviewedWords && this.validationResult.unreviewedWords.length > 0) ||
       (this.validationResult.bannedWords && this.validationResult.bannedWords.length > 0) ||
       (this.validationResult.rejectedWords && this.validationResult.rejectedWords.length > 0);
-    
+
+    this.validationResult.hasBlockingIssues =
+      (this.validationResult.bannedWords && this.validationResult.bannedWords.length > 0) ||
+      (this.validationResult.rejectedWords && this.validationResult.rejectedWords.length > 0);
+
     // Auto-close dialog if no issues and not loading
     // Add a brief delay so the user can see the "No word issues found" message
     if (!this.validationResult.hasIssues && !this.loading) {

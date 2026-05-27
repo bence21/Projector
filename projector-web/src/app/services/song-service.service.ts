@@ -134,6 +134,10 @@ export class Song extends BaseModel {
   static PUBLIC = "PUBLIC";
   static UPLOADED = "UPLOADED";
   static REVIEWER = "REVIEWER";
+  /** Max points Song.getScore may add from wordQualityScore (linear map 0–WORD_QUALITY_SCORE_SCALE_MAX → 0–this). */
+  static readonly WORD_QUALITY_SCORE_BONUS_CAP = 25;
+  /** Upper bound of wordQualityScore for getScore bonus (0–100; keep aligned with server scoring). */
+  static readonly WORD_QUALITY_SCORE_SCALE_MAX = 100;
   private static currentDate = new Date().getTime();
   originalId: string;
   title = '';
@@ -161,7 +165,10 @@ export class Song extends BaseModel {
   commonCharacterCount = 0;
   repeatChorus: boolean = true;
   reviewerErased: boolean = false;
-  hasUnsolvedWords: boolean = false;
+  hasUnsolvedWords?: boolean;
+  /** When true, song is not public (banned/rejected words) */
+  hasBlockingWordIssues?: boolean;
+  wordQualityScore?: number;
   /** From SongTitle API: number of verses; 0 means the song has no verse content. */
   verseCount?: number;
 
@@ -208,6 +215,11 @@ export class Song extends BaseModel {
     l = Song.getCurrentDate() - song.modifiedDate;
     if (l < 2592000000) {
       score += 4 * ((1 - l / 2592000000));
+    }
+    if (song.wordQualityScore != null && song.wordQualityScore > 0) {
+      const wordBonus =
+        (song.wordQualityScore * Song.WORD_QUALITY_SCORE_BONUS_CAP) / Song.WORD_QUALITY_SCORE_SCALE_MAX;
+      score += Math.min(wordBonus, Song.WORD_QUALITY_SCORE_BONUS_CAP);
     }
     return score;
   }

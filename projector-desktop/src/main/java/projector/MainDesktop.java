@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ApplicationUtil;
 import projector.application.ApplicationVersion;
+import projector.application.SessionAutosave;
 import projector.application.ProjectionScreenSettings;
 import projector.application.Settings;
 import projector.application.Updater;
@@ -82,7 +83,9 @@ public class MainDesktop extends Application {
     public static void main(String[] args) {
         Log4j2Config.getInstance().initializeLog4j2OnMac();
         accessibilityAssistiveTechnologiesProblem();
-        if (!killOtherProcesses(!AppState.getInstance().isClosed())) {
+        boolean uncleanShutdown = !AppState.getInstance().isClosed();
+        SessionAutosave.getInstance().setRestorePending(uncleanShutdown);
+        if (!killOtherProcesses(uncleanShutdown)) {
             return;
         }
         openState();
@@ -220,6 +223,13 @@ public class MainDesktop extends Application {
         myController.initialTabSelect();
         primaryStage.requestFocus();
         ApplicationUtil.getInstance().checkForProjectorState();
+        registerSessionShutdownHook();
+    }
+
+    private void registerSessionShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(
+                SessionAutosave.getInstance()::shutdown,
+                "projector-session-shutdown"));
     }
 
     @SuppressWarnings("unused")
@@ -407,6 +417,7 @@ public class MainDesktop extends Application {
     }
 
     private void closeApplication() {
+        ApplicationUtil.getInstance().consumeSessionOnCleanClose();
         saveStateOnClose();
         System.out.println("Stage is closing");
         Settings settings = Settings.getInstance();

@@ -23,6 +23,9 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import projector.application.ProjectorState;
+import projector.application.ScheduleEntryState;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.controller.song.util.ScheduleSong;
 import projector.controller.util.ProjectionScreensUtil;
@@ -61,7 +64,7 @@ public class ScheduleController {
     @FXML
     private ListView<ScheduleSong> listView;
     private SongController songController;
-    private int selectedIndex;
+    private int selectedIndex = -1;
     private boolean pauseSelectionListener = false;
 
     int getSelectedIndex() {
@@ -138,6 +141,15 @@ public class ScheduleController {
                     onSectionScheduleRowSelected(selectedItem);
                 } else {
                     onSongScheduleRowSelected(selectedItem, newValue);
+                }
+            }
+            SessionAutosave.getInstance().notifySessionChanged();
+        });
+        items.addListener((javafx.collections.ListChangeListener.Change<? extends ScheduleSong> change) -> {
+            while (change.next()) {
+                if (change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated()) {
+                    SessionAutosave.getInstance().notifySessionChanged();
+                    break;
                 }
             }
         });
@@ -455,6 +467,61 @@ public class ScheduleController {
 
     public void setSongController(SongController songController) {
         this.songController = songController;
+    }
+
+    public void updateProjectorState(ProjectorState projectorState) {
+        if (listView == null) {
+            return;
+        }
+        List<ScheduleEntryState> entries = new ArrayList<>();
+        for (ScheduleSong item : listView.getItems()) {
+            if (item.isSection()) {
+                entries.add(ScheduleEntryState.section(item.getSectionLabel()));
+            } else if (item.getSong() != null) {
+                entries.add(ScheduleEntryState.song(item.getSong()));
+            }
+        }
+        projectorState.setScheduleEntries(entries);
+        projectorState.setScheduleSelectedIndex(selectedIndex);
+    }
+
+    public void restoreFromProjectorState(ProjectorState projectorState) {
+        if (listView == null || projectorState.getScheduleEntries() == null) {
+            return;
+        }
+        pauseSelectionListener = true;
+        try {
+            ObservableList<ScheduleSong> items = listView.getItems();
+            items.clear();
+            SongService songService = ServiceManager.getSongService();
+            List<Song> readSongs = new ArrayList<>();
+            for (ScheduleEntryState entry : projectorState.getScheduleEntries()) {
+                if (ScheduleEntryState.TYPE_SECTION.equals(entry.getType())) {
+                    addSectionRow(entry.getSectionLabel());
+                } else if (ScheduleEntryState.TYPE_SONG.equals(entry.getType())) {
+                    Song song = null;
+                    if (entry.getSongUuid() != null) {
+                        song = songService.findByUuid(entry.getSongUuid());
+                    } else if (entry.getSongId() != null) {
+                        song = songService.findById(entry.getSongId());
+                    }
+                    if (song != null) {
+                        addLoadedSong(readSongs, song);
+                    }
+                }
+            }
+            if (!readSongs.isEmpty()) {
+                setSongCollections(readSongs);
+            }
+            int index = projectorState.getScheduleSelectedIndex();
+            if (index >= 0 && index < items.size()) {
+                selectedIndex = index;
+                listView.getSelectionModel().clearAndSelect(index);
+            }
+            handleNextScheduled();
+        } finally {
+            pauseSelectionListener = false;
+        }
     }
 
 }

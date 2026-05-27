@@ -45,8 +45,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.MainDesktop;
 import projector.api.assembler.ProjectionAssembler;
+import projector.application.ApplicationUtil;
+import projector.application.BibleReferenceSlotState;
 import projector.application.ProjectionType;
+import projector.application.ProjectorState;
 import projector.application.Reader;
+import projector.application.ReferenceBookState;
+import projector.application.ReferenceChapterState;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.controller.eventHandler.NextButtonEventHandler;
 import projector.controller.util.ProjectionData;
@@ -163,6 +169,11 @@ public class BibleController {
     private boolean initialized = false;
     private boolean wasSelectionChange;
     private boolean splitDividersInitialized = false;
+    private boolean pauseReferenceRestore = false;
+    private boolean restoringBibleSearch = false;
+    private boolean skipProjectionOnVerseSelection = false;
+    private ProjectorState projectorStateForRestoreReapply = null;
+    private int pendingSearchMatchIndex = -1;
     private final List<BibleVerseTextFlow> foundedBibleVerseTextFlows = new ArrayList<>();
     private int currentIterationFoundBibleVerseTextFlowIndex = 0;
 
@@ -398,6 +409,7 @@ public class BibleController {
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
+                SessionAutosave.getInstance().notifySessionChanged();
             });
             bibleListView.setCellFactory(new Callback<>() {
                 @Override
@@ -611,6 +623,7 @@ public class BibleController {
                     } catch (Exception e) {
                         LOG.error(e.getMessage(), e);
                     }
+                    SessionAutosave.getInstance().notifySessionChanged();
                 }
             });
             bookListView.setOnKeyPressed(event -> {
@@ -653,6 +666,7 @@ public class BibleController {
                     } catch (Exception e) {
                         LOG.error(e.getMessage(), e);
                     }
+                    SessionAutosave.getInstance().notifySessionChanged();
                 }
             });
             partListView.setOnKeyPressed(event -> {
@@ -815,6 +829,7 @@ public class BibleController {
                 try {
                     ref.clear();
                     referenceTextArea.setText("");
+                    SessionAutosave.getInstance().notifySessionChanged();
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
@@ -895,6 +910,7 @@ public class BibleController {
                         ref.removeVerse(i.getFirst(), i.getSecond(), i.getThird());
                     }
                     referenceTextArea.setText(ref.getReference());
+                    SessionAutosave.getInstance().notifySessionChanged();
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
@@ -1005,6 +1021,7 @@ public class BibleController {
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
                 }
+                SessionAutosave.getInstance().notifySessionChanged();
             });
             referenceListView.orientationProperty().set(Orientation.HORIZONTAL);
             referenceListView.getItems().add(settings.getResourceBundle().getString("All"));
@@ -1040,6 +1057,9 @@ public class BibleController {
                             newReferenceAdded = false;
                             referenceListView.getSelectionModel().select(lastIndex - 1);
                         }
+                        if (!pauseReferenceRestore) {
+                            SessionAutosave.getInstance().notifySessionChanged();
+                        }
                     } catch (Exception e) {
                         LOG.error(e.getMessage(), e);
                     }
@@ -1054,7 +1074,11 @@ public class BibleController {
             });
             partLabel.setText("");
             foundLabel.setText("");
-            searchTextField.textProperty().addListener((observable, oldValue, newValue) -> search(newValue));
+            searchTextField.textProperty().addListener((observable, oldValue, newValue) -> {
+                if (!restoringBibleSearch) {
+                    search(newValue);
+                }
+            });
             searchTextField.setOnKeyPressed(event -> {
                 mainController.globalKeyEventHandler().handle(event);
                 try {
@@ -1099,6 +1123,9 @@ public class BibleController {
             currentIterationFoundBibleVerseTextFlowIndex = size - 1;
         }
         scrollToCurrentIterationFoundBibleVerseTextFlow();
+        if (!restoringBibleSearch) {
+            SessionAutosave.getInstance().notifySessionChanged();
+        }
     }
 
     private void scrollToCurrentIterationFoundBibleVerseTextFlow() {
@@ -1344,6 +1371,15 @@ public class BibleController {
                                         }
                                         ++index;
                                     }
+                                }
+                                if (restoringBibleSearch) {
+                                    if (pendingSearchMatchIndex >= 0
+                                            && pendingSearchMatchIndex < foundedBibleVerseTextFlows.size()) {
+                                        currentIterationFoundBibleVerseTextFlowIndex = pendingSearchMatchIndex;
+                                    }
+                                    pendingSearchMatchIndex = -1;
+                                    restoringBibleSearch = false;
+                                    scheduleProjectionReapplyAfterRestore();
                                 }
                                 scrollToCurrentIterationFoundBibleVerseTextFlow();
                             } catch (Exception e) {
@@ -1658,65 +1694,101 @@ public class BibleController {
 
     private void verseSelected() {
         try {
-            if (bible == null) {
+            if (SessionAutosave.getInstance().isRestoring() || skipProjectionOnVerseSelection) {
                 return;
             }
-            ObservableList<Integer> ob = verseListView.getSelectionModel().getSelectedIndices();
-            StringBuilder string = new StringBuilder();
-            int iVerse;
-            iVerse = getFirstFromSelectedIndices(ob);
-            String text = null;
-            ProjectionData projectionData = new ProjectionData();
-            ProjectionDTO projectionDTO = new ProjectionDTO();
-            projectionData.setProjectionDTO(projectionDTO);
-            if (selectedBook >= 0 && selectedPart >= 0 && iVerse >= 0) {
-                List<VerseIndex> verseIndices = new ArrayList<>();
-                List<BibleVerse> bibleVerses = new ArrayList<>(ob.size());
-                for (int i : ob) {
-                    BibleVerse bibleVerse = bible.getBooks().get(selectedBook).getChapters().get(selectedPart).getVerses().get(i);
-                    bibleVerses.add(bibleVerse);
-                    List<VerseIndex> verseIndexList = bibleVerse.getVerseIndices();
-                    if (verseIndexList != null) {
-                        verseIndices.addAll(verseIndexList);
-                    }
-                }
-                ProjectionAssembler projectionAssembler = ProjectionAssembler.getInstance();
-                projectionAssembler.setVerseIndices(projectionDTO, verseIndices);
-                projectionAssembler.setSelectedBible(projectionDTO, bible);
-                projectionAssembler.setSelectedVerses(projectionDTO, selectedBook, selectedPart, ob);
-                string = new StringBuilder(getVersesAndReference(bible, bibleVerses));
-                if (settings.isParallel()) {
-                    for (Bible parallelBible : parallelBibles) {
-                        if (parallelBible.isParallelSelected()) {
-                            string.append("\n").append(getBibleVerseWithReferenceText(verseIndices, parallelBible, selectedBook, selectedPart, ob));
-                        }
-                    }
-                }
-                ArrayList<Integer> tmp = new ArrayList<>(ob);
-                text = string.toString();
-                String verseNumbers = text.substring(string.lastIndexOf(":") + 1, string.length()).replace("]", "").replace("</color>", "");
-                recentController.addRecentBibleVerse(text, selectedBook, selectedPart, iVerse, verseNumbers, tmp);
-            }
-            if (!string.isEmpty()) {
-                if (!settings.isShowReferenceOnly()) {
-                    //noinspection ConstantConditions
-                    projectionScreensUtil.setText(text, ProjectionType.BIBLE, projectionData);
-                }
-                for (int i : ob) {
-                    if (i == -1) {
-                        i = verseListView.getSelectionModel().getSelectedIndex();
-                    }
-                    ref.addVerse(selectedBook, selectedPart + 1, i + 1);
-                    allReference.addVerse(selectedBook, selectedPart + 1, i + 1);
-                }
-                refreshReferenceTextArea();
-                if (settings.isShowReferenceOnly()) {
-                    projectionScreensUtil.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, projectionData);
-                }
-            }
+            projectSelectedVersesToScreens(true);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
+    }
+
+    /**
+     * Pushes the current bible verse selection to projection screens (same logic as {@link #verseSelected}).
+     *
+     * @param updateRecent when true, also records the selection in recent verses
+     * @return false if nothing was projected
+     */
+    public boolean projectSelectedVersesToScreens(boolean updateRecent) {
+        if (bible == null) {
+            return false;
+        }
+        ObservableList<Integer> ob = verseListView.getSelectionModel().getSelectedIndices();
+        if (ob.isEmpty()) {
+            return false;
+        }
+        StringBuilder string = new StringBuilder();
+        int iVerse = getFirstFromSelectedIndices(ob);
+        String text = null;
+        ProjectionData projectionData = new ProjectionData();
+        ProjectionDTO projectionDTO = new ProjectionDTO();
+        projectionData.setProjectionDTO(projectionDTO);
+        if (selectedBook >= 0 && selectedPart >= 0 && iVerse >= 0) {
+            List<VerseIndex> verseIndices = new ArrayList<>();
+            List<BibleVerse> bibleVerses = new ArrayList<>(ob.size());
+            for (int i : ob) {
+                BibleVerse bibleVerse = bible.getBooks().get(selectedBook).getChapters().get(selectedPart).getVerses().get(i);
+                bibleVerses.add(bibleVerse);
+                List<VerseIndex> verseIndexList = bibleVerse.getVerseIndices();
+                if (verseIndexList != null) {
+                    verseIndices.addAll(verseIndexList);
+                }
+            }
+            ProjectionAssembler projectionAssembler = ProjectionAssembler.getInstance();
+            projectionAssembler.setVerseIndices(projectionDTO, verseIndices);
+            projectionAssembler.setSelectedBible(projectionDTO, bible);
+            projectionAssembler.setSelectedVerses(projectionDTO, selectedBook, selectedPart, ob);
+            string = new StringBuilder(getVersesAndReference(bible, bibleVerses));
+            if (settings.isParallel()) {
+                for (Bible parallelBible : parallelBibles) {
+                    if (parallelBible.isParallelSelected()) {
+                        string.append("\n").append(getBibleVerseWithReferenceText(verseIndices, parallelBible, selectedBook, selectedPart, ob));
+                    }
+                }
+            }
+            ArrayList<Integer> tmp = new ArrayList<>(ob);
+            text = string.toString();
+            if (updateRecent && recentController != null && !text.isEmpty()) {
+                String verseNumbers = text.substring(string.lastIndexOf(":") + 1).replace("]", "").replace("</color>", "");
+                recentController.addRecentBibleVerse(text, selectedBook, selectedPart, iVerse, verseNumbers, tmp);
+            }
+        }
+        if (string.isEmpty()) {
+            return false;
+        }
+        if (!settings.isShowReferenceOnly()) {
+            projectionScreensUtil.setText(text, ProjectionType.BIBLE, projectionData);
+        }
+        for (int i : ob) {
+            if (i == -1) {
+                i = verseListView.getSelectionModel().getSelectedIndex();
+            }
+            ref.addVerse(selectedBook, selectedPart + 1, i + 1);
+            allReference.addVerse(selectedBook, selectedPart + 1, i + 1);
+        }
+        refreshReferenceTextArea();
+        if (settings.isShowReferenceOnly()) {
+            projectionScreensUtil.setText(referenceTextArea.getText(), ProjectionType.REFERENCE, projectionData);
+        }
+        return true;
+    }
+
+    public boolean reprojectSelectedVersesAfterRestore(ProjectionType savedProjectionType) {
+        if (savedProjectionType == ProjectionType.REFERENCE) {
+            if (referenceTextArea == null) {
+                return false;
+            }
+            String referenceText = referenceTextArea.getText();
+            if (referenceText == null || referenceText.isEmpty()) {
+                return false;
+            }
+            projectionScreensUtil.setText(referenceText, ProjectionType.REFERENCE, null);
+            return true;
+        }
+        if (savedProjectionType == ProjectionType.BIBLE) {
+            return projectSelectedVersesToScreens(false);
+        }
+        return false;
     }
 
     private void refreshReferenceTextArea() {
@@ -1880,5 +1952,280 @@ public class BibleController {
 
     public void selectBible(Bible bible) {
         bibleListView.getSelectionModel().select(bible);
+    }
+
+    public void updateProjectorState(ProjectorState projectorState) {
+        if (bible == null) {
+            return;
+        }
+        if (selectedBook >= 0 && selectedPart >= 0) {
+            projectorState.setSelectedBibleUuid(bible.getUuid());
+            projectorState.setSelectedBibleBookIndex(selectedBook);
+            projectorState.setSelectedBiblePartIndex(selectedPart);
+            if (verseListView != null) {
+                projectorState.setSelectedBibleVerseIndices(
+                        new ArrayList<>(verseListView.getSelectionModel().getSelectedIndices()));
+            }
+        }
+        if (references != null && referenceListView != null) {
+            List<BibleReferenceSlotState> slots = new ArrayList<>();
+            for (Reference reference : references) {
+                slots.add(toReferenceSlotState(reference));
+            }
+            projectorState.setBibleReferenceSlots(slots);
+            projectorState.setSelectedReferenceListIndex(
+                    referenceListView.getSelectionModel().getSelectedIndex());
+        }
+        if (searchTextField != null) {
+            String searchText = searchTextField.getText();
+            if (searchText != null && !searchText.trim().isEmpty()) {
+                projectorState.setBibleSearchText(searchText.trim());
+                if (!foundedBibleVerseTextFlows.isEmpty()) {
+                    projectorState.setBibleSearchMatchIndex(currentIterationFoundBibleVerseTextFlowIndex);
+                } else {
+                    projectorState.setBibleSearchMatchIndex(-1);
+                }
+            } else {
+                projectorState.setBibleSearchText(null);
+                projectorState.setBibleSearchMatchIndex(-1);
+            }
+        }
+    }
+
+    public void restoreBibleSearchFromState(String text, int matchIndex) {
+        if (text == null || text.trim().isEmpty() || searchTextField == null) {
+            return;
+        }
+        restoringBibleSearch = true;
+        pendingSearchMatchIndex = matchIndex;
+        searchTextField.setText(text);
+        search(text);
+    }
+
+    private void scheduleProjectionReapplyAfterRestore() {
+        if (projectorStateForRestoreReapply == null) {
+            return;
+        }
+        ProjectorState state = projectorStateForRestoreReapply;
+        projectorStateForRestoreReapply = null;
+        ApplicationUtil.getInstance().reapplySavedProjection(state);
+    }
+
+    public void setByProjectorState(ProjectorState projectorState) {
+        String bibleUuid = projectorState.getSelectedBibleUuid();
+        int bookIndex = projectorState.getSelectedBibleBookIndex();
+        int partIndex = projectorState.getSelectedBiblePartIndex();
+        boolean hasReferenceSlots = projectorState.getBibleReferenceSlots() != null
+                && !projectorState.getBibleReferenceSlots().isEmpty();
+        if (bibleUuid == null && !hasReferenceSlots) {
+            return;
+        }
+        lazyInitialize();
+        initializeBiblesWithoutSameSizeCheck();
+        if (bibleUuid != null) {
+            Bible bibleToSelect = findBibleInListByUuid(bibleUuid);
+            if (bibleToSelect == null) {
+                return;
+            }
+            projectorStateForRestoreReapply = projectorState;
+            skipProjectionOnVerseSelection = true;
+            setSelecting(true);
+            try {
+                bibleListView.getSelectionModel().select(bibleToSelect);
+                bible = bibleListView.getSelectionModel().getSelectedItem();
+                if (bible == null) {
+                    return;
+                }
+                if (bookIndex >= 0 && partIndex >= 0) {
+                    selectedBook = bookIndex;
+                    selectedPart = partIndex;
+                    partListBookI = bookIndex;
+                    addAllBooks();
+                    int bookListIndex = findBookListIndexForBook(bookIndex);
+                    if (bookListIndex >= 0) {
+                        bookListView.getSelectionModel().select(bookListIndex);
+                        bookListView.scrollTo(bookListIndex);
+                    }
+                    if (partIndex < partListView.getItems().size()) {
+                        partListView.getSelectionModel().select(partIndex);
+                        partListView.scrollTo(partIndex);
+                    }
+                    addAllVerse();
+                    String bibleSearchText = projectorState.getBibleSearchText();
+                    if (bibleSearchText != null && !bibleSearchText.isEmpty()) {
+                        restoreBibleSearchFromState(bibleSearchText, projectorState.getBibleSearchMatchIndex());
+                    } else {
+                        List<Integer> verseIndices = projectorState.getSelectedBibleVerseIndices();
+                        if (verseIndices != null && !verseIndices.isEmpty()) {
+                            applyVerseIndices(verseIndices);
+                        }
+                    }
+                }
+                restoreReferencesFromProjectorState(projectorState);
+            } finally {
+                setSelecting(false);
+                skipProjectionOnVerseSelection = false;
+            }
+        } else //noinspection ConstantValue
+            if (hasReferenceSlots) {
+                projectorStateForRestoreReapply = projectorState;
+            }
+    }
+
+    private BibleReferenceSlotState toReferenceSlotState(Reference reference) {
+        BibleReferenceSlotState slot = new BibleReferenceSlotState();
+        if (reference == null || bible == null) {
+            return slot;
+        }
+        List<ReferenceBookState> bookStates = new ArrayList<>();
+        for (ReferenceBook referenceBook : reference.getBookList()) {
+            ReferenceBookState bookState = new ReferenceBookState();
+            bookState.setBookNumber(resolveBookNumber(referenceBook));
+            List<ReferenceChapterState> chapterStates = new ArrayList<>();
+            for (ReferenceChapter chapter : referenceBook.getChapters()) {
+                ReferenceChapterState chapterState = new ReferenceChapterState();
+                chapterState.setChapterNumber(chapter.getChapterNumber());
+                chapterState.setVerses(new ArrayList<>(chapter.getVerses()));
+                chapterStates.add(chapterState);
+            }
+            bookState.setChapters(chapterStates);
+            bookStates.add(bookState);
+        }
+        slot.setBooks(bookStates);
+        return slot;
+    }
+
+    private int resolveBookNumber(ReferenceBook referenceBook) {
+        Book refBook = referenceBook.getBook();
+        if (refBook != null && bible != null) {
+            List<Book> books = bible.getBooks();
+            for (int i = 0; i < books.size(); i++) {
+                Book book = books.get(i);
+                if (refBook.getUuid() != null && refBook.getUuid().equals(book.getUuid())) {
+                    return i;
+                }
+                if (refBook.getId() != null && refBook.getId().equals(book.getId())) {
+                    return i;
+                }
+            }
+        }
+        return referenceBook.getBookNumber();
+    }
+
+    private void restoreReferencesFromProjectorState(ProjectorState projectorState) {
+        List<BibleReferenceSlotState> slots = projectorState.getBibleReferenceSlots();
+        if (slots == null || slots.isEmpty() || bible == null || !initialized) {
+            return;
+        }
+        pauseReferenceRestore = true;
+        try {
+            allReference = new Reference();
+            allReference.setBible(bible);
+            ref = new Reference();
+            ref.setBible(bible);
+            references = new LinkedList<>();
+            referenceListView.getItems().clear();
+            referenceListView.getItems().add(settings.getResourceBundle().getString("All"));
+            referenceListView.getItems().add("1");
+
+            applyReferenceSlotState(allReference, slots.get(0));
+            references.add(allReference);
+
+            if (slots.size() > 1) {
+                applyReferenceSlotState(ref, slots.get(1));
+            }
+            references.add(ref);
+
+            for (int i = 2; i < slots.size(); i++) {
+                Reference extra = new Reference();
+                extra.setBible(bible);
+                applyReferenceSlotState(extra, slots.get(i));
+                references.add(extra);
+                int insertIndex = referenceListView.getItems().size() - 1;
+                if (insertIndex < 0) {
+                    insertIndex = 0;
+                }
+                referenceListView.getItems().add(insertIndex, String.valueOf(i));
+            }
+            referenceListView.getItems().add(settings.getResourceBundle().getString("New"));
+            newReferenceAdded = false;
+
+            int selectedIndex = projectorState.getSelectedReferenceListIndex();
+            if (selectedIndex >= 0 && selectedIndex < references.size()) {
+                ref = references.get(selectedIndex);
+                if (selectedIndex < referenceListView.getItems().size() - 1) {
+                    referenceListView.getSelectionModel().select(selectedIndex);
+                }
+            }
+            refreshReferenceTextArea();
+        } finally {
+            pauseReferenceRestore = false;
+        }
+    }
+
+    private void applyReferenceSlotState(Reference reference, BibleReferenceSlotState slot) {
+        reference.clear();
+        reference.setBible(bible);
+        if (slot == null || slot.getBooks() == null) {
+            return;
+        }
+        for (ReferenceBookState bookState : slot.getBooks()) {
+            if (bookState.getChapters() == null) {
+                continue;
+            }
+            for (ReferenceChapterState chapterState : bookState.getChapters()) {
+                if (chapterState.getVerses() == null) {
+                    continue;
+                }
+                for (Integer verse : chapterState.getVerses()) {
+                    if (verse != null) {
+                        reference.addVerse(bookState.getBookNumber(), chapterState.getChapterNumber(), verse);
+                    }
+                }
+            }
+        }
+    }
+
+    private Bible findBibleInListByUuid(String uuid) {
+        for (Bible item : bibleListView.getItems()) {
+            if (uuid.equals(item.getUuid())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private int findBookListIndexForBook(int bookIndex) {
+        if (searchIBook == null) {
+            return -1;
+        }
+        for (int i = 0; i < searchIBook.size(); i++) {
+            if (searchIBook.get(i) == bookIndex) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void applyVerseIndices(List<Integer> verseIndices) {
+        MultipleSelectionModel<BibleVerseTextFlow> selectionModel = verseListView.getSelectionModel();
+        selectionModel.clearSelection();
+        int maxVerseIndex = verseListView.getItems().size() - 1;
+        for (Integer verseIndex : verseIndices) {
+            if (verseIndex == null || verseIndex < 0) {
+                continue;
+            }
+            int index = verseIndex > maxVerseIndex ? maxVerseIndex : verseIndex;
+            //noinspection ConstantValue
+            if (index >= 0 && index <= maxVerseIndex) {
+                selectionModel.select(index);
+            }
+        }
+        if (!verseIndices.isEmpty()) {
+            Integer firstIndex = verseIndices.get(0);
+            if (firstIndex != null && firstIndex >= 0 && firstIndex <= maxVerseIndex) {
+                verseListView.scrollTo(firstIndex);
+            }
+        }
     }
 }

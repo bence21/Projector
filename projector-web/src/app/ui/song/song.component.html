@@ -128,6 +128,48 @@
           <td>Last modified by user email:&nbsp;</td>
           <td>{{song.lastModifiedByUserEmail}}</td>
         </tr>
+        <tr class="word-quality-summary-row" (click)="wordQualityDetailsExpanded = !wordQualityDetailsExpanded">
+          <td colspan="2" class="word-quality-summary-cell">
+            <span class="word-quality-summary-text">{{ getWordQualitySummary() }}</span>
+            <mat-icon class="word-quality-chevron">{{ wordQualityDetailsExpanded ? 'expand_less' : 'expand_more' }}
+            </mat-icon>
+          </td>
+        </tr>
+        <tr *ngIf="wordQualityDetailsExpanded" class="word-quality-details-row">
+          <td colspan="2" class="word-quality-details-cell">
+            <table class="word-quality-details">
+              <tr>
+                <td>Word review</td>
+                <td>
+                  {{ formatUnsolvedWordsStatus() }}
+                  <span *ngIf="editing" class="word-quality-edit-hint">(saved song; word list uses editor text)</span>
+                </td>
+              </tr>
+              <tr>
+                <td>Word restrictions</td>
+                <td>{{ formatBlockingWordIssuesStatus() }}</td>
+              </tr>
+              <tr>
+                <td>Word quality</td>
+                <td>
+                  <span *ngIf="wordQualityLoading" class="word-quality-muted">Checking…</span>
+                  <span *ngIf="!wordQualityLoading && getDisplayWordQualityScore() == null" class="word-quality-muted">Not calculated yet</span>
+                  <span *ngIf="!wordQualityLoading && getDisplayWordQualityScore() != null">
+                    {{ getDisplayWordQualityScore() }} / 100
+                    <span class="word-quality-detail-tier">({{ getWordQualityScoreLabel(getDisplayWordQualityScore()) }})</span>
+                  </span>
+                  <div *ngIf="!wordQualityLoading && getDisplayWordQualityScore() != null"
+                       class="word-quality-track word-quality-track-detail"
+                       role="progressbar"
+                       [attr.aria-valuenow]="getDisplayWordQualityScore()" aria-valuemin="0" aria-valuemax="100">
+                    <div class="word-quality-fill"
+                         [style.width.%]="getWordQualityScoreValue(getDisplayWordQualityScore())"></div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
       </table>
       <br>
       <button *ngIf="!song.deleted" mat-button (click)="deleteSong()">
