@@ -1,6 +1,7 @@
 package com.bence.songbook.ui.activity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
@@ -111,7 +112,7 @@ public class NewSongListActivity extends BaseActivity {
             try {
                 songListElementRepository.save(songListElements);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, e.getMessage(), e);
                 Toast.makeText(getApplicationContext(), "Could not save song list element", Toast.LENGTH_LONG).show();
                 return;
             }

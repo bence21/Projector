@@ -19,7 +19,6 @@
         android:layout_width="match_parent"
         android:layout_height="@dimen/bottom_sheet_peek_height"
         android:background="@color/secondaryColor"
-        android:onClick="onExpandBottomSheetClick"
         android:orientation="horizontal">
 
         <ImageView
@@ -39,7 +38,6 @@
         android:background="@color/secondaryColor"
         android:baselineAligned="false"
         android:gravity="center"
-        android:onClick="onExpandBottomSheetClick"
         android:weightSum="1.0">
 
         <ImageView
@@ -53,11 +51,11 @@
             app:srcCompat="@drawable/ic_keyboard_arrow_down_black_24dp" />
 
         <LinearLayout
+            android:id="@+id/saveQueueButton"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="0.28"
             android:gravity="center"
-            android:onClick="onSaveQueue"
             android:orientation="vertical"
             tools:ignore="UseCompoundDrawables">
 
@@ -85,11 +83,11 @@
 
 
         <LinearLayout
+            android:id="@+id/shareQueueButton"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="0.28"
             android:gravity="center"
-            android:onClick="onShareQueue"
             android:orientation="vertical"
             tools:ignore="UseCompoundDrawables">
 
@@ -116,11 +114,11 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/clearAllQueueButton"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="0.28"
             android:gravity="center"
-            android:onClick="onClearAllQueueClick"
             android:orientation="vertical"
             tools:ignore="UseCompoundDrawables">
 

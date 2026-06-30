@@ -23,18 +23,16 @@ public class QueueRepository {
 
     private final Context appContext;
     private final MutableLiveData<List<QueueSong>> queueLiveData = new MutableLiveData<>(new ArrayList<>());
-    private final MutableLiveData<Integer> queueIndexLiveData = new MutableLiveData<>(-1);
     private final SingleLiveEvent<QueueEvent> events = new SingleLiveEvent<>();
 
     private final List<QueueSong> queue = new ArrayList<>();
-    private int queueIndex = -1;
+    private int queueIndex;
     private boolean loadedFromDatabase;
 
     private QueueRepository(Context context) {
         appContext = context.getApplicationContext();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(appContext);
         queueIndex = prefs.getInt("queueIndex", -1);
-        queueIndexLiveData.setValue(queueIndex);
     }
 
     public static QueueRepository getInstance(Context context) {
@@ -50,10 +48,6 @@ public class QueueRepository {
 
     public LiveData<List<QueueSong>> getQueueLiveData() {
         return queueLiveData;
-    }
-
-    public LiveData<Integer> getQueueIndexLiveData() {
-        return queueIndexLiveData;
     }
 
     public LiveData<QueueEvent> getEvents() {
@@ -121,7 +115,6 @@ public class QueueRepository {
     public synchronized void add(QueueSong queueSong) {
         if (queue.isEmpty()) {
             queueIndex = 0;
-            queueIndexLiveData.postValue(0);
         }
         queueSong.setQueueNumber(queue.size());
         queue.add(queueSong);
@@ -135,7 +128,6 @@ public class QueueRepository {
         }
         if (queue.isEmpty()) {
             queueIndex = 0;
-            queueIndexLiveData.postValue(0);
         }
         for (QueueSong queueSong : queueSongs) {
             queueSong.setQueueNumber(queue.size());
@@ -156,7 +148,6 @@ public class QueueRepository {
         }
         if (queue.isEmpty()) {
             queueIndex = -1;
-            queueIndexLiveData.postValue(-1);
         }
         publishQueue();
         return queueSong;
@@ -186,7 +177,6 @@ public class QueueRepository {
     public synchronized void clear() {
         queue.clear();
         queueIndex = -1;
-        queueIndexLiveData.postValue(-1);
         loadedFromDatabase = true;
         publishQueue();
         events.postValue(QueueEvent.QUEUE_CLEARED);
@@ -196,7 +186,6 @@ public class QueueRepository {
         synchronized (this) {
             queueIndex = index;
         }
-        queueIndexLiveData.postValue(index);
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(appContext);
         sharedPreferences.edit().putInt("queueIndex", index).apply();
     }

@@ -19,7 +19,6 @@
         android:layout_width="match_parent"
         android:layout_height="@dimen/bottom_sheet_peek_height"
         android:background="@color/secondaryColor"
-        android:onClick="onExpandBottomSheetClick"
         android:orientation="horizontal">
 
         <ImageView
@@ -39,7 +38,6 @@
         android:background="@color/secondaryColor"
         android:baselineAligned="false"
         android:gravity="center"
-        android:onClick="onExpandBottomSheetClick"
         android:weightSum="1.0">
 
         <ImageView
@@ -53,37 +51,37 @@
             app:srcCompat="@drawable/ic_keyboard_arrow_down_black_24dp" />
 
         <Button
+            android:id="@+id/saveQueueButton"
             style="@style/Base.Widget.AppCompat.Button.Borderless"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="0.28"
             android:drawableTop="@drawable/ic_playlist_add_black_24dp"
             android:gravity="center"
-            android:onClick="onSaveQueue"
             android:text="@string/save"
             android:textColor="#9e9e9e"
             android:textSize="12sp" />
 
         <Button
+            android:id="@+id/shareQueueButton"
             style="@style/Base.Widget.AppCompat.Button.Borderless"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="0.28"
             android:drawableTop="@drawable/ic_forward_arrow"
             android:gravity="center"
-            android:onClick="onShareQueue"
             android:text="@string/share"
             android:textColor="#9e9e9e"
             android:textSize="12sp" />
 
         <Button
+            android:id="@+id/clearAllQueueButton"
             style="@style/Base.Widget.AppCompat.Button.Borderless"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="0.28"
             android:drawableTop="@drawable/ic_clear_all_black_24dp"
             android:gravity="center"
-            android:onClick="onClearAllQueueClick"
             android:text="@string/clear_all"
             android:textColor="#9e9e9e"
             android:textSize="12sp" />

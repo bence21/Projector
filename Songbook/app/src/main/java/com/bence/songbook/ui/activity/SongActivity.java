@@ -12,7 +12,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -374,9 +373,7 @@ public class SongActivity extends BaseActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            saveToSongListPopupWindow.setElevation(5.0f);
-        }
+        saveToSongListPopupWindow.setElevation(5.0f);
         Button closeButton = customView.findViewById(R.id.closeButton);
         closeButton.setOnClickListener(view -> saveToSongListPopupWindow.dismiss());
         ListView listView = customView.findViewById(R.id.listView);
@@ -562,7 +559,6 @@ public class SongActivity extends BaseActivity {
         finish();
     }
 
-    @SuppressWarnings("SpellCheckingInspection")
     public void onDontShowAgain(View view) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         sharedPreferences.edit().putBoolean("ShowGoogleSignInWhenFavouriteChanges", false).apply();

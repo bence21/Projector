@@ -299,13 +299,7 @@ public class MainActivity extends BaseActivity
         if (queueRecyclerView == null) {
             return;
         }
-        QueueItemTouchHelperCallback touchHelperCallback = new QueueItemTouchHelperCallback(
-                queueViewModel,
-                viewHolder -> {
-                    if (queueItemTouchHelper != null) {
-                        queueItemTouchHelper.startDrag(viewHolder);
-                    }
-                });
+        QueueItemTouchHelperCallback touchHelperCallback = new QueueItemTouchHelperCallback(queueViewModel);
         queueItemTouchHelper = new ItemTouchHelper(touchHelperCallback);
         queueItemTouchHelper.attachToRecyclerView(queueRecyclerView);
 
@@ -375,6 +369,7 @@ public class MainActivity extends BaseActivity
         buttonLayout = findViewById(R.id.buttonLayout);
         buttonLayout.setVisibility(View.GONE);
         peekLayout = findViewById(R.id.peekLayout);
+        setupBottomSheetClickListeners();
         bottomSheetBehavior.setBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
             public void onStateChanged(@NonNull View bottomSheet, int newState) {
@@ -756,8 +751,12 @@ public class MainActivity extends BaseActivity
         new Handler(Looper.getMainLooper()).post(() -> addSongListLinkPopupWindow.showAtLocation(linearLayout, Gravity.CENTER, 0, 0));
     }
 
-    private void addToQueue(Song song) {
-        queueViewModel.addSong(song);
+    private void setupBottomSheetClickListeners() {
+        peekLayout.setOnClickListener(this::onExpandBottomSheetClick);
+        buttonLayout.setOnClickListener(this::onExpandBottomSheetClick);
+        findViewById(R.id.saveQueueButton).setOnClickListener(this::onSaveQueue);
+        findViewById(R.id.shareQueueButton).setOnClickListener(this::onShareQueue);
+        findViewById(R.id.clearAllQueueButton).setOnClickListener(this::onClearAllQueueClick);
     }
 
     private void setBottomSheetHideable() {

@@ -1,5 +1,6 @@
 package com.bence.songbook.ui.queue;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 
 import androidx.annotation.NonNull;
@@ -35,10 +36,6 @@ public class QueueViewModel extends AndroidViewModel {
 
     public LiveData<List<QueueSong>> getQueue() {
         return queueRepository.getQueueLiveData();
-    }
-
-    public LiveData<Integer> getQueueIndex() {
-        return queueRepository.getQueueIndexLiveData();
     }
 
     public LiveData<QueueEvent> getEvents() {
@@ -193,6 +190,7 @@ public class QueueViewModel extends AndroidViewModel {
         return null;
     }
 
+    @SuppressLint("EmptySuperCall")
     @Override
     protected void onCleared() {
         super.onCleared();

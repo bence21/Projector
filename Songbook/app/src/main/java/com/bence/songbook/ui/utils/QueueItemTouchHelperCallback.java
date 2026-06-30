@@ -11,19 +11,13 @@ import com.bence.songbook.ui.queue.QueueViewModel;
 
 public class QueueItemTouchHelperCallback extends ItemTouchHelper.Callback {
 
-    public interface DragCallback {
-        void onStartDrag(RecyclerView.ViewHolder viewHolder);
-    }
-
     private final QueueViewModel queueViewModel;
-    private final DragCallback dragCallback;
     private float dragStartX;
     private int dragStartPosition = RecyclerView.NO_POSITION;
     private boolean deleteTriggered;
 
-    public QueueItemTouchHelperCallback(QueueViewModel queueViewModel, DragCallback dragCallback) {
+    public QueueItemTouchHelperCallback(QueueViewModel queueViewModel) {
         this.queueViewModel = queueViewModel;
-        this.dragCallback = dragCallback;
     }
 
     @Override
@@ -116,7 +110,4 @@ public class QueueItemTouchHelperCallback extends ItemTouchHelper.Callback {
         }
     }
 
-    public void startDrag(RecyclerView.ViewHolder viewHolder) {
-        dragCallback.onStartDrag(viewHolder);
-    }
 }
