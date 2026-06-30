@@ -1,7 +1,6 @@
 package com.bence.songbook.ui.utils;
 
 import static com.bence.songbook.ui.activity.MainActivity.getOrdinalNumberText;
-import static com.bence.songbook.ui.utils.QueueSongAdapter.getLongFromInteger;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -109,6 +108,13 @@ public class SongListElementAdapter extends ArrayAdapter<SongListElement> {
             e.printStackTrace();
         }
         return 0L;
+    }
+
+    private static long getLongFromInteger(Integer integer) {
+        if (integer == null) {
+            return 0L;
+        }
+        return integer;
     }
 
     @Override

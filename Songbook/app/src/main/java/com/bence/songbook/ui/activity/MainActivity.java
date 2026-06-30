@@ -56,6 +56,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSmoothScroller;
 import androidx.recyclerview.widget.RecyclerView;
@@ -79,11 +81,11 @@ import com.bence.songbook.models.SongList;
 import com.bence.songbook.models.SongListElement;
 import com.bence.songbook.models.SongVerse;
 import com.bence.songbook.repository.FavouriteSongRepository;
+import com.bence.songbook.repository.QueueEvent;
 import com.bence.songbook.repository.SongRepository;
 import com.bence.songbook.repository.impl.ormLite.FavouriteSongRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.LanguageRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.LoggedInUserRepositoryImpl;
-import com.bence.songbook.repository.impl.ormLite.QueueSongRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongCollectionRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListElementRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListRepositoryImpl;
@@ -91,11 +93,12 @@ import com.bence.songbook.repository.impl.ormLite.SongRepositoryImpl;
 import com.bence.songbook.service.FavouriteSongService;
 import com.bence.songbook.service.UserService;
 import com.bence.songbook.ui.adapter.LanguageAdapter;
+import com.bence.songbook.ui.queue.QueueViewModel;
 import com.bence.songbook.ui.utils.CheckSongForUpdate;
-import com.bence.songbook.ui.utils.DynamicListView;
 import com.bence.songbook.ui.utils.GoogleSignInIntent;
 import com.bence.songbook.ui.utils.MainPageAdapter;
 import com.bence.songbook.ui.utils.Preferences;
+import com.bence.songbook.ui.utils.QueueItemTouchHelperCallback;
 import com.bence.songbook.ui.utils.QueueSongAdapter;
 import com.bence.songbook.ui.utils.SyncFavouriteInGoogleDrive;
 import com.bence.songbook.ui.utils.SyncInBackground;
@@ -166,9 +169,10 @@ public class MainActivity extends BaseActivity
     private List<FavouriteSong> favouriteSongs;
     private boolean inSongSearchSwitch = false;
     private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
-    private DynamicListView<QueueSongAdapter> queueListView;
+    private RecyclerView queueRecyclerView;
+    private QueueViewModel queueViewModel;
+    private ItemTouchHelper queueItemTouchHelper;
     private MenuItem searchItem;
-    private QueueSongRepositoryImpl queueSongRepository;
     private View buttonLayout;
     private View peekLayout;
     private PopupWindow saveQueuePopupWindow;
@@ -263,74 +267,109 @@ public class MainActivity extends BaseActivity
     @SuppressLint({"ShowToast", "ClickableViewAccessibility"})
     private void onCreate2() {
         setContentView(R.layout.activity_main);
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        int queueIndex = sharedPreferences.getInt("queueIndex", -1);
-        memory.setQueueIndex(queueIndex, this);
-        initializeQueueListView();
+        queueViewModel = new ViewModelProvider(this).get(QueueViewModel.class);
+        initializeQueueRecyclerView();
         onCreate4();
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private void initializeQueueListView() {
-        queueListView = findViewById(R.id.queueList);
-        if (queueListView == null) {
+    private void initializeQueueRecyclerView() {
+        queueRecyclerView = findViewById(R.id.queueRecyclerView);
+        if (queueRecyclerView == null) {
             return;
         }
-        queueListView.setOnTouchListener((v, event) -> {
+        queueRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        queueRecyclerView.setNestedScrollingEnabled(false);
+        queueRecyclerView.setOnTouchListener((v, event) -> {
             int action = event.getAction();
             switch (action) {
                 case MotionEvent.ACTION_DOWN:
-                    // Disallow NestedScrollView to intercept touch events.
                     v.getParent().requestDisallowInterceptTouchEvent(true);
                     break;
-
                 case MotionEvent.ACTION_UP:
-                    // Allow NestedScrollView to intercept touch events.
                     v.getParent().requestDisallowInterceptTouchEvent(false);
+                    hideKeyboard();
                     break;
             }
-
-            // Handle ListView touch events.
-            v.onTouchEvent(event);
-            return true;
+            return false;
         });
+    }
 
-        queueListView.setListener(new DynamicListView.Listener() {
-            @Override
-            public void swapElements(int indexOne, int indexTwo) {
-                List<QueueSong> values = memory.getQueue();
-                QueueSong temp = values.get(indexOne);
-                QueueSong secondTmp = values.get(indexTwo);
-                int queueNumber = temp.getQueueNumber();
-                temp.setQueueNumber(secondTmp.getQueueNumber());
-                secondTmp.setQueueNumber(queueNumber);
-                values.set(indexOne, secondTmp);
-                values.set(indexTwo, temp);
-                queueSongRepository.save(temp);
-                queueSongRepository.save(secondTmp);
+    private void setupQueueAdapter() {
+        if (queueRecyclerView == null) {
+            return;
+        }
+        QueueItemTouchHelperCallback touchHelperCallback = new QueueItemTouchHelperCallback(
+                queueViewModel,
+                viewHolder -> {
+                    if (queueItemTouchHelper != null) {
+                        queueItemTouchHelper.startDrag(viewHolder);
+                    }
+                });
+        queueItemTouchHelper = new ItemTouchHelper(touchHelperCallback);
+        queueItemTouchHelper.attachToRecyclerView(queueRecyclerView);
+
+        queueSongAdapter = new QueueSongAdapter(
+                holder -> {
+                    if (queueItemTouchHelper != null) {
+                        queueItemTouchHelper.startDrag(holder);
+                    }
+                },
+                position -> {
+                    List<QueueSong> queue = queueViewModel.getQueueSnapshot();
+                    if (position < 0 || position >= queue.size()) {
+                        return;
+                    }
+                    Song tmp = queue.get(position).getSong();
+                    if (position + 1 < queue.size()) {
+                        queueViewModel.setQueueIndex(position + 1);
+                    } else {
+                        queueViewModel.setQueueIndex(0);
+                    }
+                    showSongFullscreen(tmp);
+                },
+                shortCollectionName);
+        queueRecyclerView.setAdapter(queueSongAdapter);
+    }
+
+    private void setupQueueObservers() {
+        queueViewModel.getQueue().observe(this, queue -> {
+            if (queueSongAdapter != null) {
+                queueSongAdapter.submitList(queue);
             }
-
-            @Override
-            public void deleteElement(int originalItem) {
-                List<QueueSong> values = memory.getQueue();
-                QueueSong temp = values.get(originalItem);
-                List<QueueSong> listElements = new ArrayList<>();
-                for (int i = originalItem + 1; i < values.size(); ++i) {
-                    QueueSong queueSong = values.get(i);
-                    queueSong.setQueueNumber(queueSong.getQueueNumber() - 1);
-                    listElements.add(queueSong);
-                }
-                queueSongRepository.save(listElements);
-                memory.removeQueueSong(temp);
-                queueSongRepository.delete(temp);
-                queueListView.invalidateViews();
-                queueListView.refreshDrawableState();
+            updateBottomSheetForQueueState(queue);
+            enrichQueueSongMetadata();
+        });
+        queueViewModel.getEvents().observe(this, event -> {
+            if (event == QueueEvent.ADDED_TO_QUEUE) {
+                showToaster(getString(R.string.added_to_queue), Toast.LENGTH_SHORT);
             }
         });
     }
 
+    private void updateBottomSheetForQueueState(List<QueueSong> queue) {
+        if (queue == null || queue.isEmpty()) {
+            setBottomSheetHideable();
+            if (bottomSheetBehavior != null
+                    && bottomSheetBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
+            }
+            if (linearLayout != null) {
+                linearLayout.setPadding(0, 0, 0, 0);
+            }
+            return;
+        }
+        if (bottomSheetBehavior != null) {
+            if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                setBottomSheetPadding();
+            }
+            bottomSheetBehavior.setHideable(false);
+            bottomSheetBehavior.setSkipCollapsed(false);
+        }
+    }
+
     private void onCreate4() {
-        queueSongRepository = new QueueSongRepositoryImpl(this);
         final LinearLayout llBottomSheet = findViewById(R.id.bottom_sheet);
         bottomSheetBehavior = BottomSheetBehavior.from(llBottomSheet);
         buttonLayout = findViewById(R.id.buttonLayout);
@@ -355,34 +394,9 @@ public class MainActivity extends BaseActivity
             }
         });
 
-        memory.addOnQueueChangeListener(new Memory.Listener() {
-            @Override
-            public void onAdd(QueueSong queueSong) {
-                if (!memory.getQueue().isEmpty()) {
-                    if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
-                        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                        setBottomSheetPadding();
-                    }
-                    bottomSheetBehavior.setHideable(false);
-                    bottomSheetBehavior.setSkipCollapsed(false);
-                }
-                onQueueChanged();
-            }
-
-            @Override
-            public void onRemove(QueueSong queueSong) {
-                if (memory.getQueue().isEmpty()) {
-                    setBottomSheetHideable();
-                    if (bottomSheetBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
-                        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
-                    }
-                    linearLayout.setPadding(0, 0, 0, 0);
-                }
-                onQueueChanged();
-            }
-        });
-
         initPreferences();
+        setupQueueAdapter();
+        setupQueueObservers();
         memory.setMainActivity(this);
         songListView = findViewById(R.id.songListView);
         CenterLayoutManager layoutManager = new CenterLayoutManager(this);
@@ -489,9 +503,8 @@ public class MainActivity extends BaseActivity
         if (songs != null) {
             filter();
             loadAll();
-            List<QueueSong> queue = memory.getQueue();
-            if (queue == null || queue.size() == 0) {
-                setDataToQueueSongs();
+            if (queueViewModel.getQueueSnapshot().isEmpty()) {
+                loadQueueData();
             }
         } else {
             setSongs(new ArrayList<>());
@@ -504,10 +517,33 @@ public class MainActivity extends BaseActivity
         this.songs = songs;
     }
 
-    private void onQueueChanged() {
-        if (queueSongAdapter != null) {
-            queueSongAdapter.notifyDataSetChanged();
+    private void loadQueueData() {
+        queueViewModel.loadAndHydrate(songs);
+        List<QueueSong> queue = queueViewModel.getQueueSnapshot();
+        if (queue.isEmpty()) {
+            hideBottomSheet();
         }
+    }
+
+    private void enrichQueueSongMetadata() {
+        List<QueueSong> queue = queueViewModel.getQueueSnapshot();
+        if (queue.isEmpty() || songs == null) {
+            return;
+        }
+        List<Song> queueSongs = new ArrayList<>();
+        for (QueueSong queueSong : queue) {
+            if (queueSong.getSong() != null) {
+                queueSongs.add(queueSong.getSong());
+            }
+        }
+        HashMap<String, Song> hashMap = new HashMap<>();
+        for (Song song : queueSongs) {
+            if (song.getUuid() != null) {
+                hashMap.put(song.getUuid(), song);
+            }
+        }
+        setSongCollections(hashMap);
+        setFavourites(hashMap);
     }
 
     private void initialLoad() {
@@ -516,7 +552,7 @@ public class MainActivity extends BaseActivity
         filter();
         runOnUiThread(() -> {
             if (songs.size() > 0) {
-                setDataToQueueSongs();
+                loadQueueData();
                 Memory memory = Memory.getInstance();
                 memory.setSongs(songs);
                 loadAll();
@@ -551,8 +587,7 @@ public class MainActivity extends BaseActivity
     }
 
     private void hideBottomSheetIfNoQueue() {
-        List<QueueSong> queue = memory.getQueue();
-        if (queue != null && queue.size() < 1) {
+        if (queueViewModel.getQueueSnapshot().isEmpty()) {
             hideBottomSheet();
         }
     }
@@ -655,30 +690,8 @@ public class MainActivity extends BaseActivity
     private void parseQueueLink(String text, String prefix) {
         String ids = text.substring(text.lastIndexOf(prefix) + prefix.length());
         String[] split = ids.split(",");
-        for (final String uuid : split) {
-            Song song = null;
-            for (Song song1 : songs) {
-                if (song1.getUuid() != null && song1.getUuid().equals(uuid)) {
-                    song = song1;
-                    break;
-                }
-            }
-            if (song == null) {
-                song = songRepository.findByUUID(uuid);
-            }
-            if (song == null) {
-                Thread thread = new Thread(() -> {
-                    SongApiBean songApiBean = new SongApiBean();
-                    Song newSong = songApiBean.getSong(uuid);
-                    addToQueue(newSong);
-                });
-                thread.start();
-            }
-            addToQueue(song);
-        }
-        setDataToQueueSongs();
-        queueListView.invalidateViews();
-        showToaster(getString(R.string.added_to_queue), Toast.LENGTH_SHORT);
+        queueViewModel.addSongsByUuids(split, songs);
+        enrichQueueSongMetadata();
     }
 
     private void parseSongListLink(String text, String prefix) {
@@ -718,15 +731,11 @@ public class MainActivity extends BaseActivity
         Button addButton = customView.findViewById(R.id.addToButton);
         addButton.setOnClickListener(view -> {
             List<SongListElement> songListElements = songList.getSongListElements();
-            QueueSongRepositoryImpl queueSongRepository = new QueueSongRepositoryImpl(MainActivity.this);
-            List<QueueSong> newQueueSongs = new ArrayList<>(songListElements.size());
+            List<Song> songsToAdd = new ArrayList<>(songListElements.size());
             for (SongListElement element : songListElements) {
-                QueueSong queueSong = new QueueSong();
-                queueSong.setSong(element.getSong());
-                memory.addSongToQueue(queueSong);
-                newQueueSongs.add(queueSong);
+                songsToAdd.add(element.getSong());
             }
-            queueSongRepository.save(newQueueSongs);
+            queueViewModel.addSongs(songsToAdd);
             showToaster(getString(R.string.added_to_queue), Toast.LENGTH_SHORT);
             addSongListLinkPopupWindow.dismiss();
         });
@@ -748,12 +757,7 @@ public class MainActivity extends BaseActivity
     }
 
     private void addToQueue(Song song) {
-        if (song != null) {
-            QueueSong queueSong = new QueueSong();
-            queueSong.setSong(song);
-            memory.addSongToQueue(queueSong);
-            queueSongRepository.save(queueSong);
-        }
+        queueViewModel.addSong(song);
     }
 
     private void setBottomSheetHideable() {
@@ -938,13 +942,8 @@ public class MainActivity extends BaseActivity
                 if (resultCode >= 1) {
                     setSongs(songRepository.findAllExceptAsDeleted());
                     memory.setSongs(songs);
-                    List<QueueSong> queue = memory.getQueue();
-                    if (queue == null) {
-                        queue = queueSongRepository.findAll();
-                        Collections.sort(queue, (o1, o2) -> Utility.compare(o1.getQueueNumber(), o2.getQueueNumber()));
-                        memory.setQueue(queue);
-                    }
-                    if (queue.size() < 1) {
+                    queueViewModel.loadAndHydrate(songs);
+                    if (queueViewModel.getQueueSnapshot().isEmpty()) {
                         hideBottomSheet();
                     }
                     loadLanguages();
@@ -1024,7 +1023,6 @@ public class MainActivity extends BaseActivity
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
-        queueListView.invalidateViews();
     }
 
     private void loadLanguages() {
@@ -1188,44 +1186,16 @@ public class MainActivity extends BaseActivity
 
                 @Override
                 public void onLongClick(Song song, int position) {
-                    QueueSong queueSong = new QueueSong();
-                    queueSong.setSong(song);
-                    memory.addSongToQueue(queueSong);
-                    queueSongRepository.save(queueSong);
-                    queueListView.invalidateViews();
-                    showToaster(getString(R.string.added_to_queue), Toast.LENGTH_SHORT);
+                    queueViewModel.addSong(song);
                 }
             });
             view_mode = getViewMode();
-            List<QueueSong> queue = memory.getQueue();
-            if (queue == null) {
-                setDataToQueueSongs();
-            }
-            if (queue == null) {
-                return;
-            }
-            queueSongAdapter = new QueueSongAdapter(this, R.layout.list_row, queue, (position, row) -> queueListView.onGrab(position, row), shortCollectionName);
-            if (queue.size() < 1) {
-                linearLayout.setPadding(0, 0, 0, 0);
+            if (queueViewModel.getQueueSnapshot().isEmpty()) {
+                loadQueueData();
             } else {
                 setBottomSheetPadding();
             }
 
-            queueListView.setAdapter(queueSongAdapter);
-            queueListView.setOnItemClickListener((parent, view, position, id) -> {
-                List<QueueSong> queue1 = memory.getQueue();
-                Song tmp = queue1.get(position).getSong();
-                if (position + 1 < queue1.size()) {
-                    memory.setQueueIndex(position + 1, MainActivity.this);
-                } else {
-                    memory.setQueueIndex(0, MainActivity.this);
-                }
-                showSongFullscreen(tmp);
-            });
-            queueListView.setOnTouchListener((v, event) -> {
-                hideKeyboard();
-                return false;
-            });
             songListView.setHasFixedSize(true);
             songListView.setAdapter(adapter);
             songListView.setOnTouchListener((v, event) -> {
@@ -2163,52 +2133,6 @@ public class MainActivity extends BaseActivity
         filterSongsByFavourites();
     }
 
-    private void setDataToQueueSongs() {
-        LongSparseArray<Song> sparseArray = new LongSparseArray<>(songs.size());
-        for (Song song : songs) {
-            sparseArray.put(song.getId(), song);
-        }
-        List<QueueSong> queue = memory.getQueue();
-        if (queue == null) {
-            queue = queueSongRepository.findAll();
-            Collections.sort(queue, (o1, o2) -> Utility.compare(o1.getQueueNumber(), o2.getQueueNumber()));
-            memory.setQueue(queue);
-            if (queue.isEmpty()) {
-                hideBottomSheet();
-            }
-        }
-        List<Song> songs = new ArrayList<>();
-        for (QueueSong queueSong : queue) {
-            if (queueSong.getSong() != null) {
-                Long id = queueSong.getSong().getId();
-                if (id == null) {
-                    continue;
-                }
-                Song song = sparseArray.get(id);
-                if (song != null) {
-                    queueSong.setSong(song);
-                } else {
-                    song = songRepository.findOne(id);
-                    if (song != null) {
-                        queueSong.setSong(song);
-                        sparseArray.put(id, song);
-                    }
-                }
-                if (song != null) {
-                    songs.add(song);
-                }
-            }
-        }
-        HashMap<String, Song> hashMap = new HashMap<>();
-        for (Song song : songs) {
-            if (song.getUuid() != null) {
-                hashMap.put(song.getUuid(), song);
-            }
-        }
-        setSongCollections(hashMap);
-        setFavourites(hashMap);
-    }
-
     private void clearSongSongCollections(Collection<Song> songs) {
         for (Song song : songs) {
             song.getSongCollections().clear();
@@ -2440,10 +2364,7 @@ public class MainActivity extends BaseActivity
     }
 
     public void onClearAllQueueClick(View view) {
-        List<QueueSong> all = queueSongRepository.findAll();
-        queueSongRepository.deleteAll(all);
-        memory.getQueue().clear();
-        queueListView.invalidateViews();
+        queueViewModel.clearAll();
         hideBottomSheet();
         linearLayout.setPadding(0, 0, 0, 0);
     }
@@ -2454,8 +2375,8 @@ public class MainActivity extends BaseActivity
     }
 
     public void onExpandBottomSheetClick(View view) {
-        List<QueueSong> queue = memory.getQueue();
-        if (queue == null || queue.isEmpty()) {
+        List<QueueSong> queue = queueViewModel.getQueueSnapshot();
+        if (queue.isEmpty()) {
             hideBottomSheet();
             return;
         }
@@ -2487,7 +2408,7 @@ public class MainActivity extends BaseActivity
     @NonNull
     private StringBuilder getQueueSongUuids() {
         StringBuilder ids = new StringBuilder();
-        for (QueueSong queueSong : memory.getQueue()) {
+        for (QueueSong queueSong : queueViewModel.getQueueSnapshot()) {
             Song song = queueSong.getSong();
             if (song == null) {
                 continue;
@@ -2525,7 +2446,7 @@ public class MainActivity extends BaseActivity
         listView.setAdapter(arrayAdapter);
         listView.setOnItemClickListener((parent, view12, position, id) -> {
             SongList songList = songLists.get(position);
-            List<QueueSong> queue = memory.getQueue();
+            List<QueueSong> queue = queueViewModel.getQueueSnapshot();
             List<SongListElement> songListElements = songList.getSongListElements();
             LongSparseArray<Object> hashMap = new LongSparseArray<>(songListElements.size());
             for (SongListElement element : songListElements) {

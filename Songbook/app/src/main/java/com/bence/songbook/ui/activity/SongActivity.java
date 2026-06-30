@@ -35,6 +35,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager.widget.ViewPager;
 
 import com.bence.songbook.Memory;
@@ -42,7 +43,6 @@ import com.bence.songbook.R;
 import com.bence.songbook.api.SongApiBean;
 import com.bence.songbook.models.FavouriteSong;
 import com.bence.songbook.models.Language;
-import com.bence.songbook.models.QueueSong;
 import com.bence.songbook.models.Song;
 import com.bence.songbook.models.SongCollection;
 import com.bence.songbook.models.SongCollectionElement;
@@ -52,13 +52,13 @@ import com.bence.songbook.repository.FavouriteSongRepository;
 import com.bence.songbook.repository.SongCollectionRepository;
 import com.bence.songbook.repository.SongRepository;
 import com.bence.songbook.repository.impl.ormLite.FavouriteSongRepositoryImpl;
-import com.bence.songbook.repository.impl.ormLite.QueueSongRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongCollectionRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListElementRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongRepositoryImpl;
 import com.bence.songbook.service.FavouriteSongService;
 import com.bence.songbook.service.SongService;
+import com.bence.songbook.ui.queue.QueueViewModel;
 import com.bence.songbook.ui.utils.CheckSongForUpdate;
 import com.bence.songbook.ui.utils.PageAdapter;
 import com.bence.songbook.ui.utils.Preferences;
@@ -89,6 +89,7 @@ public class SongActivity extends BaseActivity {
     PageAdapter pageAdapter;
     private Song song;
     private Memory memory;
+    private QueueViewModel queueViewModel;
     private MenuItem favouriteMenuItem;
     private View mainLayout;
     private Menu menu;
@@ -106,6 +107,7 @@ public class SongActivity extends BaseActivity {
         setTheme(Preferences.getTheme(this));
         super.onCreate(savedInstanceState);
         memory = Memory.getInstance();
+        queueViewModel = new ViewModelProvider(this).get(QueueViewModel.class);
         setContentView(R.layout.activity_song);
         mainLayout = findViewById(R.id.main_layout);
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -283,11 +285,7 @@ public class SongActivity extends BaseActivity {
             Intent intent = new Intent(this, YoutubeActivity.class);
             startActivity(intent);
         } else if (itemId == R.id.action_add_to_queue) {
-            QueueSongRepositoryImpl queueSongRepository = new QueueSongRepositoryImpl(this);
-            QueueSong model = new QueueSong();
-            model.setSong(song);
-            memory.addSongToQueue(model);
-            queueSongRepository.save(model);
+            queueViewModel.addSong(song);
             showToaster(getString(R.string.added_to_queue), Toast.LENGTH_SHORT);
         } else if (itemId == R.id.action_save_to_song_list) {
             saveToSongList();

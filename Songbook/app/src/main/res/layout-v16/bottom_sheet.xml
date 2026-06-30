@@ -148,10 +148,11 @@
 
     </LinearLayout>
 
-    <com.bence.songbook.ui.utils.DynamicListView
-        android:id="@+id/queueList"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/queueRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center" />
+        android:gravity="center"
+        android:nestedScrollingEnabled="false" />
 
 </LinearLayout>
