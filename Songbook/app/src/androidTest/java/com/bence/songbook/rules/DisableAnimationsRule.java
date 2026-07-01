@@ -1,10 +1,14 @@
 package com.bence.songbook.rules;
 
+import android.os.ParcelFileDescriptor;
+
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+
+import java.io.IOException;
 
 public class DisableAnimationsRule implements TestRule {
 
@@ -34,7 +38,13 @@ public class DisableAnimationsRule implements TestRule {
         executeShellCommand("settings put global " + WINDOW_ANIMATION_SCALE + " " + value);
     }
 
+    @SuppressWarnings("EmptyTryBlock")
     private static void executeShellCommand(String command) {
-        InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command);
+        try (ParcelFileDescriptor ignored =
+                     InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command)) {
+            // Shell output is intentionally discarded.
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to execute shell command: " + command, e);
+        }
     }
 }

@@ -1,5 +1,7 @@
 package com.bence.songbook.api.retrofit;
 
+import android.util.Log;
+
 import com.bence.projector.common.dto.LanguageDTO;
 import com.bence.projector.common.serializer.DateDeserializer;
 import com.bence.projector.common.serializer.DateSerializer;
@@ -23,6 +25,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiManager {
 
+    private static final String TAG = ApiManager.class.getSimpleName();
     private static ApiManager instance;
     private List<Cookie> cookies = null;
 
@@ -76,7 +79,7 @@ public class ApiManager {
                 return build;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Primary API base URL unavailable, falling back to secondary", e);
         }
         return new Retrofit.Builder()
                 .baseUrl(SECOND_BASE_URL)

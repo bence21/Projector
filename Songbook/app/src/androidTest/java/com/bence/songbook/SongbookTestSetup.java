@@ -36,10 +36,6 @@ public final class SongbookTestSetup {
         runOnMainThreadIfNeeded(SongbookTestSetup::installBundledDatabaseOnMainThread);
     }
 
-    public static void resetApplicationState() {
-        runOnMainThreadIfNeeded(SongbookTestSetup::resetApplicationStateOnMainThread);
-    }
-
     public static void prepareForFreshInstall() {
         runOnMainThreadIfNeeded(SongbookTestSetup::prepareForFreshInstallOnMainThread);
     }
@@ -52,25 +48,6 @@ public final class SongbookTestSetup {
 
     public static void preloadMemoryFromDatabase() {
         runOnMainThreadIfNeeded(SongbookTestSetup::preloadMemoryOnMainThread);
-    }
-
-    public static boolean hasPersistedSongs() {
-        final boolean[] hasSongs = {false};
-        runOnMainThreadIfNeeded(() -> hasSongs[0] = !loadPersistedSongs().isEmpty());
-        return hasSongs[0];
-    }
-
-    public static boolean hasPersistedSongWithTitle(String title) {
-        final boolean[] found = {false};
-        runOnMainThreadIfNeeded(() -> {
-            for (Song song : loadPersistedSongs()) {
-                if (RecyclerViewSongInspector.titlesMatch(song.getTitle(), title)) {
-                    found[0] = true;
-                    return;
-                }
-            }
-        });
-        return found[0];
     }
 
     public static boolean hasPersistedSongA() {

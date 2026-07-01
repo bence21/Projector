@@ -186,7 +186,7 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
         try {
             dao.executeRaw(statement);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Failed to execute SQL statement: " + statement, e);
         }
     }
 

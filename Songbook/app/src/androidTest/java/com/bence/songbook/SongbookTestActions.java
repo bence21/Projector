@@ -123,29 +123,6 @@ public final class SongbookTestActions {
                 .perform(replaceText(query), pressKey(KeyEvent.KEYCODE_ENTER));
     }
 
-    public static void waitForSearchResults(int minItemCount, long timeoutMs) {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            try {
-                onView(withId(R.id.songListView))
-                        .check(RecyclerViewItemCountAssertion.withItemCountGreater(minItemCount - 1));
-                return;
-            } catch (Throwable ignored) {
-                sleep(POLL_INTERVAL_MS);
-            }
-        }
-        onView(withId(R.id.songListView))
-                .check(RecyclerViewItemCountAssertion.withItemCountGreater(minItemCount - 1));
-    }
-
-    public static void assertSongVisibleInMainList(String title) {
-        assertSongVisibleInMainList(title, null);
-    }
-
-    public static void assertSongVisibleInMainList(String title, String ordinalLabel) {
-        waitForMainListSong(title, ordinalLabel, 15_000);
-    }
-
     public static void longPressSongInMainList(String titleSubstring) {
         onView(allOf(
                 withText(Matchers.containsString(titleSubstring)),

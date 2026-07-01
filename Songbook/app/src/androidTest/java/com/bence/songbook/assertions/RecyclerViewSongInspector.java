@@ -64,11 +64,9 @@ public final class RecyclerViewSongInspector {
         if (ordinalLabel == null || ordinalLabel.isEmpty()) {
             return true;
         }
-        if (titleTextView != null) {
-            Object tag = titleTextView.getTag();
-            if (tag instanceof Song && matchesSongCollections((Song) tag, ordinalLabel)) {
-                return true;
-            }
+        Object tag = titleTextView.getTag();
+        if (tag instanceof Song && matchesSongCollections((Song) tag, ordinalLabel)) {
+            return true;
         }
         TextView ordinalTextView = holder.itemView.findViewById(R.id.ordinalNumberTextView);
         return ordinalTextView != null
