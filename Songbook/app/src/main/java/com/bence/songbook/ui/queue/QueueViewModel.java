@@ -179,6 +179,10 @@ public class QueueViewModel extends AndroidViewModel {
         queueRepository.setQueueIndex(index);
     }
 
+    public void refreshQueueDisplay() {
+        queueRepository.refreshDisplay();
+    }
+
     private static Song findSongByUuid(List<Song> songs, String uuid) {
         if (songs == null) {
             return null;

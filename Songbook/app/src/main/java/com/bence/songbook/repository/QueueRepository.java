@@ -199,4 +199,8 @@ public class QueueRepository {
     private void publishQueue() {
         queueLiveData.postValue(new ArrayList<>(queue));
     }
+
+    public synchronized void refreshDisplay() {
+        publishQueue();
+    }
 }

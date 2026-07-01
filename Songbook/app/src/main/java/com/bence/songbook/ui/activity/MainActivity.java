@@ -1889,9 +1889,25 @@ public class MainActivity extends BaseActivity
     @Override
     protected void onResume() {
         super.onResume();
+        refreshQueueIfNeeded();
         if (searchItem != null) {
             searchItem.expandActionView();
             showKeyboard();
+        }
+    }
+
+    private void refreshQueueIfNeeded() {
+        if (queueViewModel.getQueueSnapshot().isEmpty()) {
+            return;
+        }
+        loadFavouriteSongsFromDatabase();
+        enrichQueueSongMetadata();
+        queueViewModel.refreshQueueDisplay();
+        if (queueSongAdapter != null) {
+            int count = queueViewModel.getQueueSnapshot().size();
+            if (count > 0) {
+                queueSongAdapter.notifyItemRangeChanged(0, count);
+            }
         }
     }
 

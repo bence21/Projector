@@ -23,12 +23,21 @@ import android.view.KeyEvent;
 
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
+import androidx.test.runner.lifecycle.Stage;
 
 import com.bence.songbook.actions.RecyclerViewSongActions;
 import com.bence.songbook.assertions.RecyclerViewItemCountAssertion;
+import com.bence.songbook.assertions.RecyclerViewSongInspector;
+import com.bence.songbook.models.FavouriteSong;
+import com.bence.songbook.models.Song;
+import com.bence.songbook.repository.impl.ormLite.FavouriteSongRepositoryImpl;
 import com.bence.songbook.ui.activity.MainActivity;
+import com.bence.songbook.ui.activity.SongActivity;
 
 import org.hamcrest.Matchers;
+
+import java.util.Collection;
 
 public final class SongbookTestActions {
 
@@ -176,6 +185,78 @@ public final class SongbookTestActions {
             openActionBarOverflowOrOptionsMenu(
                     InstrumentationRegistry.getInstrumentation().getTargetContext());
             onView(withText("Add to queue")).perform(click());
+        }
+    }
+
+    public static void toggleFavouriteFromSongActivity() {
+        SongActivity songActivity = waitForSongActivity(15_000);
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(songActivity::testingToggleFavourite);
+    }
+
+    private static SongActivity waitForSongActivity(@SuppressWarnings("SameParameterValue") long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            final SongActivity[] songActivity = new SongActivity[1];
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                android.app.Activity activity = getResumedActivity();
+                if (activity instanceof SongActivity) {
+                    songActivity[0] = (SongActivity) activity;
+                }
+            });
+            if (songActivity[0] != null) {
+                return songActivity[0];
+            }
+            sleep(POLL_INTERVAL_MS);
+        }
+        throw new AssertionError("SongActivity did not become resumed within " + timeoutMs + "ms");
+    }
+
+    private static android.app.Activity getResumedActivity() {
+        Collection<android.app.Activity> activities = ActivityLifecycleMonitorRegistry.getInstance()
+                .getActivitiesInStage(Stage.RESUMED);
+        if (activities.isEmpty()) {
+            return null;
+        }
+        return activities.iterator().next();
+    }
+
+    public static void ensureSongNotFavourite(String title) {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            for (Song song : Memory.getInstance().getSongsOrEmptyList()) {
+                if (!RecyclerViewSongInspector.titlesMatch(song.getTitle(), title)) {
+                    continue;
+                }
+                if (!song.isFavourite()) {
+                    return;
+                }
+                song.setFavourite(false);
+                if (song.getFavourite() != null) {
+                    new FavouriteSongRepositoryImpl(
+                            InstrumentationRegistry.getInstrumentation().getTargetContext())
+                            .save(song.getFavourite());
+                }
+                syncInMemoryFavouriteState(song);
+                return;
+            }
+        });
+    }
+
+    private static void syncInMemoryFavouriteState(Song song) {
+        if (song.getUuid() == null) {
+            return;
+        }
+        java.util.List<FavouriteSong> favouriteSongs = Memory.getInstance().getFavouriteSongs();
+        if (favouriteSongs == null) {
+            return;
+        }
+        for (FavouriteSong favouriteSong : favouriteSongs) {
+            if (favouriteSong.getSong() == null) {
+                continue;
+            }
+            if (song.getUuid().equals(favouriteSong.getSong().getUuid())) {
+                favouriteSong.setFavourite(song.isFavourite());
+                favouriteSong.getSong().setFavourite(song.isFavourite());
+            }
         }
     }
 

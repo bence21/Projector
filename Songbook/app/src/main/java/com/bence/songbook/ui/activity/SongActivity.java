@@ -29,6 +29,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -517,23 +518,13 @@ public class SongActivity extends BaseActivity {
             menu.removeItem(shareMenuItem.getItemId());
         }
         favouriteMenuItem = menu.findItem(R.id.action_favourite);
-        final SongActivity context = this;
         boolean notNewSong = song.isNotNewSong();
         if (notNewSong) {
             if (song.isFavourite()) {
                 favouriteMenuItem.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_star_black_24dp, null));
             }
             favouriteMenuItem.setOnMenuItemClickListener(item -> {
-                song.setFavourite(!song.isFavourite());
-                FavouriteSong favourite = song.getFavourite();
-                favourite.setModifiedDate(new Date());
-                favourite.setUploadedToServer(false);
-                favourite.setFavouritePublished(favourite.isFavouriteNotPublished());
-                FavouriteSongRepository favouriteSongRepository = new FavouriteSongRepositoryImpl(context);
-                favouriteSongRepository.save(favourite);
-                favouriteMenuItem.setIcon(ResourcesCompat.getDrawable(getResources(), song.isFavourite() ?
-                        R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp, null));
-                FavouriteSongService.getInstance().syncFavourites(SongActivity.this);
+                toggleFavourite();
                 return false;
             });
             favouriteMenuItem.setVisible(true);
@@ -570,5 +561,26 @@ public class SongActivity extends BaseActivity {
         intent.putExtra("addSongToSongList", true);
         memory.setPassingSong(song);
         startActivity(intent);
+    }
+
+    private void toggleFavourite() {
+        song.setFavourite(!song.isFavourite());
+        FavouriteSong favourite = song.getFavourite();
+        favourite.setModifiedDate(new Date());
+        favourite.setUploadedToServer(false);
+        favourite.setFavouritePublished(favourite.isFavouriteNotPublished());
+        FavouriteSongRepository favouriteSongRepository = new FavouriteSongRepositoryImpl(this);
+        favouriteSongRepository.save(favourite);
+        if (favouriteMenuItem != null) {
+            favouriteMenuItem.setIcon(ResourcesCompat.getDrawable(getResources(), song.isFavourite() ?
+                    R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp, null));
+        }
+        queueViewModel.refreshQueueDisplay();
+        FavouriteSongService.getInstance().syncFavourites(this);
+    }
+
+    @VisibleForTesting
+    public void testingToggleFavourite() {
+        toggleFavourite();
     }
 }

@@ -40,11 +40,8 @@ public class QueueSongDiffCallback extends DiffUtil.ItemCallback<QueueSong> {
     }
 
     private static boolean songsEqual(Song a, Song b) {
-        if (a == b) {
-            return true;
-        }
         if (a == null || b == null) {
-            return false;
+            return a == b;
         }
         return Objects.equals(a.getUuid(), b.getUuid())
                 && a.isFavourite() == b.isFavourite();

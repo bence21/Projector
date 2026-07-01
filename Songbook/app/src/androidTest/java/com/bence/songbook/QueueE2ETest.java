@@ -11,6 +11,7 @@ import androidx.test.filters.LargeTest;
 
 import com.bence.songbook.actions.QueueDragActions;
 import com.bence.songbook.assertions.RecyclerViewItemCountAssertion;
+import com.bence.songbook.assertions.RecyclerViewStarAtPositionAssertion;
 import com.bence.songbook.assertions.RecyclerViewTitleAtPositionAssertion;
 import com.bence.songbook.rules.BundledDatabaseTestRule;
 import com.bence.songbook.rules.DisableAnimationsRule;
@@ -130,5 +131,36 @@ public class QueueE2ETest {
                 .check(RecyclerViewItemCountAssertion.withItemCount(1));
         onView(withId(R.id.queueRecyclerView))
                 .check(RecyclerViewTitleAtPositionAssertion.withTitleAtPosition(0, remainingTitle));
+    }
+
+    @Test
+    public void favouriteToggleAfterAddToQueue_updatesQueueStar() {
+        SongbookTestActions.search(SongbookTestFixtures.SEARCH_QUERY_SONG_A);
+        SongbookTestActions.ensureSongNotFavourite(SongbookTestFixtures.SONG_A_TITLE);
+
+        SongbookTestActions.longPressSongInMainList(SongbookTestFixtures.SONG_A_TITLE);
+        SongbookTestActions.expandQueueBottomSheet();
+        onView(withId(R.id.queueRecyclerView))
+                .check(RecyclerViewStarAtPositionAssertion.withStarHiddenAtPosition(0));
+
+        SongbookTestActions.openSongFromMainListByTitle(SongbookTestFixtures.SONG_A_TITLE);
+        SongbookTestActions.toggleFavouriteFromSongActivity();
+        SongbookTestActions.navigateBack();
+        SongbookTestActions.search(SongbookTestFixtures.SEARCH_QUERY_SONG_A);
+        SongbookTestActions.ensureMainActivityReady();
+
+        SongbookTestActions.expandQueueBottomSheet();
+        onView(withId(R.id.queueRecyclerView))
+                .check(RecyclerViewStarAtPositionAssertion.withStarVisibleAtPosition(0));
+
+        SongbookTestActions.openSongFromMainListByTitle(SongbookTestFixtures.SONG_A_TITLE);
+        SongbookTestActions.toggleFavouriteFromSongActivity();
+        SongbookTestActions.navigateBack();
+        SongbookTestActions.search(SongbookTestFixtures.SEARCH_QUERY_SONG_A);
+        SongbookTestActions.ensureMainActivityReady();
+
+        SongbookTestActions.expandQueueBottomSheet();
+        onView(withId(R.id.queueRecyclerView))
+                .check(RecyclerViewStarAtPositionAssertion.withStarHiddenAtPosition(0));
     }
 }
