@@ -6,10 +6,10 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -25,11 +25,14 @@ import com.bence.songbook.R;
 import com.bence.songbook.models.Song;
 import com.bence.songbook.models.SongVerse;
 import com.bence.songbook.ui.adapter.SectionTypeAdapter;
+import com.bence.songbook.ui.utils.KeyboardUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class BaseSongFragment extends Fragment {
+
+    private static final String TAG = BaseSongFragment.class.getSimpleName();
 
     static {
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
@@ -70,14 +73,7 @@ public abstract class BaseSongFragment extends Fragment {
             @Override
             public void onScrollStateChanged(AbsListView v, int scrollState) {
                 if (scrollState == SCROLL_STATE_TOUCH_SCROLL) {
-                    @SuppressWarnings("ConstantConditions")
-                    View view = BaseSongFragment.this.getActivity().getCurrentFocus();
-                    if (view != null) {
-                        InputMethodManager imm = (InputMethodManager) BaseSongFragment.this.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-                        if (imm != null) {
-                            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                        }
-                    }
+                    KeyboardUtils.hideKeyboard(BaseSongFragment.this.getActivity());
                 }
             }
 
@@ -115,7 +111,7 @@ public abstract class BaseSongFragment extends Fragment {
                 viewGroup.addView(view);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Failed to handle configuration change", e);
         }
     }
 

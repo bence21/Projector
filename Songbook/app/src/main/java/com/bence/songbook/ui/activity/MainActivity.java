@@ -97,6 +97,7 @@ import com.bence.songbook.ui.adapter.LanguageAdapter;
 import com.bence.songbook.ui.queue.QueueViewModel;
 import com.bence.songbook.ui.utils.CheckSongForUpdate;
 import com.bence.songbook.ui.utils.GoogleSignInIntent;
+import com.bence.songbook.ui.utils.KeyboardUtils;
 import com.bence.songbook.ui.utils.MainPageAdapter;
 import com.bence.songbook.ui.utils.Preferences;
 import com.bence.songbook.ui.utils.QueueItemTouchHelperCallback;
@@ -1912,13 +1913,7 @@ public class MainActivity extends BaseActivity
     }
 
     private void hideKeyboard() {
-        View view = this.getCurrentFocus();
-        if (view != null) {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-            }
-        }
+        KeyboardUtils.hideKeyboard(this);
     }
 
     private void showKeyboard() {
@@ -2496,14 +2491,18 @@ public class MainActivity extends BaseActivity
             LongSparseArray<Object> hashMap = new LongSparseArray<>(songListElements.size());
             for (SongListElement element : songListElements) {
                 Song song = element.getSong();
-                if (song == null) {
+                if (song == null || song.getId() == null) {
                     continue;
                 }
                 hashMap.put(song.getId(), song);
             }
             boolean duplicate = false;
             for (QueueSong queueSong : queue) {
-                if (hashMap.get(queueSong.getSong().getId()) != null) {
+                Song song = queueSong.getSong();
+                if (song == null || song.getId() == null) {
+                    continue;
+                }
+                if (hashMap.get(song.getId()) != null) {
                     duplicate = true;
                     break;
                 }
@@ -2524,11 +2523,15 @@ public class MainActivity extends BaseActivity
         List<SongListElement> songListElements = songList.getSongListElements();
         int count = 0;
         for (QueueSong queueSong : queue) {
-            if (skipDuplicate && hashMap.get(queueSong.getSong().getId()) != null) {
+            Song song = queueSong.getSong();
+            if (song == null || song.getId() == null) {
+                continue;
+            }
+            if (skipDuplicate && hashMap.get(song.getId()) != null) {
                 continue;
             }
             SongListElement element = new SongListElement();
-            element.setSong(queueSong.getSong());
+            element.setSong(song);
             element.setNumber(songListElements.size());
             element.setSongList(songList);
             songListElements.add(element);
