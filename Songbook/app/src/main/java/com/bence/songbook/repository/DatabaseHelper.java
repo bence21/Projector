@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
+
 import com.bence.songbook.R;
 import com.bence.songbook.models.FavouriteSong;
 import com.bence.songbook.models.Language;
@@ -56,6 +58,14 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             instance = databaseHelper;
         }
         return instance;
+    }
+
+    @VisibleForTesting
+    public static synchronized void resetForTests() {
+        if (instance != null) {
+            instance.close();
+            instance = null;
+        }
     }
 
     @Override

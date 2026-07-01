@@ -18,6 +18,16 @@ android {
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        def localProperties = new Properties()
+        def localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withInputStream { localProperties.load(it) }
+        }
+        def testApiBaseUrl = localProperties.getProperty("test.api.base.url", "http://192.168.1.134:8081")
+        def testApiSecondBaseUrl = localProperties.getProperty("test.api.second.base.url", "http://192.168.100.119:8081")
+        buildConfigField "String", "API_BASE_URL", "\"${testApiBaseUrl}\""
+        buildConfigField "String", "API_SECOND_BASE_URL", "\"${testApiSecondBaseUrl}\""
     }
     buildTypes {
         // debug { // This can be used if we want to test e2e with minifyEnabled and proguard feature

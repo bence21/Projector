@@ -50,6 +50,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
@@ -324,6 +325,35 @@ public class MainActivity extends BaseActivity
                 },
                 shortCollectionName);
         queueRecyclerView.setAdapter(queueSongAdapter);
+    }
+
+    @VisibleForTesting
+    public void testingStartQueueItemDrag(int position) {
+        if (queueRecyclerView == null || queueItemTouchHelper == null) {
+            return;
+        }
+        RecyclerView.ViewHolder holder = queueRecyclerView.findViewHolderForAdapterPosition(position);
+        if (holder != null) {
+            queueItemTouchHelper.startDrag(holder);
+        }
+    }
+
+    @VisibleForTesting
+    public void testingExpandQueueBottomSheet() {
+        List<QueueSong> queue = queueViewModel.getQueueSnapshot();
+        if (queue.isEmpty() || bottomSheetBehavior == null) {
+            return;
+        }
+        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+        if (buttonLayout != null) {
+            buttonLayout.setVisibility(View.VISIBLE);
+        }
+        if (peekLayout != null) {
+            peekLayout.setVisibility(View.GONE);
+        }
+        if (searchItem != null) {
+            searchItem.collapseActionView();
+        }
     }
 
     private void setupQueueObservers() {

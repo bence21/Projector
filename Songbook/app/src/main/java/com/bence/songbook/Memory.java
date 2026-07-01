@@ -2,6 +2,8 @@ package com.bence.songbook;
 
 import static com.bence.songbook.ui.activity.YoutubeActivity.logWithNullCheck;
 
+import androidx.annotation.VisibleForTesting;
+
 import com.bence.songbook.models.FavouriteSong;
 import com.bence.songbook.models.Language;
 import com.bence.songbook.models.Song;
@@ -45,6 +47,11 @@ public class Memory {
             instance = new Memory();
         }
         return instance;
+    }
+
+    @VisibleForTesting
+    public static synchronized void resetForTests() {
+        instance = null;
     }
 
     public synchronized List<Song> getSongs() {

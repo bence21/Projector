@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.LongSparseArray;
 
+import androidx.annotation.VisibleForTesting;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -44,6 +45,11 @@ public class QueueRepository {
             }
         }
         return instance;
+    }
+
+    @VisibleForTesting
+    public static synchronized void resetForTests() {
+        instance = null;
     }
 
     public LiveData<List<QueueSong>> getQueueLiveData() {
