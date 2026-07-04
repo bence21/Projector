@@ -9,7 +9,6 @@ import projector.api.retrofit.LanguageApi;
 import projector.model.Language;
 import retrofit2.Call;
 
-import java.net.ConnectException;
 import java.util.List;
 
 public class LanguageApiBean {
@@ -22,24 +21,25 @@ public class LanguageApiBean {
         languageAssembler = LanguageAssembler.getInstance();
     }
 
-    public List<Language> getLanguages() {
+    public RemoteFetchResult<List<Language>> getLanguagesResult() {
         Call<List<LanguageDTO>> call = languageApi.getLanguages();
-        return getLanguages(call);
+        return fetchLanguages(call);
     }
 
-    private List<Language> getLanguages(Call<List<LanguageDTO>> call) {
-        try {
-            List<LanguageDTO> languageDTOs = call.execute().body();
-            return languageAssembler.createModelList(languageDTOs);
-        } catch (ConnectException ignored) {
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
-        return null;
+    public List<Language> getLanguages() {
+        return getLanguagesResult().getDataOrNull();
     }
 
     public List<Language> getDeletedLanguages() {
         Call<List<LanguageDTO>> call = languageApi.getDeletedLanguages();
-        return getLanguages(call);
+        RemoteFetchResult<List<Language>> result = fetchLanguages(call);
+        if (!result.isSuccess()) {
+            LOG.warn("Failed to fetch deleted languages: {}", result.getFailureKind());
+        }
+        return result.getDataOrNull();
+    }
+
+    private RemoteFetchResult<List<Language>> fetchLanguages(Call<List<LanguageDTO>> call) {
+        return RemoteFetchSupport.execute(call, languageAssembler::createModelList);
     }
 }

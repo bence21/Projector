@@ -400,3 +400,121 @@
     -fx-border-radius: 4;
     -fx-border-width: 1;
 }
+
+.download-header {
+    -fx-spacing: 8;
+    -fx-padding: 12 16 10 16;
+}
+
+.download-warning-label {
+    -fx-padding: 10 12;
+    -fx-background-color: derive(-generalBackgroundColor, 6%);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(255, 193, 7, 0.45);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-wrap-text: true;
+}
+
+.download-placeholder-label {
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+    -fx-text-fill: derive(-fx-text-base-color, 35%);
+    -fx-padding: 24;
+    -fx-wrap-text: true;
+}
+
+.download-progress-count {
+    -fx-font-size: 12px;
+    -fx-text-fill: derive(-fx-text-base-color, 30%);
+    -fx-min-width: 48;
+    -fx-alignment: center-right;
+}
+
+.download-status-label {
+    -fx-text-fill: derive(-fx-text-base-color, 25%);
+    -fx-font-size: 12px;
+}
+
+.compare-root {
+    -fx-background-color: -generalBackgroundColor;
+}
+
+.compare-toolbar {
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 0 0 1 0;
+}
+
+.compare-summary-label {
+    -fx-text-fill: derive(-primaryTextColor, 20%);
+    -fx-font-size: 12px;
+}
+
+.compare-title-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: -primaryTextColor;
+    -fx-padding: 8 12 4 12;
+}
+
+.compare-verse-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: derive(-primaryTextColor, 25%);
+    -fx-padding: 0 12 0 12;
+}
+
+.compare-verse-order-only {
+    -fx-text-fill: #ffb74d;
+}
+
+.compare-column {
+    -fx-padding: 0 8 8 8;
+}
+
+.compare-scroll-pane {
+    -fx-background-color: derive(-generalBackgroundColor, 8%);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+}
+
+.compare-text-flow {
+    -fx-padding: 8;
+}
+
+.compare-column-separator {
+    -fx-opacity: 0.35;
+}
+
+.compare-footer {
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 1 0 0 0;
+}
+
+.compare-match {
+    -fx-fill: -primaryTextColor;
+}
+
+.compare-diff {
+    -fx-fill: #ff8a80;
+    -fx-underline: true;
+}
+
+.song-version-status-label {
+    -fx-text-fill: derive(-primaryTextColor, 25%);
+    -fx-font-size: 11px;
+    -fx-wrap-text: true;
+}
+
+.song-badge-icon {
+    -fx-fit-width: 16;
+    -fx-fit-height: 16;
+}
+
+.song-badge-edited {
+    -fx-effect: dropshadow(gaussian, rgba(249, 187, 95, 0.55), 4, 0.4, 0, 0);
+}
+
+.song-badge-local-fork {
+    -fx-effect: dropshadow(gaussian, rgba(66, 165, 245, 0.55), 4, 0.4, 0, 0);
+}

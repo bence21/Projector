@@ -35,6 +35,7 @@ import projector.application.Updater;
 import projector.config.Log4j2Config;
 import projector.controller.BibleController;
 import projector.controller.FirstSetupController;
+import projector.controller.MessageDialogController;
 import projector.controller.MyController;
 import projector.controller.ProjectionScreenController;
 import projector.controller.song.SongController;
@@ -45,6 +46,8 @@ import projector.repository.ormLite.DatabaseHelper;
 import projector.service.CustomCanvasService;
 import projector.utils.AppProperties;
 import projector.utils.AppState;
+import projector.utils.CompareWindowTracker;
+import projector.utils.SongSaveDiagnostics;
 import projector.utils.monitors.MonitorUtil;
 
 import java.io.FileWriter;
@@ -205,6 +208,7 @@ public class MainDesktop extends Application {
 
     public void start2(Stage primaryStage) {
         Settings.shouldBeNull();
+        registerSongSaveDiagnostics();
         loadInBackGround();
         addIconToStage(primaryStage, getClass());
         primaryStage.setMinHeight(600);
@@ -230,6 +234,19 @@ public class MainDesktop extends Application {
         Runtime.getRuntime().addShutdownHook(new Thread(
                 SessionAutosave.getInstance()::shutdown,
                 "projector-session-shutdown"));
+    }
+
+    private void registerSongSaveDiagnostics() {
+        SongSaveDiagnostics.setDevWarningHandler(count -> Platform.runLater(() -> {
+            MessageDialogController messageDialog = MessageDialogController.getMessageDialog(
+                    getClass(), "Development warning");
+            if (messageDialog == null) {
+                return;
+            }
+            messageDialog.setHeaderText(count + " song(s) saved without a language. Check logs for details.");
+            messageDialog.addOkButton();
+            messageDialog.showAndWait();
+        }));
     }
 
     @SuppressWarnings("unused")
@@ -431,6 +448,7 @@ public class MainDesktop extends Application {
         }
         // Close all settings windows
         closeAllSettingsWindows();
+        CompareWindowTracker.closeAll();
         myController.closeAllPdfFiles();
         myController.closeAllVideoFiles();
         myController.close();

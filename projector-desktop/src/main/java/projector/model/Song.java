@@ -66,9 +66,15 @@ public class Song extends BaseEntity {
     private List<Short> verseOrderList;
     @DatabaseField
     private Boolean downloadedSeparately;
+    @DatabaseField
+    private boolean serverMirror = false;
+    @DatabaseField(width = 36)
+    private String originalSongUuid;
     private transient FavouriteSong favourite;
     private Long savedScore;
     private List<SongVerseHolder> songVerseHolders;
+    private transient Song localFork;
+    private transient Boolean localChangesCached;
 
     public Song() {
     }
@@ -85,7 +91,7 @@ public class Song extends BaseEntity {
         super(song);
         this.title = song.title;
         this.strippedTitle = song.strippedTitle;
-        this.verses = SongVerse.cloneList(song.verses);
+        this.verses = SongVerse.cloneList(song.getVerses());
         this.createdDate = song.createdDate;
         this.modifiedDate = song.modifiedDate;
         this.serverModifiedDate = song.serverModifiedDate;
@@ -104,6 +110,8 @@ public class Song extends BaseEntity {
         this.verseOrder = song.verseOrder;
         this.verseOrderList = CloneUtil.cloneList(song.verseOrderList);
         this.downloadedSeparately = song.downloadedSeparately;
+        this.serverMirror = song.serverMirror;
+        this.originalSongUuid = song.originalSongUuid;
     }
 
     private static long getCurrentDate() {
@@ -482,6 +490,33 @@ public class Song extends BaseEntity {
         this.downloadedSeparately = downloadedSeparately;
     }
 
+    public boolean isServerMirror() {
+        return serverMirror;
+    }
+
+    public void setServerMirror(boolean serverMirror) {
+        this.serverMirror = serverMirror;
+    }
+
+    public String getOriginalSongUuid() {
+        return originalSongUuid;
+    }
+
+    public void setOriginalSongUuid(String originalSongUuid) {
+        this.originalSongUuid = originalSongUuid;
+    }
+
+    public boolean isFork() {
+        return originalSongUuid != null && !originalSongUuid.trim().isEmpty();
+    }
+
+    public String getServerSourceUuid() {
+        if (isFork()) {
+            return originalSongUuid;
+        }
+        return getUuid();
+    }
+
     public boolean equivalent(Song other) {
         boolean equivalent = super.equivalent(other);
         if (!equivalent && other != null) {
@@ -508,5 +543,30 @@ public class Song extends BaseEntity {
 
     public List<SongVerseHolder> getSongVerseHolders() {
         return songVerseHolders;
+    }
+
+    public Song getLocalFork() {
+        return localFork;
+    }
+
+    public void setLocalFork(Song localFork) {
+        this.localFork = localFork;
+    }
+
+    public boolean hasLocalFork() {
+        return localFork != null;
+    }
+
+    public Boolean getLocalChangesCached() {
+        return localChangesCached;
+    }
+
+    public void setLocalChangesCached(Boolean localChangesCached) {
+        this.localChangesCached = localChangesCached;
+    }
+
+    public void clearForkLinks() {
+        localFork = null;
+        localChangesCached = null;
     }
 }

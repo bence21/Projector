@@ -5,7 +5,6 @@ import com.goxr3plus.fxborderlessscene.borderless.BorderlessScene;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Bounds;
@@ -28,7 +27,6 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Popup;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.MainDesktop;
@@ -55,6 +53,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static projector.utils.ColorUtil.getMainBorderColor;
+import static projector.utils.SceneUtils.closeStage;
 import static projector.utils.SceneUtils.getCustomStage3;
 
 public class WindowController {
@@ -155,13 +154,7 @@ public class WindowController {
             }
         });
 
-        exit.setOnAction(a -> {
-            EventHandler<WindowEvent> onCloseRequest = stage.getOnCloseRequest();
-            if (onCloseRequest != null) {
-                onCloseRequest.handle(null);
-            }
-            stage.close();
-        });
+        exit.setOnAction(a -> closeStage(stage));
         minimize.setOnAction(a -> stage.setIconified(true));
         maximizeNormalize.setOnAction(a -> borderlessScene.maximizeStage());
         SimpleBooleanProperty maximizedProperty = maximizedProperty();

@@ -6,17 +6,20 @@ import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.GridPane;
-import javafx.scene.paint.Color;
+import javafx.stage.Stage;
+import projector.utils.SceneUtils;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import projector.api.RemoteFetchFailureKind;
+import projector.api.RemoteFetchResult;
 import projector.api.SongApiBean;
 import projector.api.SongCollectionApiBean;
 import projector.application.Settings;
@@ -27,9 +30,17 @@ import projector.model.SongVerse;
 import projector.service.LanguageService;
 import projector.service.ServiceManager;
 import projector.service.SongCollectionService;
+import projector.service.ServiceException;
 import projector.service.SongService;
 import projector.service.SongVerseService;
+import projector.utils.ConnectionErrorMessages;
+import projector.utils.DevelopmentMode;
+import projector.utils.DownloadedSongLanguageSupport;
+import projector.utils.DownloadWorkPlan;
+import projector.utils.ForkMirrorMigrationState;
+import projector.utils.MissingServerSongImporter;
 import projector.utils.StringUtils;
+import projector.utils.compare.CompareDiffHighlighter;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -45,6 +56,18 @@ public class DownloadSongsController {
     private GridPane conflictGridPane;
     @FXML
     private Label downloadingLabel;
+    @FXML
+    private Label migrationWarningLabel;
+    @FXML
+    private Label downloadCompleteHintLabel;
+    @FXML
+    private Button closeWindowButton;
+    @FXML
+    private ProgressBar downloadProgressBar;
+    @FXML
+    private Label downloadProgressCountLabel;
+    @FXML
+    private Label downloadPlaceholderLabel;
     @FXML
     private ListView<Song> newSongListView;
     @FXML
@@ -68,31 +91,18 @@ public class DownloadSongsController {
     private List<SongCollection> onlineModifiedSongCollections;
     private List<Language> languages;
     private int remainingLanguages;
-
-    private static void addTexts(String a, List<String> subStrings, TextFlow textFlow) {
-        textFlow.getChildren().clear();
-        for (int i = subStrings.size() - 1; i >= 0; --i) {
-            final String x = subStrings.get(i);
-            final int endIndex = a.indexOf(x);
-            final Text text = new Text(a.substring(0, endIndex));
-            text.setUnderline(true);
-            text.setFill(Color.rgb(255, 0, 0));
-            textFlow.getChildren().add(text);
-            final Text text2 = new Text(x);
-            text2.setFill(Color.rgb(36, 52, 40));
-            textFlow.getChildren().add(text2);
-            a = a.substring(endIndex + x.length());
-        }
-        if (a.length() > 0) {
-            final Text text = new Text(a);
-            text.setUnderline(true);
-            text.setFill(Color.rgb(255, 0, 0));
-            textFlow.getChildren().add(text);
-        }
-    }
+    private int totalSongs;
+    private int completedSongs;
+    private boolean downloadComplete;
+    private List<Song> songs;
+    private DownloadWorkPlan downloadWorkPlan;
+    private int pendingMigrationLanguages;
 
     public void initialize() {
-        conflictGridPane.setVisible(false);
+        setConflictPaneVisible(false);
+        if (downloadPlaceholderLabel != null) {
+            downloadPlaceholderLabel.setText(resourceBundle.getString("Download in progress"));
+        }
         newSongListView.setCellFactory(param -> new ListCell<>() {
             @Override
             protected void updateItem(Song item, boolean empty) {
@@ -108,15 +118,27 @@ public class DownloadSongsController {
         conflictSongList = new ArrayList<>();
         conflictLocalSongList = new ArrayList<>();
         songService = ServiceManager.getSongService();
-        final List<Song> songs = songService.findAll();
+        songs = songService.findAll();
         LanguageService languageService = ServiceManager.getLanguageService();
         languages = languageService.findAll();
+        hideMigrationWarningLabel();
+        initializeButtons();
+    }
+
+    public void startDownload(DownloadWorkPlan downloadWorkPlan) {
+        this.downloadWorkPlan = downloadWorkPlan;
+        LanguageService languageService = ServiceManager.getLanguageService();
         Thread thread = new Thread(() -> {
             SongApiBean songApi = new SongApiBean();
             remainingLanguages = getSelectedLanguageSize();
+            pendingMigrationLanguages = countPendingMigrationLanguages();
+            initDownloadProgress();
             for (Language language : languages) {
                 if (language.isSelected()) {
-                    Platform.runLater(() -> downloadingLabel.setText(resourceBundle.getString("Downloading") + ": " + language.getNativeName()));
+                    if (!migrateLegacySongsForLanguageIfNeeded(songApi, language)) {
+                        return;
+                    }
+                    updateDownloadStatus(resourceBundle.getString("Downloading") + ": " + language.getNativeName());
                     final SongApiBean songApiBean = new SongApiBean();
                     List<SongViewsDTO> songViewsDTOS = songApiBean.getSongViewsByLanguage(language);
                     if (songViewsDTOS != null) {
@@ -127,51 +149,37 @@ public class DownloadSongsController {
                         songService.saveFavouriteCount(songFavouritesDTOS);
                     }
                     List<Song> newSongList = new ArrayList<>();
-                    final List<Song> songApiSongs = songApi.getSongsByLanguageAndAfterModifiedDate(language, getLastModifiedSongDate(language));
-                    if (songApiSongs == null) {
-                        noInternetMessage();
+                    RemoteFetchResult<List<Song>> songsResult = songApi.getSongsByLanguageAndAfterModifiedDateResult(
+                            language, getLastModifiedSongDate(language));
+                    if (!songsResult.isSuccess()) {
+                        showRemoteFetchFailure(songsResult.getFailureKind(), true);
                         return;
-                    } else {
-                        if (songApiSongs.size() > 0) {
-                            Platform.runLater(() -> downloadingLabel.setText(resourceBundle.getString("Saving") + ": " + language.getNativeName()));
+                    }
+                    final List<Song> songApiSongs = songsResult.getData();
+                    int downloadedCount = songApiSongs != null ? songApiSongs.size() : 0;
+                    if (songApiSongs != null && !songApiSongs.isEmpty()) {
+                        updateDownloadStatus(resourceBundle.getString("Saving") + ": " + language.getNativeName());
+                        adjustDownloadEstimate(language, songApiSongs.size());
                             HashMap<String, Song> uuidSongHashMap = new HashMap<>(songs.size());
                             for (Song song : songs) {
                                 if (song.getUuid() != null) {
                                     uuidSongHashMap.put(song.getUuid(), song);
                                 }
                             }
+                        DownloadedSongLanguageSupport.attachLanguage(songApiSongs, language);
                             for (Song song : songApiSongs) {
-                                final boolean containsKeyInUuid = uuidSongHashMap.containsKey(song.getUuid());
-                                song.setLanguage(language);
+                                final String serverUuid = song.getUuid();
+                                final boolean containsKeyInUuid = serverUuid != null && uuidSongHashMap.containsKey(serverUuid);
                                 if (!containsKeyInUuid) {
-                                    if (!song.isDeleted()) {
-                                        newSongList.add(song);
-                                        saveSong(song);
-                                    }
+                                    handleDownloadWithoutLocalUuid(song, newSongList);
                                 } else {
-                                    final Song localSong = uuidSongHashMap.get(song.getUuid());
-                                    if (song.isDeleted() && localSong.isPublished()) {
-                                        songService.delete(localSong);
-                                    } else {
-                                        // Means modified song
-                                        localSong.setServerModifiedDate(song.getServerModifiedDate());
-                                        localSong.setCreatedDate(song.getCreatedDate());
-                                        localSong.setModifiedDate(song.getModifiedDate());
-                                        localSong.setLanguage(language);
-                                        localSong.setVersionGroup(song.getVersionGroup());
-                                        songVerseService.delete(localSong.getVerses());
-                                        localSong.setTitle(song.getTitle());
-                                        localSong.setVerses(song.getVerses());
-                                        localSong.setViews(song.getViews());
-                                        localSong.setFavouriteCount(song.getFavouriteCount());
-                                        localSong.setAuthor(song.getAuthor());
-                                        localSong.setVerseOrderList(song.getVerseOrderList());
-                                        saveSong(localSong);
-                                    }
+                                    final Song localSong = uuidSongHashMap.get(serverUuid);
+                                    updateExistingDownloadedSong(song, localSong);
                                 }
+                                incrementCompletedSongs(1);
                             }
-                        }
                     }
+                    reconcileDownloadEstimate(language, downloadedCount);
                     try {
                         SongCollectionApiBean songCollectionApiBean = new SongCollectionApiBean();
                         SongCollectionService songCollectionService = ServiceManager.getSongCollectionService();
@@ -183,10 +191,12 @@ public class DownloadSongsController {
                                 lastModifiedDate = songCollectionModifiedDate;
                             }
                         }
-                        onlineModifiedSongCollections = songCollectionApiBean.getSongCollections(language, lastModifiedDate);
-                        if (onlineModifiedSongCollections == null) {
-                            noInternetMessage();
+                        RemoteFetchResult<List<SongCollection>> collectionsResult =
+                                songCollectionApiBean.getSongCollectionsResult(language, lastModifiedDate);
+                        if (!collectionsResult.isSuccess()) {
+                            showRemoteFetchFailure(collectionsResult.getFailureKind(), false);
                         } else {
+                            onlineModifiedSongCollections = collectionsResult.getData();
                             saveSongCollections(songCollectionService, songCollectionServiceAll);
                         }
                     } catch (Exception e) {
@@ -204,7 +214,205 @@ public class DownloadSongsController {
             }
         });
         thread.start();
-        initializeButtons();
+    }
+
+    private void initDownloadProgress() {
+        totalSongs = downloadWorkPlan != null ? downloadWorkPlan.getTotalWork() : 0;
+        completedSongs = 0;
+        downloadComplete = false;
+        Platform.runLater(() -> {
+            if (downloadProgressBar != null) {
+                if (totalSongs <= 0) {
+                    downloadProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+                } else {
+                    downloadProgressBar.setProgress(0);
+                    SceneUtils.setVisibleAndManaged(downloadProgressBar, true);
+                }
+            }
+            updateDownloadProgressCountLabel(completedSongs, totalSongs);
+        });
+    }
+
+    private void updateDownloadProgress(int completed, int total) {
+        Platform.runLater(() -> {
+            if (downloadProgressBar != null) {
+                if (total <= 0) {
+                    if (downloadComplete) {
+                        hideDownloadProgress();
+                    } else {
+                        downloadProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+                        SceneUtils.setVisibleAndManaged(downloadProgressBar, true);
+                    }
+                } else {
+                    downloadProgressBar.setProgress((double) completed / total);
+                    SceneUtils.setVisibleAndManaged(downloadProgressBar, true);
+                }
+            }
+            if (!downloadComplete || total > 0) {
+                SceneUtils.setVisibleAndManaged(downloadProgressCountLabel, true);
+                updateDownloadProgressCountLabel(completed, total);
+            }
+        });
+    }
+
+    private void adjustTotalSongs(int delta) {
+        if (delta <= 0) {
+            return;
+        }
+        totalSongs += delta;
+        updateDownloadProgress(completedSongs, totalSongs);
+    }
+
+    private void adjustDownloadEstimate(Language language, int actualCount) {
+        if (actualCount <= 0) {
+            return;
+        }
+        if (downloadWorkPlan == null) {
+            adjustTotalSongs(actualCount);
+            return;
+        }
+        int estimated = downloadWorkPlan.getEstimatedDownloadSteps(language.getUuid());
+        if (actualCount > estimated) {
+            adjustTotalSongs(actualCount - estimated);
+        }
+    }
+
+    private void reconcileDownloadEstimate(Language language, int actualCount) {
+        if (downloadWorkPlan == null || actualCount < 0) {
+            return;
+        }
+        int estimated = downloadWorkPlan.getEstimatedDownloadSteps(language.getUuid());
+        if (actualCount < estimated) {
+            int delta = estimated - actualCount;
+            totalSongs = Math.max(completedSongs, totalSongs - delta);
+            updateDownloadProgress(completedSongs, totalSongs);
+        }
+    }
+
+    private void incrementCompletedSongs(int count) {
+        if (count <= 0) {
+            return;
+        }
+        completedSongs += count;
+        updateDownloadProgress(completedSongs, totalSongs);
+    }
+
+    private void updateDownloadProgressCountLabel(int completed, int total) {
+        if (downloadProgressCountLabel == null) {
+            return;
+        }
+        if (total <= 0) {
+            SceneUtils.setVisibleAndManaged(downloadProgressCountLabel, false);
+            return;
+        }
+        SceneUtils.setVisibleAndManaged(downloadProgressCountLabel, true);
+        if (DevelopmentMode.isActive()) {
+            downloadProgressCountLabel.setText(
+                    String.format(resourceBundle.getString("Download progress count"), completed, total));
+        } else {
+            int percent = (int) Math.round(100.0 * completed / total);
+            downloadProgressCountLabel.setText(percent + "%");
+        }
+    }
+
+    private void updateDownloadStatus(String text) {
+        Platform.runLater(() -> downloadingLabel.setText(text));
+    }
+
+    private void setConflictPaneVisible(boolean visible) {
+        SceneUtils.setVisibleAndManaged(conflictGridPane, visible);
+        if (downloadPlaceholderLabel != null) {
+            boolean showPlaceholder = !visible && !downloadComplete && remainingLanguages > 0;
+            SceneUtils.setVisibleAndManaged(downloadPlaceholderLabel, showPlaceholder);
+        }
+    }
+
+    private void hideMigrationWarningLabel() {
+        if (migrationWarningLabel == null) {
+            return;
+        }
+        SceneUtils.setVisibleAndManaged(migrationWarningLabel, false);
+    }
+
+    private void showMigrationInProgressWarning(boolean visible) {
+        Platform.runLater(() -> {
+            if (migrationWarningLabel == null) {
+                return;
+            }
+            if (visible) {
+                migrationWarningLabel.setText(resourceBundle.getString("Fork mirror migration in progress"));
+            }
+            SceneUtils.setVisibleAndManaged(migrationWarningLabel, visible);
+        });
+    }
+
+    private int countPendingMigrationLanguages() {
+        int count = 0;
+        for (Language language : languages) {
+            if (language.isSelected() && ForkMirrorMigrationState.needsMigration(language, songService)) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    private void onMigrationLanguageFinished() {
+        if (pendingMigrationLanguages > 0) {
+            --pendingMigrationLanguages;
+        }
+        if (pendingMigrationLanguages <= 0) {
+            showMigrationInProgressWarning(false);
+        }
+    }
+
+    private boolean migrateLegacySongsForLanguageIfNeeded(SongApiBean songApi, Language language) {
+        String languageUuid = language.getUuid();
+        if (languageUuid == null || ForkMirrorMigrationState.isMigrated(languageUuid)) {
+            return true;
+        }
+        showMigrationInProgressWarning(true);
+        showForkMirrorMigrationProgress(language);
+        RemoteFetchResult<List<Song>> fullServerResult = songApi.getSongsByLanguageAndAfterModifiedDateResult(language, 0L);
+        if (!fullServerResult.isSuccess()) {
+            showRemoteFetchFailure(fullServerResult.getFailureKind(), true);
+            return false;
+        }
+        List<Song> fullServerSongs = fullServerResult.getData();
+        DownloadedSongLanguageSupport.attachLanguage(fullServerSongs, language);
+        try {
+            songService.migrateLegacySongsForLanguage(language, fullServerSongs, () -> incrementCompletedSongs(1));
+            songs = songService.findAll();
+            List<Song> importedSongs = new ArrayList<>();
+            int importedCount = importMissingServerSongs(language, fullServerSongs, importedSongs);
+            if (importedCount > 0) {
+                songs = songService.findAll();
+                List<Song> importedForUi = new ArrayList<>(importedSongs);
+                Platform.runLater(() -> newSongListView.getItems().addAll(importedForUi));
+            }
+            onMigrationLanguageFinished();
+            return true;
+        } catch (ServiceException e) {
+            LOG.error(e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private int importMissingServerSongs(Language language, List<Song> serverSongs, List<Song> newSongList) {
+        List<Song> missingSongs = MissingServerSongImporter.findMissingServerSongs(songs, serverSongs);
+        if (missingSongs.isEmpty()) {
+            return 0;
+        }
+        DownloadedSongLanguageSupport.attachLanguage(missingSongs, language);
+        adjustTotalSongs(missingSongs.size());
+        for (Song serverSong : missingSongs) {
+            handleDownloadWithoutLocalUuid(serverSong, newSongList);
+            incrementCompletedSongs(1);
+        }
+        return missingSongs.size();
+    }
+
+    private void showForkMirrorMigrationProgress(Language language) {
+        updateDownloadStatus(resourceBundle.getString("Checking local copies") + ": " + language.getNativeName());
     }
 
     private static void setLanguageSectionTypeDownloadedCorrectly(Language language, LanguageService languageService) {
@@ -221,6 +429,52 @@ public class DownloadSongsController {
             songService.create(song);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
+        }
+    }
+
+    private void handleDownloadWithoutLocalUuid(Song song, List<Song> newSongList) {
+        final String serverUuid = song.getUuid();
+        Song existingFork = songService.findForkByOriginalUuid(serverUuid);
+        if (existingFork != null) {
+            Song mirror = songService.findMirrorByUuid(serverUuid);
+            if (mirror == null) { // original song somehow deleted locally
+                Song mirrorCopy = new Song(song);
+                mirrorCopy.setServerMirror(true);
+                mirrorCopy.setPublished(true);
+                saveSong(mirrorCopy);
+            } else {
+                try {
+                    songService.updateMirrorFromServer(mirror, song);
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        } else if (!song.isDeleted()) {
+            newSongList.add(song);
+            saveSong(song);
+        }
+    }
+
+    private void updateExistingDownloadedSong(Song song, Song localSong) {
+        if (localSong.isFork()) {
+            return;
+        }
+        final String serverUuid = song.getUuid();
+        if (song.isDeleted() && localSong.isPublished()) {
+            try {
+                songService.deleteMirrorOnServerDelete(serverUuid);
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
+        } else {
+            try {
+                if (songService.findForkByOriginalUuid(serverUuid) != null) {
+                    localSong.setServerMirror(true);
+                }
+                songService.updateMirrorFromServer(localSong, song);
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
         }
     }
 
@@ -258,10 +512,24 @@ public class DownloadSongsController {
         songCollectionService.create(onlineModifiedSongCollections);
     }
 
-    private void noInternetMessage() {
-        final String no_internet_connection = resourceBundle.getString("No internet connection");
-        final String try_again_later = resourceBundle.getString("Try again later");
-        Platform.runLater(() -> downloadingLabel.setText(no_internet_connection + "! " + try_again_later + "!"));
+    private void showRemoteFetchFailure(RemoteFetchFailureKind failureKind, boolean fatal) {
+        Platform.runLater(() -> {
+            downloadingLabel.setText(ConnectionErrorMessages.getMessage(resourceBundle, failureKind));
+            if (fatal) {
+                hideDownloadProgress();
+                SceneUtils.setVisibleAndManaged(downloadPlaceholderLabel, false);
+            }
+        });
+    }
+
+    private void hideDownloadProgress() {
+        if (downloadProgressBar != null) {
+            downloadProgressBar.setProgress(0);
+            SceneUtils.setVisibleAndManaged(downloadProgressBar, false);
+        }
+        if (downloadProgressCountLabel != null) {
+            SceneUtils.setVisibleAndManaged(downloadProgressCountLabel, false);
+        }
     }
 
     private Long getLastModifiedSongDate(Language language) {
@@ -271,6 +539,9 @@ public class DownloadSongsController {
             return 0L;
         }
         for (Song song : all) {
+            if (song.isFork()) {
+                continue;
+            }
             Date serverModifiedDate = song.getServerModifiedDate();
             if (serverModifiedDate != null && lastModified.compareTo(serverModifiedDate) < 0 && !song.isDownloadedSeparately()) {
                 lastModified = serverModifiedDate;
@@ -281,7 +552,7 @@ public class DownloadSongsController {
 
     private void setNextConflictSong() {
         if (conflictSongList.size() > conflictIndex) {
-            conflictGridPane.setVisible(true);
+            setConflictPaneVisible(true);
             Song localSong = conflictLocalSongList.get(conflictIndex);
             conflictTitle.setText(localSong.getTitle());
             Song song = conflictSongList.get(conflictIndex);
@@ -290,10 +561,10 @@ public class DownloadSongsController {
             String b = song.getVersesText();
             try {
                 final List<String> subStrings = StringUtils.highestCommonStrings(a, b);
-                addTexts(a, subStrings, conflictLocalSongTextFlow);
-                addTexts(b, subStrings, conflictSongTextFlow);
+                CompareDiffHighlighter.render(conflictLocalSongTextFlow, a, subStrings);
+                CompareDiffHighlighter.render(conflictSongTextFlow, b, subStrings);
             } catch (Exception e) {
-                LOG.error(e.getMessage() + " - setNextConflict()");
+                LOG.error("{} - setNextConflict()", e.getMessage());
                 ObservableList<Node> children = conflictLocalSongTextFlow.getChildren();
                 children.clear();
                 children.add(new Text(a));
@@ -303,22 +574,39 @@ public class DownloadSongsController {
             }
             ++conflictIndex;
         } else {
-            conflictGridPane.setVisible(false);
+            setConflictPaneVisible(false);
             showCompletedMessage();
         }
     }
 
     private void showCompletedMessage() {
         if (remainingLanguages == 0) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle(resourceBundle.getString("Completed"));
-            alert.setHeaderText(resourceBundle.getString("Close the window to finish!"));
-            alert.showAndWait();
-            Platform.runLater(() -> downloadingLabel.setText(resourceBundle.getString("Completed")));
+            downloadComplete = true;
+            if (totalSongs > 0 && completedSongs < totalSongs) {
+                completedSongs = totalSongs;
+            }
+            updateDownloadProgress(completedSongs, totalSongs);
+            Platform.runLater(() -> {
+                downloadingLabel.setText(resourceBundle.getString("Completed"));
+                SceneUtils.setVisibleAndManaged(downloadPlaceholderLabel, false);
+                showMigrationInProgressWarning(false);
+                if (downloadCompleteHintLabel != null) {
+                    SceneUtils.setVisibleAndManaged(downloadCompleteHintLabel, true);
+                }
+                if (closeWindowButton != null) {
+                    SceneUtils.setVisibleAndManaged(closeWindowButton, true);
+                }
+            });
         }
     }
 
     private void initializeButtons() {
+        if (closeWindowButton != null) {
+            closeWindowButton.setOnAction(event -> {
+                Stage stage = (Stage) closeWindowButton.getScene().getWindow();
+                SceneUtils.closeStage(stage);
+            });
+        }
         keepButton.setOnAction(event -> setNextConflictSong());
         acceptBothButton.setOnAction(event -> {
             Song song = conflictSongList.get(conflictIndex - 1);

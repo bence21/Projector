@@ -28,9 +28,14 @@ public class BibleApiBean {
         return executeBiblesCall(call);
     }
 
-    public List<Bible> getBibleTitles() {
+    public RemoteFetchResult<List<Bible>> getBibleTitlesResult() {
         Call<List<BibleDTO>> call = bibleApi.getBibleTitles();
-        return executeBiblesCall(call);
+        return RemoteFetchSupport.execute(call, bibleDTOs -> {
+            if (bibleDTOs != null) {
+                return bibleAssembler.createModelList(bibleDTOs);
+            }
+            return null;
+        });
     }
 
     public Bible getBible(String uuid) {

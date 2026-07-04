@@ -15,6 +15,7 @@
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -139,23 +140,39 @@
                         <bottom>
                             <BorderPane prefWidth="300.0" BorderPane.alignment="CENTER">
                                 <top>
-                                    <HBox alignment="CENTER" spacing="7.0">
+                                    <FlowPane alignment="CENTER_LEFT" hgap="7.0"
+                                              vgap="4.0" BorderPane.alignment="CENTER">
                                         <CheckBox fx:id="searchInTextCheckBox" mnemonicParsing="false"
-                                                  text="%Search in text" BorderPane.alignment="CENTER">
+                                                  text="%Search in text">
                                             <padding>
                                                 <Insets bottom="4.0"/>
                                             </padding>
                                         </CheckBox>
-                                        <CheckBox fx:id="favoritesCheckBox" mnemonicParsing="false" text="Favourites"
-                                                  BorderPane.alignment="CENTER">
+                                        <CheckBox fx:id="favoritesCheckBox" mnemonicParsing="false" text="Favourites">
                                             <padding>
                                                 <Insets bottom="4.0"/>
                                             </padding>
                                         </CheckBox>
+                                        <ToggleButton fx:id="localVersionsToggleButton" contentDisplay="CENTER"
+                                                      graphicTextGap="0.0" maxHeight="-Infinity" maxWidth="-Infinity"
+                                                      mnemonicParsing="false" prefHeight="32.0" prefWidth="32.0"
+                                                      textAlignment="CENTER">
+                                            <graphic>
+                                                <ImageView fitHeight="24.0" fitWidth="24.0" pickOnBounds="true"
+                                                           preserveRatio="true" styleClass="song-badge-edited">
+                                                    <Image url="@../../icons/pencil.png"/>
+                                                </ImageView>
+                                            </graphic>
+                                            <tooltip>
+                                                <Tooltip text="%Local versions filter tooltip"/>
+                                            </tooltip>
+                                            <padding>
+                                                <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                                            </padding>
+                                        </ToggleButton>
                                         <Button fx:id="showVersionsButton" contentDisplay="CENTER" graphicTextGap="0.0"
-                                                layoutX="815.0" layoutY="163.0" maxHeight="-Infinity"
-                                                maxWidth="-Infinity" mnemonicParsing="false" prefHeight="32.0"
-                                                prefWidth="32.0" textAlignment="CENTER">
+                                                maxHeight="-Infinity" maxWidth="-Infinity" mnemonicParsing="false"
+                                                prefHeight="32.0" prefWidth="32.0" textAlignment="CENTER">
                                             <graphic>
                                                 <ImageView fitHeight="40.0" fitWidth="27.0" pickOnBounds="true"
                                                            preserveRatio="true">
@@ -169,7 +186,7 @@
                                                 <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
                                             </padding>
                                         </Button>
-                                    </HBox>
+                                    </FlowPane>
                                 </top>
                                 <left>
                                     <Label text="%Search" BorderPane.alignment="CENTER"/>
@@ -289,6 +306,24 @@
                                                 </ToggleButton>
                                                 <CheckBox fx:id="aspectRatioCheckBox" text="%Aspect ratio"
                                                           BorderPane.alignment="CENTER"/>
+                                                <Button fx:id="compareWithOriginalButton" contentDisplay="CENTER"
+                                                        graphicTextGap="0.0"
+                                                        managed="false" maxHeight="-Infinity" maxWidth="-Infinity"
+                                                        mnemonicParsing="false" prefHeight="32.0" prefWidth="32.0"
+                                                        textAlignment="CENTER" visible="false">
+                                                    <graphic>
+                                                        <ImageView fitHeight="24.0" fitWidth="24.0" pickOnBounds="true"
+                                                                   preserveRatio="true">
+                                                            <Image url="@../../icons/compare.png"/>
+                                                        </ImageView>
+                                                    </graphic>
+                                                    <tooltip>
+                                                        <Tooltip text="%Compare with original"/>
+                                                    </tooltip>
+                                                    <padding>
+                                                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                                                    </padding>
+                                                </Button>
                                                 <Button fx:id="starButton" contentDisplay="CENTER" graphicTextGap="0.0"
                                                         layoutX="815.0" layoutY="163.0" maxHeight="-Infinity"
                                                         maxWidth="-Infinity" mnemonicParsing="false" prefHeight="20.0"
@@ -309,15 +344,25 @@
                                             </HBox>
                                         </right>
                                         <bottom>
-                                            <HBox fx:id="authorBox" alignment="CENTER_LEFT" spacing="4.0">
-                                                <Label text="Author"/>
-                                                <TextField fx:id="authorTextField" editable="false" prefHeight="22.0"
-                                                           prefWidth="200.0" promptText="Author"
-                                                           BorderPane.alignment="CENTER"/>
-                                                <BorderPane.margin>
-                                                    <Insets left="10.0"/>
-                                                </BorderPane.margin>
-                                            </HBox>
+                                            <VBox spacing="2.0">
+                                                <Label fx:id="versionStatusLabel" managed="false"
+                                                       styleClass="song-version-status-label" visible="false"
+                                                       wrapText="true">
+                                                    <VBox.margin>
+                                                        <Insets left="10.0" top="2.0"/>
+                                                    </VBox.margin>
+                                                </Label>
+                                                <HBox fx:id="authorBox" alignment="CENTER_LEFT" spacing="4.0">
+                                                    <Label text="Author"/>
+                                                    <TextField fx:id="authorTextField" editable="false"
+                                                               prefHeight="22.0"
+                                                               prefWidth="200.0" promptText="Author"
+                                                               BorderPane.alignment="CENTER"/>
+                                                    <HBox.margin>
+                                                        <Insets left="10.0"/>
+                                                    </HBox.margin>
+                                                </HBox>
+                                            </VBox>
                                         </bottom>
                                     </BorderPane>
                                 </center>

@@ -2,11 +2,12 @@ package projector.controller.song;
 
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
-import javafx.geometry.Bounds;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Pane;
 import org.junit.Assert;
@@ -86,15 +87,20 @@ public class SongControllerTest extends BaseTest {
             }
         } while (count < 100);
         clickOn("#newSongButton");
-        clickOn("#titleTextField").write(test_songTitle);
-        clickOn("#newVerseButton");
-        clickOn("#textArea").write("First verse");
-        clickOn("#languageComboBoxForNewSong").sleep(100);
-        Pane root = NewSongController.getGlobalRoot();
+        Pane root = waitForSongEditorRoot();
+        TextField titleTextField = find("#titleTextField", root);
+        clickOn(titleTextField).write(test_songTitle);
+        Button newVerseButton = find("#newVerseButton", root);
+        clickOn(newVerseButton);
+        TextArea verseTextArea = waitForSongEditorTextArea(root);
+        clickOn(verseTextArea).write("First verse");
+        ComboBox<Language> languageComboBoxForNewSong = find("#languageComboBoxForNewSong", root);
+        clickOn(languageComboBoxForNewSong).sleep(100);
         final ComboBox<Language> languageComboBox = find("#languageComboBoxForNewSong", root);
         Platform.runLater(() -> languageComboBox.getSelectionModel().selectFirst());
         sleep(100);
-        clickOn("#saveButton");
+        Button saveButton = find("#saveButton", root);
+        clickOn(saveButton);
         ListView<SearchedSong> listView = find("#searchedSongListView");
         boolean was = false;
         ObservableList<SearchedSong> items = listView.getItems();
@@ -156,18 +162,35 @@ public class SongControllerTest extends BaseTest {
         Assert.assertTrue(activeTextLength > songVerseTextLength2);
     }
 
+    private void clearAndSearch(String query) {
+        doubleClickOn("#searchTextField");
+        eraseText(100);
+        clickOn("#searchTextField").write(query);
+        sleep(200);
+    }
+
     //	@Test
     private void editSong() {
-        clickOn("#searchTextField").write(test_songTitle);
+        clearAndSearch(test_songTitle);
         final ListView<SearchedSong> searchedSongListView = find("#searchedSongListView");
-        Bounds boundsInScene = searchedSongListView.localToScene(searchedSongListView.getBoundsInLocal());
-        clickOn("#searchedSongListView");
-        final double x = boundsInScene.getMinX() + 10;
-        final double y = boundsInScene.getMinY() + 10;
-        rightClickOn(x, y).sleep(100).clickOn(x + 7, y + 7);
+        Platform.runLater(() -> {
+            for (SearchedSong item : searchedSongListView.getItems()) {
+                if (item.getSong().getTitle().equals(test_songTitle)) {
+                    searchedSongListView.getSelectionModel().select(item);
+                    break;
+                }
+            }
+        });
+        sleep(200);
+        rightClickOn("#searchedSongListView");
+        sleep(100);
+        clickOn("Edit");
+        Pane root = waitForSongEditorRoot();
         final String edited_text = "Edited text";
-        clickOn("#textArea").write(edited_text);
-        clickOn("#saveButton");
+        TextArea verseTextArea = waitForSongEditorTextArea(root);
+        clickOn(verseTextArea).write(edited_text);
+        Button saveButton = find("#saveButton", root);
+        clickOn(saveButton);
         ListView<SearchedSong> listView = find("#searchedSongListView");
         SearchedSong editedSong = null;
         for (SearchedSong song : listView.getItems()) {
@@ -180,17 +203,54 @@ public class SongControllerTest extends BaseTest {
         Assert.assertTrue(editedSong.getSong().getVerses().get(0).getText().contains(edited_text));
     }
 
+    private Pane waitForSongEditorRoot() {
+        int count = 0;
+        do {
+            Pane root = NewSongController.getGlobalRoot();
+            if (root != null && root.getScene() != null && root.getScene().getWindow() != null
+                    && root.getScene().getWindow().isShowing()) {
+                return root;
+            }
+            ++count;
+            sleep(100);
+        } while (count < 100);
+        Assert.fail("Song editor window not found");
+        return null;
+    }
+
+    private TextArea waitForSongEditorTextArea(Pane root) {
+        int count = 0;
+        do {
+            try {
+                return find("#textArea", root);
+            } catch (Exception e) {
+                ++count;
+                sleep(100);
+            }
+        } while (count < 100);
+        Assert.fail("Song editor textArea not found");
+        return null;
+    }
+
     //	@Test
     private void deleteASong() {
-        doubleClickOn("#searchTextField").doubleClickOn("#searchTextField").write(test_songTitle);
+        clearAndSearch(test_songTitle);
         final ListView<SearchedSong> searchedSongListView = find("#searchedSongListView");
-        Bounds boundsInScene = searchedSongListView.localToScene(searchedSongListView.getBoundsInLocal());
-        clickOn("#searchedSongListView");
-        final double x = boundsInScene.getMinX() + 10;
-        final double y = boundsInScene.getMinY() + 10;
-        rightClickOn(x, y).sleep(100).clickOn("#deleteMenuItem");
-        sleep(100).clickOn("#confirmButton").sleep(50);
-        doubleClickOn("#searchTextField").doubleClickOn("#searchTextField").write(test_songTitle);
+        Platform.runLater(() -> {
+            for (SearchedSong item : searchedSongListView.getItems()) {
+                if (item.getSong().getTitle().equals(test_songTitle)) {
+                    searchedSongListView.getSelectionModel().select(item);
+                    break;
+                }
+            }
+        });
+        sleep(200);
+        rightClickOn("#searchedSongListView");
+        sleep(100);
+        clickOn("Delete");
+        sleep(100);
+        clickOn("#confirmButton").sleep(50);
+        clearAndSearch(test_songTitle);
         Assert.assertEquals(0, searchedSongListView.getItems().size());
     }
 }

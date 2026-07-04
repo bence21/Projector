@@ -134,6 +134,9 @@ public class SongApiBean {
 
     private SongUploadResult uploadSong(Song song, boolean secondTry) {
         final SongDTO dto = songAssembler.createDto(song);
+        if (song.isFork()) {
+            dto.setUuid(song.getOriginalSongUuid());
+        }
         Call<SongDTO> call = songApi.uploadSong(dto);
         try {
             Response<SongDTO> response = call.execute();
@@ -162,17 +165,16 @@ public class SongApiBean {
         }
     }
 
-    public List<Song> getSongsByLanguageAndAfterModifiedDate(Language language, Long modifiedDate) {
+    public RemoteFetchResult<List<Song>> getSongsByLanguageAndAfterModifiedDateResult(Language language, Long modifiedDate) {
         Call<List<SongDTO>> call = songApi.getSongsByLanguageAndAfterModifiedDate(language.getUuid(), modifiedDate);
-        List<Song> songs;
-        try {
-            List<SongDTO> songDTOs = call.execute().body();
-            songs = songAssembler.createModelList(songDTOs);
-            return songs;
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
-        return null;
+        return RemoteFetchSupport.execute(call, songDTOs -> {
+            removeDeleted(songDTOs);
+            return songAssembler.createModelList(songDTOs);
+        });
+    }
+
+    public List<Song> getSongsByLanguageAndAfterModifiedDate(Language language, Long modifiedDate) {
+        return getSongsByLanguageAndAfterModifiedDateResult(language, modifiedDate).getDataOrNull();
     }
 
     public List<SongViewsDTO> getSongViewsByLanguage(Language language) {

@@ -43,7 +43,7 @@ public class DatabaseHelper {
 
     private static DatabaseHelper instance;
     private static boolean frozen = false;
-    private final int DATABASE_VERSION = 20;
+    private final int DATABASE_VERSION = 21;
     private final ConnectionSource connectionSource;
     private final String dataBaseVersionPath = getDataBaseVersionPath();
     private Dao<Song, Long> songDao;
@@ -73,6 +73,8 @@ public class DatabaseHelper {
             } else {
                 databaseUrl += "projector";
             }
+            // AUTO_SERVER=TRUE allows external tools to read the DB while Projector is running (dev/scripts).
+            // databaseUrl += ";AUTO_SERVER=TRUE"; // TODO: remove before release — production should use single-process embedded H2 (no TCP server).
             connectionSource = new JdbcConnectionSource(databaseUrl);
             int oldVersion = getOldVersion();
             if (oldVersion < DATABASE_VERSION) {
@@ -185,7 +187,6 @@ public class DatabaseHelper {
                         executeSafe(getCountdownTimeDao(), "ALTER TABLE `CountdownTime` ADD COLUMN showFinishTime BOOLEAN");
                         executeSafe(getCountdownTimeDao(), "ALTER TABLE `CountdownTime` ADD COLUMN selectedProjectionScreenName VARCHAR(255)");
                     }
-                    //noinspection ConstantValue
                     if (oldVersion <= 19) {
                         executeSafe(getLanguageDao(), "ALTER TABLE `language` ADD COLUMN sectionTypeDownloadedCorrectly BOOLEAN");
                     }
@@ -278,6 +279,14 @@ public class DatabaseHelper {
                 }
                 try {
                     getSongDao().executeRaw("ALTER TABLE `SONG` ADD COLUMN versionGroup VARCHAR(36);");
+                } catch (Exception ignored) {
+                }
+                try {
+                    getSongDao().executeRaw("ALTER TABLE `SONG` ADD COLUMN serverMirror BOOLEAN DEFAULT FALSE;");
+                } catch (Exception ignored) {
+                }
+                try {
+                    getSongDao().executeRaw("ALTER TABLE `SONG` ADD COLUMN originalSongUuid VARCHAR(36);");
                 } catch (Exception ignored) {
                 }
             }

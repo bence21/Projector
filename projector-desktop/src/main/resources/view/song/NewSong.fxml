@@ -137,12 +137,20 @@
                 <ListView fx:id="verseOrderListView" prefHeight="42.0" BorderPane.alignment="CENTER"/>
             </top>
             <left>
-                <Button fx:id="uploadButton" mnemonicParsing="false" onAction="#uploadButtonOnAction" text="%Upload"
-                        visible="false" BorderPane.alignment="CENTER_RIGHT">
-                    <BorderPane.margin>
-                        <Insets bottom="4.0" right="4.0" top="4.0"/>
-                    </BorderPane.margin>
-                </Button>
+                <HBox spacing="4.0">
+                    <Button fx:id="compareWithOriginalButton" mnemonicParsing="false"
+                            onAction="#compareWithOriginalButtonOnAction" text="%Compare with original" visible="false">
+                        <BorderPane.margin>
+                            <Insets bottom="4.0" left="4.0" top="4.0"/>
+                        </BorderPane.margin>
+                    </Button>
+                    <Button fx:id="uploadButton" mnemonicParsing="false" onAction="#uploadButtonOnAction" text="%Upload"
+                            visible="false">
+                        <BorderPane.margin>
+                            <Insets bottom="4.0" right="4.0" top="4.0"/>
+                        </BorderPane.margin>
+                    </Button>
+                </HBox>
             </left>
             <right>
                 <Button fx:id="saveButton" mnemonicParsing="false" onAction="#saveButtonOnAction" text="%Save"

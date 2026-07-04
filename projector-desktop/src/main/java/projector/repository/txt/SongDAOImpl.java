@@ -179,4 +179,9 @@ public class SongDAOImpl implements SongDAO {
     public void saveFavouriteCount(List<SongFavouritesDTO> songFavouritesDTOS) {
 
     }
+
+    @Override
+    public Song findByOriginalSongUuid(String originalSongUuid) {
+        return null;
+    }
 }

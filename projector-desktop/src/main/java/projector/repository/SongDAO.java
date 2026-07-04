@@ -14,4 +14,6 @@ public interface SongDAO extends CrudDAO<Song> {
     void saveViews(List<SongViewsDTO> songViewsDTOS);
 
     void saveFavouriteCount(List<SongFavouritesDTO> songFavouritesDTOS);
+
+    Song findByOriginalSongUuid(String originalSongUuid);
 }

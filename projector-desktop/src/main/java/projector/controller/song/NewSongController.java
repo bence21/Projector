@@ -69,6 +69,7 @@ import java.util.ResourceBundle;
 import static projector.controller.song.VerseController.getRawTextFromVerseString;
 import static projector.utils.ContextMenuUtil.initializeContextMenu;
 import static projector.utils.SceneUtils.getAStage;
+import static projector.utils.SceneUtils.setVisibleAndManaged;
 
 public class NewSongController {
 
@@ -89,6 +90,8 @@ public class NewSongController {
     private ToggleButton secondTextToggleButton;
     @FXML
     private Button uploadButton;
+    @FXML
+    private Button compareWithOriginalButton;
     @FXML
     private Button saveButton;
     @FXML
@@ -119,6 +122,8 @@ public class NewSongController {
     private Stage stage2;
     private SearchedSong selectedSong;
     private Song editingSong;
+    private Song sourceSong;
+    private Song editBaselineSong;
     private Song newSong;
     private VerseController lastFocusedVerse;
     private List<Language> languages;
@@ -176,6 +181,7 @@ public class NewSongController {
                 addVerseToVerseOrder(songVerse);
             }
             setVerseOrderForSong(editingSong);
+            updateSaveButtonState();
         });
     }
 
@@ -208,6 +214,7 @@ public class NewSongController {
             try {
                 DraggableEntity<SongVerse> selectedItem = verseOrderListView.getSelectionModel().getSelectedItem();
                 verseOrderListView.getItems().remove(selectedItem);
+                updateSaveButtonState();
             } catch (Exception e) {
                 LOG.error(e.getMessage(), e);
             }
@@ -288,6 +295,7 @@ public class NewSongController {
                                                 items.set(otherIndex, songVerse1);
                                             }
                                             calculateSameOrder();
+                                            updateSaveButtonState();
                                         }
                                         event.setDropCompleted(true);
                                     }
@@ -409,12 +417,21 @@ public class NewSongController {
                 editingSong.setVerseOrderList(verseOrderList);
                 fillVerseOrder(editingSong.getSongVersesByVerseOrder());
                 colorPicker.setDisable(false);
-                saveButton.setDisable(false);
+                if (isEdit()) {
+                    updateSaveButtonState();
+                } else {
+                    setVisibleAndManaged(saveButton, true);
+                    saveButton.setDisable(false);
+                }
                 uploadButton.setDisable(false);
                 verseOrderListView.setVisible(true);
             } else {
                 colorPicker.setDisable(true);
-                saveButton.setDisable(true);
+                if (isEdit()) {
+                    setVisibleAndManaged(saveButton, false);
+                } else {
+                    saveButton.setDisable(true);
+                }
                 uploadButton.setDisable(true);
                 String text = getRawTextFromVerses();
                 textArea.setText(text);
@@ -459,6 +476,37 @@ public class NewSongController {
         return edit != null && edit;
     }
 
+    private boolean needsForkBeforeSave(Song song) {
+        return song != null && !song.isFork() && (song.isPublished() || song.isServerMirror());
+    }
+
+    private Song buildSongFromEditor() {
+        Song song = new Song(editingSong);
+        song.setTitle(titleTextField.getText().trim());
+        song.setLanguage(languageComboBoxForNewSong.getSelectionModel().getSelectedItem());
+        song.setPublish(uploadCheckBox.isSelected());
+        if (verseEditorRadioButton.isSelected()) {
+            song.setVerses(getVerses());
+            setVerseOrderForSong(song);
+        }
+        return song;
+    }
+
+    private boolean hasEditorChanges() {
+        if (!isEdit() || editBaselineSong == null || !verseEditorRadioButton.isSelected()) {
+            return false;
+        }
+        return !songService.songsContentEquals(editBaselineSong, buildSongFromEditor());
+    }
+
+    private void updateSaveButtonState() {
+        if (!isEdit()) {
+            return;
+        }
+        boolean hasChanges = hasEditorChanges();
+        setVisibleAndManaged(saveButton, hasChanges);
+    }
+
     void setSongController(SongController songController) {
         this.songController = songController;
     }
@@ -493,29 +541,42 @@ public class NewSongController {
             alert.showAndWait();
             return false;
         }
+        if (isEdit() && !hasEditorChanges()) {
+            stage.close();
+            stage2.close();
+            return false;
+        }
         final Date createdDate = new Date();
-        if (isEdit()) {
-            songController.removeSongFromList(selectedSong);
-            editingSong = songService.getFromMemoryOrSong(editingSong);
-            songVerseService.delete(editingSong.getVerses());
-            newSong = editingSong;
-        } else {
-            newSong = new Song();
-            newSong.setCreatedDate(createdDate);
-            if (selectedLanguage != null) {
-                selectedLanguage.getSongs().add(newSong);
-            }
-        }
-        newSong.setLanguage(selectedLanguage);
-        newSong.setTitle(titleTextField.getText().trim());
-        setVerseOrderForSong(newSong);
-        newSong.setModifiedDate(createdDate);
-        newSong.setPublished(false);
-        newSong.setPublish(uploadCheckBox.isSelected());
-        if (verseEditorRadioButton.isSelected()) {
-            newSong.setVerses(getVerses());
-        }
         try {
+            if (isEdit()) {
+                if (!needsForkBeforeSave(sourceSong)) {
+                    songController.removeSongFromList(selectedSong);
+                }
+                if (needsForkBeforeSave(sourceSong)) {
+                    editingSong = songService.createForkForEdit(sourceSong);
+                } else {
+                    editingSong = songService.getFromMemoryOrSong(sourceSong);
+                }
+                songVerseService.delete(editingSong.getVerses());
+                newSong = editingSong;
+            } else {
+                newSong = new Song();
+                newSong.setCreatedDate(createdDate);
+                if (selectedLanguage != null) {
+                    selectedLanguage.getSongs().add(newSong);
+                }
+            }
+            newSong.setLanguage(selectedLanguage);
+            newSong.setTitle(titleTextField.getText().trim());
+            setVerseOrderForSong(newSong);
+            newSong.setModifiedDate(createdDate);
+            if (!newSong.isFork()) {
+                newSong.setPublished(false);
+            }
+            newSong.setPublish(uploadCheckBox.isSelected());
+            if (verseEditorRadioButton.isSelected()) {
+                newSong.setVerses(getVerses());
+            }
             songService.create(newSong);
         } catch (ServiceException e) {
             Alert alert = new Alert(AlertType.WARNING);
@@ -544,7 +605,9 @@ public class NewSongController {
     }
 
     void setEditingSong(Song selectedSong) {
-        editingSong = new Song(selectedSong);
+        sourceSong = songService.getFromMemoryOrSong(selectedSong);
+        editBaselineSong = new Song(sourceSong);
+        editingSong = new Song(sourceSong);
         textAreas.getChildren().clear();
         verseControllers.clear();
         verseOrderListView.getItems().clear();
@@ -556,6 +619,14 @@ public class NewSongController {
         fillVerseOrder(editingSong.getSongVersesByVerseOrder());
         calculateSameOrder();
         edit = true;
+        if (compareWithOriginalButton != null) {
+            compareWithOriginalButton.setVisible(sourceSong.isFork());
+        }
+        titleTextField.textProperty().addListener((observable, oldValue, newValue) -> updateSaveButtonState());
+        languageComboBoxForNewSong.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> updateSaveButtonState());
+        uploadCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> updateSaveButtonState());
+        updateSaveButtonState();
     }
 
     private void calculateSameOrder() {
@@ -585,6 +656,7 @@ public class NewSongController {
                     }
                     setVerseOrderForSong(editingSong);
                     invalidateVerseControllers();
+                    updateSaveButtonState();
                 }
 
                 @Override
@@ -696,24 +768,37 @@ public class NewSongController {
                     SongApiBean songApiBean = new SongApiBean();
                     Language byId = ServiceManager.getLanguageService().findById(newSong.getLanguage().getId());
                     newSong.setLanguage(byId);
-                    try {
-                        final Song song = songApiBean.updateSong(newSong, user);
-                        if (song == null) {
-                            LOG.info("Cannot update");
+                    if (newSong.isFork()) {
+                        SongApiBean.SongUploadResult uploadResult = songApiBean.uploadSong(newSong);
+                        Song uploadedSong = uploadResult.getSong();
+                        if (uploadedSong == null) {
+                            LOG.info("Cannot upload fork");
                         } else {
-                            newSong.setUuid(song.getUuid());
-                            newSong.setModifiedDate(song.getModifiedDate());
-                            newSong.setPublished(true);
-                            songService.create(newSong);
+                            newSong.setPublish(false);
+                            songService.update(newSong);
                             songController.addSong(newSong);
                             stage.close();
                         }
-                    } catch (ApiException e) {
-                        Alert alert = new Alert(AlertType.INFORMATION);
-                        final ResourceBundle resourceBundle = settings.getResourceBundle();
-                        alert.setTitle("Error");
-                        alert.setHeaderText(resourceBundle.getString(e.getMessage()));
-                        alert.showAndWait();
+                    } else {
+                        try {
+                            final Song song = songApiBean.updateSong(newSong, user);
+                            if (song == null) {
+                                LOG.info("Cannot update");
+                            } else {
+                                newSong.setUuid(song.getUuid());
+                                newSong.setModifiedDate(song.getModifiedDate());
+                                newSong.setPublished(true);
+                                songService.create(newSong);
+                                songController.addSong(newSong);
+                                stage.close();
+                            }
+                        } catch (ApiException e) {
+                            Alert alert = new Alert(AlertType.INFORMATION);
+                            final ResourceBundle resourceBundle = settings.getResourceBundle();
+                            alert.setTitle("Error");
+                            alert.setHeaderText(resourceBundle.getString(e.getMessage()));
+                            alert.showAndWait();
+                        }
                     }
                 });
             } catch (Exception e) {
@@ -729,9 +814,22 @@ public class NewSongController {
         }
     }
 
+    public void compareWithOriginalButtonOnAction() {
+        if (editingSong != null && editingSong.isFork() && songController != null) {
+            try {
+                songController.openCompareWithOriginal(editingSong);
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+            }
+        }
+    }
+
     void setNewSong() {
         edit = false;
         editingSong = new Song();
+        sourceSong = null;
+        editBaselineSong = null;
+        setVisibleAndManaged(saveButton, true);
     }
 
     public void setRoot(Pane root) {

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.TextFlow?>
+<BorderPane prefHeight="600.0" prefWidth="900.0" styleClass="compare-root" xmlns="http://javafx.com/javafx/18"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="projector.controller.song.CompareSongsController">
+    <top>
+        <VBox spacing="6.0" styleClass="compare-toolbar">
+            <HBox spacing="8.0">
+                <padding>
+                    <Insets bottom="4.0" left="12.0" right="12.0" top="10.0"/>
+                </padding>
+                <CheckBox fx:id="strictDiffCheckBox" text="%Strict diff"/>
+                <CheckBox fx:id="ignoreCaseCheckBox" text="%Ignore case"/>
+                <CheckBox fx:id="ignoreAccentsCheckBox" text="%Ignore accents"/>
+                <CheckBox fx:id="normalizeWhitespaceCheckBox" text="%Normalize whitespace"/>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="8.0">
+                <padding>
+                    <Insets bottom="8.0" left="12.0" right="12.0" top="0.0"/>
+                </padding>
+                <Label fx:id="diffSummaryLabel" styleClass="compare-summary-label" wrapText="true"/>
+            </HBox>
+        </VBox>
+    </top>
+    <center>
+        <GridPane fx:id="compareGridPane" styleClass="compare-grid">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS" minWidth="10.0"/>
+                <ColumnConstraints hgrow="SOMETIMES" maxWidth="1.0" minWidth="1.0" prefWidth="1.0"/>
+                <ColumnConstraints hgrow="ALWAYS" minWidth="10.0"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints maxHeight="-Infinity" minHeight="28.0" prefHeight="28.0"/>
+                <RowConstraints vgrow="ALWAYS"/>
+            </rowConstraints>
+            <Label fx:id="leftTitleLabel" styleClass="compare-title-label" text="%Original" GridPane.columnIndex="0"
+                   GridPane.rowIndex="0"/>
+            <Separator orientation="VERTICAL" GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.rowSpan="2"
+                       styleClass="compare-column-separator"/>
+            <Label fx:id="rightTitleLabel" styleClass="compare-title-label" text="%Your version"
+                   GridPane.columnIndex="2"
+                   GridPane.rowIndex="0"/>
+            <ScrollPane fx:id="leftScrollPane" fitToWidth="true" GridPane.columnIndex="0" GridPane.rowIndex="1"
+                        styleClass="compare-scroll-pane">
+                <TextFlow fx:id="leftTextFlow" styleClass="compare-text-flow"/>
+            </ScrollPane>
+            <ScrollPane fx:id="rightScrollPane" fitToWidth="true" GridPane.columnIndex="2" GridPane.rowIndex="1"
+                        styleClass="compare-scroll-pane">
+                <TextFlow fx:id="rightTextFlow" styleClass="compare-text-flow"/>
+            </ScrollPane>
+        </GridPane>
+    </center>
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" styleClass="compare-footer">
+            <padding>
+                <Insets bottom="10.0" left="12.0" right="12.0" top="6.0"/>
+            </padding>
+            <Button fx:id="closeButton" mnemonicParsing="false" onAction="#closeButtonOnAction" text="%Close"/>
+        </HBox>
+    </bottom>
+</BorderPane>

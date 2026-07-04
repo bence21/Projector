@@ -24,19 +24,15 @@ public class SongCollectionApiBean {
         songCollectionAssembler = SongCollectionAssembler.getInstance();
     }
 
-    public List<SongCollection> getSongCollections(Language language, Date lastModifiedDate) {
+    public RemoteFetchResult<List<SongCollection>> getSongCollectionsResult(Language language, Date lastModifiedDate) {
         Call<List<SongCollectionDTO>> call = songCollectionApi.getSongCollections(language.getUuid(), lastModifiedDate.getTime());
-        try {
-            List<SongCollectionDTO> songCollectionDTOs = call.execute().body();
+        return RemoteFetchSupport.execute(call, songCollectionDTOs -> {
             List<SongCollection> songCollections = songCollectionAssembler.createModelList(songCollectionDTOs);
             for (SongCollection songCollection : songCollections) {
                 songCollection.setLanguage(language);
             }
             return songCollections;
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
-        return null;
+        });
     }
 
     public SongCollection uploadSongCollection(SongCollection songCollection) {

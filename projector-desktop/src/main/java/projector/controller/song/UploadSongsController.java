@@ -19,6 +19,7 @@ import projector.service.LanguageService;
 import projector.service.ServiceManager;
 import projector.service.SongCollectionService;
 import projector.service.SongService;
+import projector.utils.ConnectionErrorMessages;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,6 +92,11 @@ public class UploadSongsController {
                         }
                     }
                     SongUploadFailureKind finalFailure = dominantFailure[0];
+                    final String networkFailureMessage = finalFailure == SongUploadFailureKind.NEEDS_SIGN_IN
+                            || finalFailure == SongUploadFailureKind.SESSION_NOT_REFRESHED
+                            ? null
+                            : ConnectionErrorMessages.getMessageForAmbiguousFailure(
+                            Settings.getInstance().getResourceBundle());
                     Platform.runLater(() -> {
                         publishingSongs.removeAll(publishedSongs);
                         songListViewItems.clear();
@@ -100,7 +106,7 @@ public class UploadSongsController {
                                     || finalFailure == SongUploadFailureKind.SESSION_NOT_REFRESHED) {
                                 uploadAuthMessage(finalFailure);
                             } else {
-                                noInternetMessage();
+                                uploadingLabel.setText(networkFailureMessage);
                             }
                             uploadButton.setDisable(publishingSongs.isEmpty());
                         } else {
@@ -139,13 +145,6 @@ public class UploadSongsController {
             }
         });
         thread.start();
-    }
-
-    private void noInternetMessage() {
-        final ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
-        final String no_internet_connection = resourceBundle.getString("No internet connection");
-        final String try_again_later = resourceBundle.getString("Try again later");
-        Platform.runLater(() -> uploadingLabel.setText(no_internet_connection + "! " + try_again_later + "!"));
     }
 
     private void uploadAuthMessage(SongUploadFailureKind kind) {
