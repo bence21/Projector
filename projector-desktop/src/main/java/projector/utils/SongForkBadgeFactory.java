@@ -46,7 +46,7 @@ public final class SongForkBadgeFactory {
         if (song.isFork()) {
             Boolean changed = song.getLocalChangesCached();
             if (changed != null) {
-                return Boolean.TRUE.equals(changed) ? ForkBadgeKind.EDITED : ForkBadgeKind.NONE;
+                return changed ? ForkBadgeKind.EDITED : ForkBadgeKind.NONE;
             }
             if (songService.hasLocalChanges(song)) {
                 return ForkBadgeKind.EDITED;
@@ -73,14 +73,6 @@ public final class SongForkBadgeFactory {
                     createBadge(COPY_IMAGE, resourceBundle.getString("Local version available"), "song-badge-local-fork");
             default -> null;
         };
-    }
-
-    public static ImageView createBadgeIfNeeded(Song song, SongService songService) {
-        return createFromKind(resolve(song, songService));
-    }
-
-    public static ImageView createBadgeIfNeeded(Song song) {
-        return createFromKind(resolve(song));
     }
 
     private static Image loadImage(String iconPath) {

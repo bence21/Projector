@@ -33,7 +33,7 @@ public class LanguageApiBean {
     public List<Language> getDeletedLanguages() {
         Call<List<LanguageDTO>> call = languageApi.getDeletedLanguages();
         RemoteFetchResult<List<Language>> result = fetchLanguages(call);
-        if (!result.isSuccess()) {
+        if (result.isFailure()) {
             LOG.warn("Failed to fetch deleted languages: {}", result.getFailureKind());
         }
         return result.getDataOrNull();

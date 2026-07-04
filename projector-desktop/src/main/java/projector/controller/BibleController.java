@@ -316,7 +316,10 @@ public class BibleController {
         }
         result.append(reference.getReference());
         if (settings.getBibleShortName() && bible.isShowAbbreviation()) {
-            result.append(" (").append(bible.getShortName()).append(")");
+            String displayShortName = bible.getShortName();
+            if (displayShortName != null && !displayShortName.isEmpty()) {
+                result.append(" (").append(displayShortName).append(")");
+            }
         }
         if (settings.isReferenceItalic()) {
             result.append("]");

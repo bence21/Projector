@@ -75,7 +75,7 @@ public class DownloadLanguagesController {
         showCheckingLanguagesStatus();
         Thread thread = new Thread(() -> {
             RemoteFetchResult<List<Language>> languagesResult = languageApiBean.getLanguagesResult();
-            if (!languagesResult.isSuccess()) {
+            if (languagesResult.isFailure()) {
                 Platform.runLater(() -> {
                     hideLanguageListProgress();
                     showRemoteFetchFailure(languagesResult.getFailureKind());

@@ -58,16 +58,6 @@ public final class SongCompareEngine {
         return entries;
     }
 
-    public static int countDifferingVerses(List<VerseCompareEntry> entries) {
-        int count = 0;
-        for (VerseCompareEntry entry : entries) {
-            if (entry.isDiffers()) {
-                ++count;
-            }
-        }
-        return count;
-    }
-
     public static int countContentDifferences(List<VerseCompareEntry> entries) {
         int count = 0;
         for (VerseCompareEntry entry : entries) {

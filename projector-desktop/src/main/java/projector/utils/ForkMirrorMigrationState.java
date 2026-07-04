@@ -57,30 +57,6 @@ public final class ForkMirrorMigrationState {
         return false;
     }
 
-    public static boolean anyNeedsMigration(List<Language> languages, SongService songService) {
-        if (languages == null) {
-            return false;
-        }
-        for (Language language : languages) {
-            if (needsMigration(language, songService)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static boolean anySelectedNeedsMigration(List<Language> languages, SongService songService) {
-        if (languages == null) {
-            return false;
-        }
-        for (Language language : languages) {
-            if (language.isSelected() && needsMigration(language, songService)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static File getMigrationFile() {
         return new File(AppProperties.getInstance().getDatabaseFolder(), MIGRATION_FILE_NAME);
     }

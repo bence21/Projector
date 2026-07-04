@@ -27,7 +27,7 @@ public final class DownloadWorkEstimator {
             if (ForkMirrorMigrationState.needsMigration(language, songService)) {
                 totalWork += countLegacyMigrationCandidates(language, songService);
             }
-            int downloadSteps = estimateDownloadSteps(language, songService);
+            int downloadSteps = estimateDownloadSteps(language);
             if (languageUuid != null) {
                 estimatedDownloadSteps.put(languageUuid, downloadSteps);
             }
@@ -46,7 +46,7 @@ public final class DownloadWorkEstimator {
         return count;
     }
 
-    public static int estimateDownloadSteps(Language language, SongService songService) {
+    public static int estimateDownloadSteps(Language language) {
         long serverSize = language.getCountedSongsSize();
         if (!language.isSectionTypeDownloadedCorrectly()) {
             return toInt(serverSize);

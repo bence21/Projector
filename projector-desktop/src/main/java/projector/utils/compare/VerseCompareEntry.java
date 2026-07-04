@@ -28,39 +28,11 @@ public class VerseCompareEntry {
         return verseIndex;
     }
 
-    public String getLeftText() {
-        return leftText;
-    }
-
-    public String getRightText() {
-        return rightText;
-    }
-
-    public String getLeftLabel() {
-        return leftLabel;
-    }
-
-    public String getRightLabel() {
-        return rightLabel;
-    }
-
     public VerseDiffKind getDiffKind() {
         return diffKind;
     }
 
-    public boolean isDiffers() {
-        return diffKind != VerseDiffKind.MATCH;
-    }
-
     public boolean isOrderOnly() {
         return diffKind == VerseDiffKind.ORDER_ONLY;
-    }
-
-    public int getMatchedLeftIndex() {
-        return matchedLeftIndex;
-    }
-
-    public int getMatchedRightIndex() {
-        return matchedRightIndex;
     }
 }

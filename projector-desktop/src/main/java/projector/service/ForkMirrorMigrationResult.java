@@ -23,16 +23,8 @@ public class ForkMirrorMigrationResult {
         ++forksCreated;
     }
 
-    public int getServerUpdated() {
-        return serverUpdated;
-    }
-
     public void incrementServerUpdated() {
         ++serverUpdated;
-    }
-
-    public int getSkipped() {
-        return skipped;
     }
 
     public void incrementSkipped() {

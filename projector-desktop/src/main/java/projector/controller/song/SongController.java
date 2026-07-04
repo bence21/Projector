@@ -22,8 +22,8 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.MultipleSelectionModel;
@@ -76,14 +76,15 @@ import projector.controller.ProjectionTextChangeListener;
 import projector.controller.RecentController;
 import projector.controller.eventHandler.NextButtonEventHandler;
 import projector.controller.language.DownloadLanguagesController;
-import projector.controller.util.ControllerUtil;
 import projector.controller.song.util.ContainsResult;
 import projector.controller.song.util.LastSearching;
 import projector.controller.song.util.OrderMethod;
 import projector.controller.song.util.ScheduleSong;
 import projector.controller.song.util.SearchedSong;
+import projector.controller.song.util.SongSearchCoordinator;
 import projector.controller.song.util.SongTextFlow;
 import projector.controller.song.util.SongVersionGroupUtil;
+import projector.controller.util.ControllerUtil;
 import projector.controller.util.ProjectionData;
 import projector.controller.util.ProjectionScreensUtil;
 import projector.controller.util.UserService;
@@ -103,10 +104,9 @@ import projector.service.SongCollectionService;
 import projector.service.SongService;
 import projector.utils.CompareWindowTracker;
 import projector.utils.CustomProperties;
-import projector.controller.song.util.SongSearchCoordinator;
+import projector.utils.IntegerFilter;
 import projector.utils.SongForkBadgeFactory;
 import projector.utils.SongForkBadgeFactory.ForkBadgeKind;
-import projector.utils.IntegerFilter;
 import projector.utils.SongVerseHolder;
 import projector.utils.scene.text.MyTextFlow;
 import projector.utils.scene.text.SongVersePartTextFlow;
@@ -2373,7 +2373,6 @@ public class SongController {
                 int generation = songSearchCoordinator.beginSearch();
                 emitPartialFromPreviousRun(generation);
                 List<Song> candidates = continuation ? songSearchCoordinator.getLastFinishedMatches() : songs;
-                String rawText = text;
                 String normalizedQuery = SongSearchCoordinator.normalizeQuery(text);
                 Thread thread = new Thread(() -> {
                     try {
@@ -2414,10 +2413,9 @@ public class SongController {
                             matchedSongs.add(searchedSong.getSong());
                         }
                         songSearchCoordinator.storeFinishedRun(LastSearching.IN_SONG, normalizedQuery, matchedSongs, contextKey);
-                        int finalGeneration = generation;
                         Platform.runLater(() -> {
-                            applySearchResults(results, finalGeneration);
-                            lastSearchText = rawText;
+                            applySearchResults(results, generation);
+                            lastSearchText = text;
                         });
                     } catch (Exception e) {
                         LOG.error(e.getMessage(), e);
@@ -2592,7 +2590,7 @@ public class SongController {
             emitPartialFromPreviousRun(generation);
             List<Song> candidates = continuation ? songSearchCoordinator.getLastFinishedMatches() : getFilteredSongs();
             TitleSearchQuery query = parseTitleSearchQuery(text);
-            String rawText = text;
+            final String trimmedText = text;
             String normalizedQuery = SongSearchCoordinator.normalizeQuery(text);
             Thread thread = new Thread(() -> {
                 try {
@@ -2638,10 +2636,9 @@ public class SongController {
                         matchedSongs.add(searchedSong.getSong());
                     }
                     songSearchCoordinator.storeFinishedRun(LastSearching.IN_TITLE, normalizedQuery, matchedSongs, contextKey);
-                    int finalGeneration = generation;
                     Platform.runLater(() -> {
-                        applySearchResults(results, finalGeneration);
-                        lastSearchText = rawText;
+                        applySearchResults(results, generation);
+                        lastSearchText = trimmedText;
                     });
                 } catch (Exception e) {
                     LOG.error(e.getMessage(), e);
@@ -3991,15 +3988,6 @@ public class SongController {
         for (Language languageInList : languages) {
             if (languageInList.equivalent(language)) {
                 return languageInList;
-            }
-        }
-        return null;
-    }
-
-    private SearchedSong getSearchedSongBySong(Song song, List<SearchedSong> searchedSongs) {
-        for (SearchedSong searchedSong : searchedSongs) {
-            if (searchedSong.getSong().equivalent(song)) {
-                return searchedSong;
             }
         }
         return null;

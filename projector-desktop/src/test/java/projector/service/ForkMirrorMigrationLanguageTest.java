@@ -311,7 +311,7 @@ public class ForkMirrorMigrationLanguageTest {
         Files.writeString(databaseFolder.resolve("database.version"), version, StandardCharsets.UTF_8);
     }
 
-    private void deleteTempDatabaseFiles() throws Exception {
+    private void deleteTempDatabaseFiles() {
         deleteTempDatabaseFilesQuietly();
     }
 
@@ -323,7 +323,7 @@ public class ForkMirrorMigrationLanguageTest {
         }
     }
 
-    private Language createLanguage() throws Exception {
+    private Language createLanguage() {
         Language language = new Language();
         language.setUuid(UUID.randomUUID().toString());
         language.setNativeName("Magyar");
@@ -331,7 +331,7 @@ public class ForkMirrorMigrationLanguageTest {
         return languageService.create(language);
     }
 
-    private List<Song> createLegacyLocalSongs(Language language, int count) throws Exception {
+    private List<Song> createLegacyLocalSongs(Language language, int count) {
         List<Song> songs = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             Song song = new Song();

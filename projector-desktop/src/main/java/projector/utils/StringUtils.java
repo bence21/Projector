@@ -203,4 +203,30 @@ public class StringUtils {
         copiedList.addAll(strings);
         return copiedList;
     }
+
+    public static String parseToShortName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return "";
+        }
+        String trimmedName = name.trim();
+        StringBuilder shortName = new StringBuilder();
+        String[] split = trimmedName.split(" ");
+        if (split.length > 1) {
+            for (String s : split) {
+                try {
+                    shortName.append((s.charAt(0) + "").toUpperCase());
+                    int i = 1;
+                    while (i < s.length() && Character.isUpperCase(s.charAt(i))) {
+                        shortName.append(s.charAt(i));
+                        ++i;
+                    }
+                } catch (Exception e) {
+                    shortName.append(s);
+                }
+            }
+        } else {
+            return (trimmedName.charAt(0) + "").toUpperCase();
+        }
+        return shortName.toString();
+    }
 }

@@ -153,10 +153,6 @@ public class CompareSongsSettings {
         return repeatChorus;
     }
 
-    public void setRepeatChorus(boolean repeatChorus) {
-        this.repeatChorus = repeatChorus;
-    }
-
     public boolean isIgnoreCase() {
         return ignoreCase;
     }
@@ -173,51 +169,11 @@ public class CompareSongsSettings {
         this.ignoreAccents = ignoreAccents;
     }
 
-    public boolean isIgnorePunctuation() {
-        return ignorePunctuation;
-    }
-
-    public void setIgnorePunctuation(boolean ignorePunctuation) {
-        this.ignorePunctuation = ignorePunctuation;
-    }
-
-    public boolean isIgnoreSlashPipeBackslash() {
-        return ignoreSlashPipeBackslash;
-    }
-
-    public void setIgnoreSlashPipeBackslash(boolean ignoreSlashPipeBackslash) {
-        this.ignoreSlashPipeBackslash = ignoreSlashPipeBackslash;
-    }
-
-    public boolean isIgnoreAnnotations() {
-        return ignoreAnnotations;
-    }
-
-    public void setIgnoreAnnotations(boolean ignoreAnnotations) {
-        this.ignoreAnnotations = ignoreAnnotations;
-    }
-
-    public boolean isIgnoreNumbers() {
-        return ignoreNumbers;
-    }
-
-    public void setIgnoreNumbers(boolean ignoreNumbers) {
-        this.ignoreNumbers = ignoreNumbers;
-    }
-
     public boolean isNormalizeWhitespace() {
         return normalizeWhitespace;
     }
 
     public void setNormalizeWhitespace(boolean normalizeWhitespace) {
         this.normalizeWhitespace = normalizeWhitespace;
-    }
-
-    public boolean isNormalizeQuotes() {
-        return normalizeQuotes;
-    }
-
-    public void setNormalizeQuotes(boolean normalizeQuotes) {
-        this.normalizeQuotes = normalizeQuotes;
     }
 }

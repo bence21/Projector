@@ -14,12 +14,12 @@ public final class CompareNormalizeUtil {
     private static final Set<Character> SLASH_PIPE_BACKSLASH = Set.of('/', '|', '\\');
     private static final String CHORUS = "chorus";
     private static final String CHORUS_PREFIX = CHORUS + ":";
-    private static final char LEFT_SINGLE_QUOTATION_MARK = '\u2018';
-    private static final char RIGHT_SINGLE_QUOTATION_MARK = '\u2019';
-    private static final char ACUTE_ACCENT = '\u00B4';
+    private static final char LEFT_SINGLE_QUOTATION_MARK = '‘';
+    private static final char RIGHT_SINGLE_QUOTATION_MARK = '’';
+    private static final char ACUTE_ACCENT = '´';
     private static final char GRAVE_ACCENT = '`';
-    private static final char LEFT_DOUBLE_QUOTATION_MARK = '\u201C';
-    private static final char RIGHT_DOUBLE_QUOTATION_MARK = '\u201D';
+    private static final char LEFT_DOUBLE_QUOTATION_MARK = '“';
+    private static final char RIGHT_DOUBLE_QUOTATION_MARK = '”';
     private static final char APOSTROPHE = '\'';
     private static final char QUOTATION_MARK = '"';
     private static final char COMBINING_DIACRITICAL_MARKS_MIN = '\u0300';
@@ -110,50 +110,6 @@ public final class CompareNormalizeUtil {
             return Character.toLowerCase(a) == Character.toLowerCase(b);
         }
         return a == b;
-    }
-
-    public static List<String> highestCommonStrings(String a, String b, CompareNormalizeOptions options) {
-        int[][] table = new int[a.length() + 2][];
-        for (int i = 0; i < a.length() + 2; i++) {
-            table[i] = new int[b.length() + 2];
-        }
-        for (int i = 0; i < a.length(); i++) {
-            char c = a.charAt(i);
-            for (int j = 0; j < b.length(); j++) {
-                if (charactersEqual(c, b.charAt(j), options)) {
-                    table[i + 1][j + 1] = table[i][j] + 1;
-                } else if (table[i + 1][j] > table[i][j + 1]) {
-                    table[i + 1][j + 1] = table[i + 1][j];
-                } else {
-                    table[i + 1][j + 1] = table[i][j + 1];
-                }
-            }
-        }
-        List<String> strings = new ArrayList<>();
-        List<Character> reverse = new ArrayList<>();
-        int i = a.length();
-        int j = b.length();
-        while (i != 0 && j != 0) {
-            if (table[i - 1][j] + 1 == table[i][j] && table[i][j] == table[i][j - 1] + 1) {
-                reverse.add(a.charAt(i - 1));
-                i--;
-                j--;
-            } else {
-                if (!reverse.isEmpty()) {
-                    strings.add(charsToString(reverse));
-                    reverse.clear();
-                }
-                if (table[i][j - 1] > table[i - 1][j]) {
-                    j--;
-                } else {
-                    i--;
-                }
-            }
-        }
-        if (!reverse.isEmpty()) {
-            strings.add(charsToString(reverse));
-        }
-        return strings;
     }
 
     private static String charsToString(List<Character> chars) {

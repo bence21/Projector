@@ -3,10 +3,8 @@ package projector.utils;
 import projector.model.Song;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public final class MissingServerSongImporter {
@@ -35,19 +33,5 @@ public final class MissingServerSongImporter {
             }
         }
         return missing;
-    }
-
-    public static Map<String, Song> indexByUuid(List<Song> songs) {
-        Map<String, Song> byUuid = new HashMap<>();
-        if (songs == null) {
-            return byUuid;
-        }
-        for (Song song : songs) {
-            String uuid = song.getUuid();
-            if (uuid != null) {
-                byUuid.put(uuid, song);
-            }
-        }
-        return byUuid;
     }
 }

@@ -133,6 +133,10 @@ public class NewSongController {
         return globalRoot;
     }
 
+    static void resetGlobalRootForTesting() {
+        globalRoot = null;
+    }
+
     public void initialize() {
         edit = null;
         textArea.textProperty().addListener((observable, oldValue, newValue) -> toProjectionScreen());
@@ -152,7 +156,7 @@ public class NewSongController {
             String left = text.substring(0, selection.getStart());
             String selected = text.substring(selection.getStart(), selection.getEnd());
             selected = selected.replaceAll("<color=\"0x.{0,9}>", "");
-            selected = selected.replaceAll("</color>", "");
+            selected = selected.replace("</color>", "");
             String right = text.substring(selection.getEnd());
             lastFocusedVerseTextArea.setText(left + "<color=\"" + value.toString() + "\">" + selected + "</color>" + right);
         });
@@ -377,9 +381,9 @@ public class NewSongController {
                 textAreas.getChildren().clear();
                 String s = textArea.getText();
                 while (s.contains("\n\n\n")) {
-                    s = s.replaceAll("\n\n\n", "\n\n");
+                    s = s.replace("\n\n\n", "\n\n");
                 }
-                String textAreaText = s.replaceAll("]\n\n", "]\n");
+                String textAreaText = s.replace("]\n\n", "]\n");
                 String[] split = textAreaText.split("\n\n");
                 Map<String, Short> versesMap = new HashMap<>(split.length);
                 short verseCount = 0;

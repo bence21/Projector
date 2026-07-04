@@ -12,10 +12,9 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.GridPane;
-import javafx.stage.Stage;
-import projector.utils.SceneUtils;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.api.RemoteFetchFailureKind;
@@ -28,17 +27,18 @@ import projector.model.Song;
 import projector.model.SongCollection;
 import projector.model.SongVerse;
 import projector.service.LanguageService;
+import projector.service.ServiceException;
 import projector.service.ServiceManager;
 import projector.service.SongCollectionService;
-import projector.service.ServiceException;
 import projector.service.SongService;
 import projector.service.SongVerseService;
 import projector.utils.ConnectionErrorMessages;
 import projector.utils.DevelopmentMode;
-import projector.utils.DownloadedSongLanguageSupport;
 import projector.utils.DownloadWorkPlan;
+import projector.utils.DownloadedSongLanguageSupport;
 import projector.utils.ForkMirrorMigrationState;
 import projector.utils.MissingServerSongImporter;
+import projector.utils.SceneUtils;
 import projector.utils.StringUtils;
 import projector.utils.compare.CompareDiffHighlighter;
 
@@ -151,7 +151,7 @@ public class DownloadSongsController {
                     List<Song> newSongList = new ArrayList<>();
                     RemoteFetchResult<List<Song>> songsResult = songApi.getSongsByLanguageAndAfterModifiedDateResult(
                             language, getLastModifiedSongDate(language));
-                    if (!songsResult.isSuccess()) {
+                    if (songsResult.isFailure()) {
                         showRemoteFetchFailure(songsResult.getFailureKind(), true);
                         return;
                     }
@@ -176,7 +176,7 @@ public class DownloadSongsController {
                                     final Song localSong = uuidSongHashMap.get(serverUuid);
                                     updateExistingDownloadedSong(song, localSong);
                                 }
-                                incrementCompletedSongs(1);
+                                incrementCompletedSongs();
                             }
                     }
                     reconcileDownloadEstimate(language, downloadedCount);
@@ -193,7 +193,7 @@ public class DownloadSongsController {
                         }
                         RemoteFetchResult<List<SongCollection>> collectionsResult =
                                 songCollectionApiBean.getSongCollectionsResult(language, lastModifiedDate);
-                        if (!collectionsResult.isSuccess()) {
+                        if (collectionsResult.isFailure()) {
                             showRemoteFetchFailure(collectionsResult.getFailureKind(), false);
                         } else {
                             onlineModifiedSongCollections = collectionsResult.getData();
@@ -289,11 +289,8 @@ public class DownloadSongsController {
         }
     }
 
-    private void incrementCompletedSongs(int count) {
-        if (count <= 0) {
-            return;
-        }
-        completedSongs += count;
+    private void incrementCompletedSongs() {
+        ++completedSongs;
         updateDownloadProgress(completedSongs, totalSongs);
     }
 
@@ -373,14 +370,14 @@ public class DownloadSongsController {
         showMigrationInProgressWarning(true);
         showForkMirrorMigrationProgress(language);
         RemoteFetchResult<List<Song>> fullServerResult = songApi.getSongsByLanguageAndAfterModifiedDateResult(language, 0L);
-        if (!fullServerResult.isSuccess()) {
+        if (fullServerResult.isFailure()) {
             showRemoteFetchFailure(fullServerResult.getFailureKind(), true);
             return false;
         }
         List<Song> fullServerSongs = fullServerResult.getData();
         DownloadedSongLanguageSupport.attachLanguage(fullServerSongs, language);
         try {
-            songService.migrateLegacySongsForLanguage(language, fullServerSongs, () -> incrementCompletedSongs(1));
+            songService.migrateLegacySongsForLanguage(language, fullServerSongs, DownloadSongsController.this::incrementCompletedSongs);
             songs = songService.findAll();
             List<Song> importedSongs = new ArrayList<>();
             int importedCount = importMissingServerSongs(language, fullServerSongs, importedSongs);
@@ -406,7 +403,7 @@ public class DownloadSongsController {
         adjustTotalSongs(missingSongs.size());
         for (Song serverSong : missingSongs) {
             handleDownloadWithoutLocalUuid(serverSong, newSongList);
-            incrementCompletedSongs(1);
+            incrementCompletedSongs();
         }
         return missingSongs.size();
     }

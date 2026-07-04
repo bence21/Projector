@@ -16,8 +16,8 @@ import java.util.List;
 
 public class SongCollectionApiBean {
     private static final Logger LOG = LoggerFactory.getLogger(SongCollectionApiBean.class);
-    private SongCollectionApi songCollectionApi;
-    private SongCollectionAssembler songCollectionAssembler;
+    private final SongCollectionApi songCollectionApi;
+    private final SongCollectionAssembler songCollectionAssembler;
 
     public SongCollectionApiBean() {
         songCollectionApi = ApiManager.getClient().create(SongCollectionApi.class);

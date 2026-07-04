@@ -40,6 +40,18 @@ public class SongControllerTest extends BaseTest {
         final TabPane tabPane = find("#tabPane");
         Platform.runLater(() -> tabPane.getSelectionModel().select(2));
         sleep(1000);
+        refreshSongList();
+    }
+
+    private void refreshSongList() {
+        TextField searchTextField = find("#searchTextField");
+        interact(() -> {
+            NewSongController.resetGlobalRootForTesting();
+            SongController songController = MyController.getInstance().getSongController();
+            songController.initializeSongs();
+            searchTextField.setText("");
+        });
+        sleep(300);
     }
 
     private void createLanguage() {
@@ -86,6 +98,7 @@ public class SongControllerTest extends BaseTest {
                 sleep(100);
             }
         } while (count < 100);
+        NewSongController.resetGlobalRootForTesting();
         clickOn("#newSongButton");
         Pane root = waitForSongEditorRoot();
         TextField titleTextField = find("#titleTextField", root);
@@ -117,19 +130,79 @@ public class SongControllerTest extends BaseTest {
 
 
     private void searchForASong() {
-        clickOn("#searchTextField").write(il_iubesc_pe_el);
+        searchForTitle(il_iubesc_pe_el, 1);
+    }
+
+    private void clearAndSearch() {
+        searchForTitle(test_songTitle, 1);
+    }
+
+    private void searchForTitle(String title, int expectedMatches) {
+        TextField searchTextField = find("#searchTextField");
+        interact(() -> searchTextField.setText(title));
+        waitForSongSearch(title, expectedMatches);
+    }
+
+    private void waitForSongSearch(String title, int expectedMatches) {
+        for (int attempt = 0; attempt < 100; attempt++) {
+            ListView<SearchedSong> listView = find("#searchedSongListView");
+            int matches = 0;
+            for (SearchedSong item : listView.getItems()) {
+                if (item.getSong().getTitle().equals(title)) {
+                    matches++;
+                }
+            }
+            if (matches == expectedMatches) {
+                sleep(150);
+                return;
+            }
+            sleep(100);
+        }
+        ListView<SearchedSong> listView = find("#searchedSongListView");
+        Assert.fail("Expected " + expectedMatches + " search result(s) for '" + title + "', list size="
+                + listView.getItems().size());
+    }
+
+    private void waitForAuthorField(String expectedAuthor) {
+        for (int attempt = 0; attempt < 50; attempt++) {
+            TextField authorTextField = find("#authorTextField");
+            if (expectedAuthor.equals(authorTextField.getText())) {
+                return;
+            }
+            sleep(100);
+        }
+        TextField authorTextField = find("#authorTextField");
+        Assert.assertEquals(expectedAuthor, authorTextField.getText());
+    }
+
+    private void waitForSongVerseListView() {
+        for (int attempt = 0; attempt < 50; attempt++) {
+            ListView<SongVersePartTextFlow> songListView = find("#songListView");
+            int verseParts = 0;
+            for (SongVersePartTextFlow item : songListView.getItems()) {
+                if (item.getSongVerse() != null) {
+                    verseParts++;
+                }
+            }
+            if (verseParts >= 2) {
+                sleep(150);
+                return;
+            }
+            sleep(100);
+        }
+        Assert.fail("Song verse list did not load");
     }
 
     @Test
     public void checkAuthorTextField() {
         searchForASong();
-        TextField authorTextField = find("#authorTextField");
-        Assert.assertEquals(songAuthor, authorTextField.getText());
+        waitForAuthorField(songAuthor);
     }
 
     @Test
     public void checkDoubleSelectedSongVerse() {
         searchForASong();
+        waitForSongVerseListView();
         final ListView<SongVersePartTextFlow> songListView = find("#songListView");
         Platform.runLater(() -> {
             MultipleSelectionModel<SongVersePartTextFlow> selectionModel = songListView.getSelectionModel();
@@ -149,7 +222,7 @@ public class SongControllerTest extends BaseTest {
         });
         sleep(300);
         String activeText = "";
-        for (int i = 0; i < 20; ++i) {
+        for (int i = 0; i < 50; ++i) {
             activeText = MyController.getInstance().getProjectionScreenController().getActiveText();
             if (activeText != null && !activeText.isEmpty()) {
                 break;
@@ -162,16 +235,9 @@ public class SongControllerTest extends BaseTest {
         Assert.assertTrue(activeTextLength > songVerseTextLength2);
     }
 
-    private void clearAndSearch(String query) {
-        doubleClickOn("#searchTextField");
-        eraseText(100);
-        clickOn("#searchTextField").write(query);
-        sleep(200);
-    }
-
     //	@Test
     private void editSong() {
-        clearAndSearch(test_songTitle);
+        clearAndSearch();
         final ListView<SearchedSong> searchedSongListView = find("#searchedSongListView");
         Platform.runLater(() -> {
             for (SearchedSong item : searchedSongListView.getItems()) {
@@ -184,6 +250,7 @@ public class SongControllerTest extends BaseTest {
         sleep(200);
         rightClickOn("#searchedSongListView");
         sleep(100);
+        NewSongController.resetGlobalRootForTesting();
         clickOn("Edit");
         Pane root = waitForSongEditorRoot();
         final String edited_text = "Edited text";
@@ -234,7 +301,7 @@ public class SongControllerTest extends BaseTest {
 
     //	@Test
     private void deleteASong() {
-        clearAndSearch(test_songTitle);
+        clearAndSearch();
         final ListView<SearchedSong> searchedSongListView = find("#searchedSongListView");
         Platform.runLater(() -> {
             for (SearchedSong item : searchedSongListView.getItems()) {
@@ -250,7 +317,6 @@ public class SongControllerTest extends BaseTest {
         clickOn("Delete");
         sleep(100);
         clickOn("#confirmButton").sleep(50);
-        clearAndSearch(test_songTitle);
-        Assert.assertEquals(0, searchedSongListView.getItems().size());
+        searchForTitle(test_songTitle, 0);
     }
 }

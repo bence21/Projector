@@ -28,7 +28,7 @@
             </HBox>
             <HBox alignment="CENTER_LEFT" spacing="8.0">
                 <padding>
-                    <Insets bottom="8.0" left="12.0" right="12.0" top="0.0"/>
+                    <Insets bottom="8.0" left="12.0" right="12.0"/>
                 </padding>
                 <Label fx:id="diffSummaryLabel" styleClass="compare-summary-label" wrapText="true"/>
             </HBox>
@@ -67,7 +67,7 @@
             <padding>
                 <Insets bottom="10.0" left="12.0" right="12.0" top="6.0"/>
             </padding>
-            <Button fx:id="closeButton" mnemonicParsing="false" onAction="#closeButtonOnAction" text="%Close"/>
+            <Button mnemonicParsing="false" onAction="#closeButtonOnAction" text="%Close"/>
         </HBox>
     </bottom>
 </BorderPane>

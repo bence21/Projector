@@ -18,8 +18,8 @@ public final class RemoteFetchResult<T> {
         return new RemoteFetchResult<>(null, kind);
     }
 
-    public boolean isSuccess() {
-        return failureKind == null;
+    public boolean isFailure() {
+        return failureKind != null;
     }
 
     public T getData() {

@@ -66,7 +66,7 @@ public class DownloadBiblesController {
         updateButton.setVisible(false);
         Thread thread = new Thread(() -> {
             RemoteFetchResult<List<Bible>> biblesResult = bibleApiBean.getBibleTitlesResult();
-            if (!biblesResult.isSuccess()) {
+            if (biblesResult.isFailure()) {
                 ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
                 Platform.runLater(() -> label.setText(
                         ConnectionErrorMessages.getMessage(resourceBundle, biblesResult.getFailureKind())));
