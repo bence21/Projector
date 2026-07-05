@@ -83,10 +83,6 @@ public class ApplicationUtil {
         this.primaryStage = primaryStage;
     }
 
-    public Stage getPrimaryStage() {
-        return primaryStage;
-    }
-
     public void saveProjectorState() {
         ProjectorState projectorState = new ProjectorState();
         projectorState.setLoaded(false);

@@ -10,9 +10,8 @@ public final class TestStageBounds {
     private TestStageBounds() {
     }
 
-    public static boolean shouldCap() {
-        return ApplicationVersion.getInstance().isTesting()
-                && !ApplicationVersion.getInstance().isAllowUncappedTestWindowSize();
+    public static boolean isUncapped() {
+        return !ApplicationVersion.getInstance().isTesting() || ApplicationVersion.getInstance().isAllowUncappedTestWindowSize();
     }
 
     public static Rectangle2D getPrimaryVisualBounds() {
@@ -20,21 +19,21 @@ public final class TestStageBounds {
     }
 
     public static double cappedWidth(double width) {
-        if (!shouldCap()) {
+        if (isUncapped()) {
             return width;
         }
         return Math.min(width, getPrimaryVisualBounds().getWidth());
     }
 
     public static double cappedHeight(double height) {
-        if (!shouldCap()) {
+        if (isUncapped()) {
             return height;
         }
         return Math.min(height, getPrimaryVisualBounds().getHeight());
     }
 
     public static void positionStage(Stage stage) {
-        if (!shouldCap()) {
+        if (isUncapped()) {
             stage.setX(0);
             stage.setY(0);
             return;

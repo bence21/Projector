@@ -128,7 +128,7 @@ public class DownloadBiblesController {
             try {
                 thread1.join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOG.error(e.getMessage(), e);
             }
         }
         closeDownloadBibleStage();
@@ -168,7 +168,7 @@ public class DownloadBiblesController {
             });
             thread.start();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOG.error(e.getMessage(), e);
         }
         return thread;
     }
@@ -193,7 +193,7 @@ public class DownloadBiblesController {
             thread = new Thread(() -> bibleService.create(bible));
             thread.start();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOG.error(e.getMessage(), e);
         }
         return thread;
     }
