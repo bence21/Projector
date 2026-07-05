@@ -4,8 +4,6 @@ public class ForkMirrorMigrationResult {
 
     private int mirrorsMarked;
     private int forksCreated;
-    private int serverUpdated;
-    private int skipped;
 
     public int getMirrorsMarked() {
         return mirrorsMarked;
@@ -24,10 +22,9 @@ public class ForkMirrorMigrationResult {
     }
 
     public void incrementServerUpdated() {
-        ++serverUpdated;
     }
 
     public void incrementSkipped() {
-        ++skipped;
     }
+
 }

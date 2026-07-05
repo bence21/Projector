@@ -16,6 +16,7 @@ import static projector.utils.StringUtils.stripAccents;
 
 public class SongCollection extends BaseEntity {
     @ForeignCollectionField
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private ForeignCollection<SongCollectionElement> songCollectionElementForeignCollection;
     @Expose
     private List<SongCollectionElement> songCollectionElements;

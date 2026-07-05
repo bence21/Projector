@@ -24,6 +24,7 @@ public class ApplicationVersion {
     @Expose
     private int version;
     private boolean testing;
+    private boolean allowUncappedTestWindowSize;
 
     private ApplicationVersion() {
     }
@@ -93,5 +94,13 @@ public class ApplicationVersion {
 
     public void setTesting(boolean testing) {
         this.testing = testing;
+    }
+
+    public boolean isAllowUncappedTestWindowSize() {
+        return allowUncappedTestWindowSize;
+    }
+
+    public void setAllowUncappedTestWindowSize(boolean allowUncappedTestWindowSize) {
+        this.allowUncappedTestWindowSize = allowUncappedTestWindowSize;
     }
 }

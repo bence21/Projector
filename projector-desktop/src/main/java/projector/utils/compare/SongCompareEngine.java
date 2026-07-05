@@ -1,14 +1,12 @@
 package projector.utils.compare;
 
 import javafx.scene.text.TextFlow;
-import projector.application.Settings;
 import projector.model.Song;
 import projector.model.SongVerse;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.ResourceBundle;
 
 public final class SongCompareEngine {
 
@@ -36,24 +34,13 @@ public final class SongCompareEngine {
         List<SongVerse> leftVerses = originalSong.getVerses();
         List<SongVerse> rightVerses = changedSong.getVerses();
         int maxLen = Math.max(leftVerses.size(), rightVerses.size());
-        ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
         for (int i = 0; i < maxLen; i++) {
             SongVerse leftVerse = i < leftVerses.size() ? leftVerses.get(i) : null;
             SongVerse rightVerse = i < rightVerses.size() ? rightVerses.get(i) : null;
             String leftText = leftVerse != null ? leftVerse.getText() : "";
             String rightText = rightVerse != null ? rightVerse.getText() : "";
             VerseDiffKind diffKind = classifyVersePair(leftText, rightText, leftVerses, rightVerses, i, settings);
-            int matchedRight = findMatchingVerseIndex(leftText, rightVerses, i, settings);
-            int matchedLeft = findMatchingVerseIndex(rightText, leftVerses, i, settings);
-            entries.add(new VerseCompareEntry(
-                    i,
-                    leftText,
-                    rightText,
-                    buildVerseLabel(leftVerse, i, resourceBundle),
-                    buildVerseLabel(rightVerse, i, resourceBundle),
-                    diffKind,
-                    matchedLeft,
-                    matchedRight));
+            entries.add(new VerseCompareEntry(i, diffKind));
         }
         return entries;
     }
@@ -150,12 +137,5 @@ public final class SongCompareEngine {
         String normalizedRight = CompareNormalizeUtil.buildComparisonString(
                 CompareNormalizeUtil.repeatChorusText(rightText, settings.isRepeatChorus()), options);
         return normalizedLeft.equals(normalizedRight);
-    }
-
-    private static String buildVerseLabel(SongVerse verse, int index, ResourceBundle resourceBundle) {
-        if (verse != null && verse.isChorus()) {
-            return resourceBundle.getString("chorus");
-        }
-        return resourceBundle.getString("Verse") + " " + (index + 1);
     }
 }

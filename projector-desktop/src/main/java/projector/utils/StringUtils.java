@@ -170,7 +170,7 @@ public class StringUtils {
                 --i;
                 --j;
             } else {
-                if (r.length() > 0) {
+                if (!r.isEmpty()) {
                     strings.add(r.reverse().toString());
                     r = new StringBuilder();
                 }
@@ -181,7 +181,7 @@ public class StringUtils {
                 }
             }
         }
-        if (r.length() > 0) {
+        if (!r.isEmpty()) {
             strings.add(r.reverse().toString());
         }
         return strings;

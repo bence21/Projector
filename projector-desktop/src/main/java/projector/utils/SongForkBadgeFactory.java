@@ -5,7 +5,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import projector.application.Settings;
 import projector.model.Song;
-import projector.service.SongService;
 
 import java.io.InputStream;
 import java.util.ResourceBundle;
@@ -34,29 +33,6 @@ public final class SongForkBadgeFactory {
             return Boolean.TRUE.equals(song.getLocalChangesCached()) ? ForkBadgeKind.EDITED : ForkBadgeKind.NONE;
         }
         if (song.hasLocalFork()) {
-            return ForkBadgeKind.LOCAL_FORK;
-        }
-        return ForkBadgeKind.NONE;
-    }
-
-    public static ForkBadgeKind resolve(Song song, SongService songService) {
-        if (song == null || songService == null) {
-            return ForkBadgeKind.NONE;
-        }
-        if (song.isFork()) {
-            Boolean changed = song.getLocalChangesCached();
-            if (changed != null) {
-                return changed ? ForkBadgeKind.EDITED : ForkBadgeKind.NONE;
-            }
-            if (songService.hasLocalChanges(song)) {
-                return ForkBadgeKind.EDITED;
-            }
-            return ForkBadgeKind.NONE;
-        }
-        if (song.hasLocalFork()) {
-            return ForkBadgeKind.LOCAL_FORK;
-        }
-        if (songService.hasLocalFork(song)) {
             return ForkBadgeKind.LOCAL_FORK;
         }
         return ForkBadgeKind.NONE;

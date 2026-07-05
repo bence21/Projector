@@ -28,8 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ApplicationUtil;
 import projector.application.ApplicationVersion;
-import projector.application.SessionAutosave;
 import projector.application.ProjectionScreenSettings;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.application.Updater;
 import projector.config.Log4j2Config;
@@ -65,6 +65,9 @@ import static projector.utils.SceneUtils.addStylesheetToSceneBySettings;
 import static projector.utils.SceneUtils.createWindowController;
 import static projector.utils.SceneUtils.getTransparentStage;
 import static projector.utils.SceneUtils.getWindowController;
+import static projector.utils.TestStageBounds.cappedHeight;
+import static projector.utils.TestStageBounds.cappedWidth;
+import static projector.utils.TestStageBounds.positionStage;
 
 public class MainDesktop extends Application {
 
@@ -211,13 +214,14 @@ public class MainDesktop extends Application {
         registerSongSaveDiagnostics();
         loadInBackGround();
         addIconToStage(primaryStage, getClass());
-        primaryStage.setMinHeight(600);
-        primaryStage.setWidth(settings.getMainWidth());
-        primaryStage.setHeight(settings.getMainHeight());
+        double mainWidth = cappedWidth(settings.getMainWidth());
+        double mainHeight = cappedHeight(settings.getMainHeight());
+        primaryStage.setMinHeight(Math.min(600, mainHeight));
+        primaryStage.setWidth(mainWidth);
+        primaryStage.setHeight(mainHeight);
         primaryStage.show();
         primaryStage.setTitle("Projector");
-        primaryStage.setX(0);
-        primaryStage.setY(0);
+        positionStage(primaryStage);
         myController.setPrimaryStage(primaryStage);
         setProjectionScreen();
         if (canvasStage != null) {
@@ -294,7 +298,7 @@ public class MainDesktop extends Application {
             myController = loader.getController();
             BibleController bibleController = myController.getBibleController();
             SongController songController = myController.getSongController();
-            primaryScene = new Scene(root, settings.getMainWidth(), settings.getMainHeight());
+            primaryScene = new Scene(root, cappedWidth(settings.getMainWidth()), cappedHeight(settings.getMainHeight()));
             windowController = createWindowController(getClass(), primaryScene, primaryStage);
             addSettingsMenu(windowController);
             windowController.showSignInButton();

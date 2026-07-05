@@ -95,7 +95,7 @@ public class DownloadBiblesController {
                     }
                 }
             }
-            if (updateNeededBibles.size() > 0) {
+            if (!updateNeededBibles.isEmpty()) {
                 updateButton.setVisible(true);
             }
             Platform.runLater(() -> label.setText(""));

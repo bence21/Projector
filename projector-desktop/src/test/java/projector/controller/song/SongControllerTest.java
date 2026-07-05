@@ -99,7 +99,8 @@ public class SongControllerTest extends BaseTest {
             }
         } while (count < 100);
         NewSongController.resetGlobalRootForTesting();
-        clickOn("#newSongButton");
+        Button newSongButton = find("#newSongButton");
+        interact(newSongButton::fire);
         Pane root = waitForSongEditorRoot();
         TextField titleTextField = find("#titleTextField", root);
         clickOn(titleTextField).write(test_songTitle);
@@ -163,16 +164,16 @@ public class SongControllerTest extends BaseTest {
                 + listView.getItems().size());
     }
 
-    private void waitForAuthorField(String expectedAuthor) {
+    private void waitForAuthorField() {
         for (int attempt = 0; attempt < 50; attempt++) {
             TextField authorTextField = find("#authorTextField");
-            if (expectedAuthor.equals(authorTextField.getText())) {
+            if (songAuthor.equals(authorTextField.getText())) {
                 return;
             }
             sleep(100);
         }
         TextField authorTextField = find("#authorTextField");
-        Assert.assertEquals(expectedAuthor, authorTextField.getText());
+        Assert.assertEquals(songAuthor, authorTextField.getText());
     }
 
     private void waitForSongVerseListView() {
@@ -196,7 +197,7 @@ public class SongControllerTest extends BaseTest {
     @Test
     public void checkAuthorTextField() {
         searchForASong();
-        waitForAuthorField(songAuthor);
+        waitForAuthorField();
     }
 
     @Test

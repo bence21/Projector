@@ -88,7 +88,7 @@ public class ForkMirrorMigrationLanguageTest {
     }
 
     @Test(expected = AssertionError.class)
-    public void migrateLegacySongsForLanguage_failsWhenServerSongsMissingLanguage() throws Exception {
+    public void migrateLegacySongsForLanguage_failsWhenServerSongsMissingLanguage() {
         Language language = createLanguage();
         List<Song> localSongs = createLegacyLocalSongs(language, 1);
         language.setSongs(localSongs);
@@ -98,7 +98,7 @@ public class ForkMirrorMigrationLanguageTest {
     }
 
     @Test
-    public void migrateLegacySongsForLanguage_unpublishedLocalCopy_createsForkAndMirror() throws Exception {
+    public void migrateLegacySongsForLanguage_unpublishedLocalCopy_createsForkAndMirror() {
         Language language = createLanguage();
         Song local = new Song();
         String serverUuid = UUID.randomUUID().toString();
@@ -151,7 +151,7 @@ public class ForkMirrorMigrationLanguageTest {
     }
 
     @Test
-    public void migrateLegacySongsForLanguage_unpublishedMatchingServer_becomesMirrorOnly() throws Exception {
+    public void migrateLegacySongsForLanguage_unpublishedMatchingServer_becomesMirrorOnly() {
         Language language = createLanguage();
         Song local = new Song();
         String serverUuid = UUID.randomUUID().toString();
@@ -226,7 +226,7 @@ public class ForkMirrorMigrationLanguageTest {
     }
 
     @Test
-    public void updateSongMetadataWithoutLoadingVerses_preservesVersesInDatabase() throws Exception {
+    public void updateSongMetadataWithoutLoadingVerses_preservesVersesInDatabase() {
         Language language = createLanguage();
         Song local = new Song();
         String serverUuid = UUID.randomUUID().toString();
@@ -248,7 +248,7 @@ public class ForkMirrorMigrationLanguageTest {
     }
 
     @Test
-    public void importMissingServerSong_whenForkExists_createsMirrorWithPersistedVerses() throws Exception {
+    public void importMissingServerSong_whenForkExists_createsMirrorWithPersistedVerses() {
         Language language = createLanguage();
         String serverUuid = UUID.randomUUID().toString();
 

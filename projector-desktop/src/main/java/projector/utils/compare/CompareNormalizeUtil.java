@@ -74,7 +74,7 @@ public final class CompareNormalizeUtil {
                 }
             }
             if (options.isNormalizeWhitespace() && Character.isWhitespace(c)) {
-                if (!lastWasSpace && out.length() > 0) {
+                if (!lastWasSpace && !out.isEmpty()) {
                     out.append(' ');
                     indexMap.add(i);
                     lastWasSpace = true;
@@ -88,7 +88,7 @@ public final class CompareNormalizeUtil {
             out.append(c);
             indexMap.add(i);
         }
-        if (options.isNormalizeWhitespace() && out.length() > 0 && out.charAt(out.length() - 1) == ' ') {
+        if (options.isNormalizeWhitespace() && !out.isEmpty() && out.charAt(out.length() - 1) == ' ') {
             out.setLength(out.length() - 1);
             if (!indexMap.isEmpty()) {
                 indexMap.remove(indexMap.size() - 1);
@@ -110,14 +110,6 @@ public final class CompareNormalizeUtil {
             return Character.toLowerCase(a) == Character.toLowerCase(b);
         }
         return a == b;
-    }
-
-    private static String charsToString(List<Character> chars) {
-        StringBuilder sb = new StringBuilder(chars.size());
-        for (int k = chars.size() - 1; k >= 0; k--) {
-            sb.append(chars.get(k));
-        }
-        return sb.toString();
     }
 
     private static char normalizeQuoteChar(char c) {
@@ -148,7 +140,7 @@ public final class CompareNormalizeUtil {
         StringBuilder result = new StringBuilder();
         String lastChorusBlock = null;
         for (String line : lines) {
-            if (result.length() > 0) {
+            if (!result.isEmpty()) {
                 result.append('\n');
             }
             String trimmed = line.trim().toLowerCase(Locale.ROOT);

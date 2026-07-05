@@ -19,6 +19,7 @@ public class Bible extends BaseEntity {
     @DatabaseField
     private String shortName;
     @ForeignCollectionField
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private ForeignCollection<Book> bookForeignCollection;
     private List<Book> books;
     @DatabaseField(foreign = true, index = true)
