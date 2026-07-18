@@ -5,7 +5,10 @@ import { Router } from '@angular/router';
 import { Language } from "../../models/language";
 import { LanguageDataService } from "../../services/language-data.service";
 import { MatDialog, MatIconRegistry } from "@angular/material";
-import { NewLanguageComponent } from "../new-language/new-language.component";
+import {
+  openNewLanguageDialog as presentNewLanguageDialog,
+  selectLanguageFromList
+} from "../../util/language-dialog.util";
 import { DomSanitizer, SafeResourceUrl, Title } from "@angular/platform-browser";
 import { CdkDragDrop, moveItemInArray, copyArrayItem } from '@angular/cdk/drag-drop';
 import { addNewVerse_, calculateOrder_, validateWordsAndSave } from '../../util/song.utils';
@@ -271,12 +274,16 @@ export class NewSongComponent implements OnInit {
     return chip.name;
   }
 
-  loadLanguage(selectLast: boolean) {
+  loadLanguage(selectLast: boolean, selectUuid?: string) {
     this.languageDataService.getAll().subscribe(
       (languages) => {
         this.languages = languages;
-        if (selectLast) {
-          this.selectedLanguage = this.languages[this.languages.length - 1];
+        const selected = selectLanguageFromList(languages, {
+          selectUuid,
+          selectLast: !selectUuid && selectLast,
+        });
+        if (selected) {
+          this.selectedLanguage = selected;
         }
       }
     );
@@ -495,12 +502,9 @@ export class NewSongComponent implements OnInit {
   }
 
   openNewLanguageDialog(): void {
-    const dialogRef = this.dialog.open(NewLanguageComponent);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result === 'ok') {
-        this.loadLanguage(true);
-      }
-    });
+    presentNewLanguageDialog(this.dialog, this.snackBar, (selectLast, selectUuid) =>
+      this.loadLanguage(selectLast, selectUuid)
+    );
   }
 
   editorTypeChange() {

@@ -74,4 +74,21 @@ public class LanguageServiceImpl extends BaseServiceImpl<Language> implements La
         }
         return deletedLanguages;
     }
+
+    @Override
+    public boolean existsActiveByEnglishName(String englishName) {
+        return findActiveByEnglishName(englishName) != null;
+    }
+
+    @Override
+    public Language findActiveByEnglishName(String englishName) {
+        if (englishName == null || englishName.trim().isEmpty()) {
+            return null;
+        }
+        List<Language> matches = languageRepository.findActiveByEnglishName(englishName);
+        if (matches.isEmpty()) {
+            return null;
+        }
+        return matches.get(0);
+    }
 }

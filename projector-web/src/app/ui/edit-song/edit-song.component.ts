@@ -3,7 +3,10 @@ import { Song, SongService, SongVerseDTO, SongVerseUI, SectionType } from '../..
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LanguageDataService } from "../../services/language-data.service";
-import { NewLanguageComponent } from "../new-language/new-language.component";
+import {
+  openNewLanguageDialog as presentNewLanguageDialog,
+  selectLanguageFromList
+} from "../../util/language-dialog.util";
 import { MatDialog, MatIconRegistry, MatSnackBar } from "@angular/material";
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
 import { SubmitOrPublish, replace, valueRefactorable } from "../new-song/new-song.component";
@@ -220,19 +223,17 @@ export class EditSongComponent implements OnInit {
     return chip.name;
   }
 
-  loadLanguage(selectLast: boolean) {
+  loadLanguage(selectLast: boolean, selectUuid?: string) {
     this.languageDataService.getAll().subscribe(
       (languages) => {
         this.languages = languages;
-        if (selectLast) {
-          this.selectedLanguage = this.languages[this.languages.length - 1];
-        } else {
-          for (const language of this.languages) {
-            if (language.uuid === this.song.languageDTO.uuid) {
-              this.selectedLanguage = language;
-              break;
-            }
-          }
+        const selected = selectLanguageFromList(languages, {
+          selectUuid,
+          selectLast: !selectUuid && selectLast,
+          fallbackUuid: !selectUuid && !selectLast ? this.song.languageDTO.uuid : undefined,
+        });
+        if (selected) {
+          this.selectedLanguage = selected;
         }
         this.originalLanguage = this.selectedLanguage;
       }
@@ -485,12 +486,9 @@ export class EditSongComponent implements OnInit {
   }
 
   openNewLanguageDialog(): void {
-    const dialogRef = this.dialog.open(NewLanguageComponent);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result === 'ok') {
-        this.loadLanguage(true);
-      }
-    });
+    presentNewLanguageDialog(this.dialog, this.snackBar, (selectLast, selectUuid) =>
+      this.loadLanguage(selectLast, selectUuid)
+    );
   }
 
   editorTypeChange() {

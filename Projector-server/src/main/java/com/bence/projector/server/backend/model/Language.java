@@ -4,6 +4,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import java.util.ArrayList;
@@ -23,6 +24,8 @@ public class Language extends AbstractModel {
     @ManyToMany(mappedBy = "reviewLanguages")
     private List<User> reviewers;
     private Boolean deleted;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User createdBy;
 
     public Language() {
     }
@@ -128,6 +131,14 @@ public class Language extends AbstractModel {
 
     public void setDeleted(Boolean deleted) {
         this.deleted = deleted;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
     }
 
     public boolean isCzech() {
