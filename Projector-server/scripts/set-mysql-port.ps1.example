@@ -1,0 +1,26 @@
+# Copy to set-mysql-port.local.ps1 and run in an elevated PowerShell window.
+# set-mysql-port.local.ps1 is gitignored.
+#
+# Example:
+#   Copy-Item set-mysql-port.ps1.example set-mysql-port.local.ps1
+#   notepad set-mysql-port.local.ps1   # adjust $MysqlPort if needed
+#   .\set-mysql-port.local.ps1
+
+param(
+    [int]$MysqlPort = 3452
+)
+
+$ErrorActionPreference = 'Stop'
+$myIni = 'C:\ProgramData\MySQL\MySQL Server 8.0\my.ini'
+
+if (-not (Test-Path $myIni)) {
+    Write-Error "my.ini not found at $myIni"
+}
+
+$content = Get-Content $myIni -Raw
+$content = $content -replace '(?m)^port=\d+', "port=$MysqlPort"
+Set-Content -Path $myIni -Value $content -NoNewline
+
+Write-Host "Updated $myIni to port $MysqlPort"
+Restart-Service MySQL80
+Get-Service MySQL80
