@@ -5,10 +5,18 @@ import projector.model.Song;
 import projector.model.SongVerse;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public final class SongCompareEngine {
+
+    /** Minimum word-overlap score to treat verses as the same content despite split/whitespace differences. */
+    static final double WORD_SIMILARITY_THRESHOLD = 0.65;
+    /** Whole-song wording below this is treated as truly different (hint-worthy). */
+    static final double WHOLE_SONG_SIMILARITY_THRESHOLD = 0.55;
+    private static final int MAX_CONCAT_VERSES = 4;
 
     private SongCompareEngine() {
     }
@@ -115,8 +123,8 @@ public final class SongCompareEngine {
     }
 
     /**
-     * Finds the best matching verse by normalized text comparison.
-     * Prefer an exact normalized match; returns -1 when none is found.
+     * Finds a matching verse by exact normalized text equality.
+     * Prefer {@link #findBestMatchingVerseIndex} for swap focus when verse splits may differ.
      */
     public static int findMatchingVerseIndex(String text, List<SongVerse> verses, int excludeIndex,
                                              CompareSongsSettings settings) {
@@ -138,6 +146,74 @@ public final class SongCompareEngine {
         return -1;
     }
 
+    /**
+     * Finds the best matching verse by exact text, then by word/content similarity,
+     * including matches across consecutive verses that only differ by split boundaries.
+     * Returns -1 when no good match is found (caller should fall back to index).
+     */
+    public static int findBestMatchingVerseIndex(String text, List<SongVerse> verses, int excludeIndex,
+                                                 CompareSongsSettings settings) {
+        int exact = findMatchingVerseIndex(text, verses, excludeIndex, settings);
+        if (exact >= 0) {
+            return exact;
+        }
+        if (text == null || text.isEmpty() || verses == null || verses.isEmpty()) {
+            return -1;
+        }
+        List<String> focusWords = words(text, settings);
+        if (focusWords.isEmpty()) {
+            return -1;
+        }
+        double bestScore = -1.0;
+        int bestIndex = -1;
+        for (int i = 0; i < verses.size(); i++) {
+            if (i == excludeIndex) {
+                continue;
+            }
+            SongVerse verse = verses.get(i);
+            if (verse == null) {
+                continue;
+            }
+            double score = wordSimilarity(focusWords, words(verse.getText(), settings));
+            if (score > bestScore) {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+        // Across split boundaries: compare focus text to concatenations of consecutive verses.
+        for (int start = 0; start < verses.size(); start++) {
+            if (start == excludeIndex) {
+                continue;
+            }
+            StringBuilder concatenated = new StringBuilder();
+            for (int end = start; end < verses.size() && end - start + 1 <= MAX_CONCAT_VERSES; end++) {
+                if (end == excludeIndex) {
+                    break;
+                }
+                SongVerse verse = verses.get(end);
+                if (verse == null) {
+                    break;
+                }
+                if (!concatenated.isEmpty()) {
+                    concatenated.append('\n');
+                }
+                concatenated.append(verse.getText());
+                if (end == start) {
+                    continue; // single verse already scored above
+                }
+                double score = wordSimilarity(focusWords, words(concatenated.toString(), settings));
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIndex = start;
+                }
+            }
+        }
+        if (bestIndex < 0 || bestScore < WORD_SIMILARITY_THRESHOLD) {
+            return -1;
+        }
+        return bestIndex;
+    }
+
     public static boolean textsEqual(String leftText, String rightText, CompareSongsSettings settings) {
         CompareNormalizeOptions options = settings.getEffectiveNormalizeOptions();
         String normalizedLeft = CompareNormalizeUtil.buildComparisonString(
@@ -148,18 +224,90 @@ public final class SongCompareEngine {
     }
 
     /**
-     * True when content differences cover at least half of the longer song's verse count.
+     * True only when whole-song wording differs substantially.
+     * Verse-boundary / whitespace-only differences do not count.
      */
     public static boolean versionsLookVeryDifferent(Song left, Song right, CompareSongsSettings settings) {
         if (left == null || right == null) {
             return false;
         }
-        List<VerseCompareEntry> entries = buildVerseEntries(left, right, settings);
-        int contentDiffs = countContentDifferences(entries);
-        int maxVerses = Math.max(left.getVerses().size(), right.getVerses().size());
-        if (maxVerses <= 0) {
+        String leftAll = joinVerseTexts(left.getVerses());
+        String rightAll = joinVerseTexts(right.getVerses());
+        if (leftAll.isEmpty() && rightAll.isEmpty()) {
             return false;
         }
-        return contentDiffs * 2 >= maxVerses;
+        double similarity = wordSimilarity(words(leftAll, settings), words(rightAll, settings));
+        return similarity < WHOLE_SONG_SIMILARITY_THRESHOLD;
+    }
+
+    public static double wordSimilarity(String leftText, String rightText, CompareSongsSettings settings) {
+        return wordSimilarity(words(leftText, settings), words(rightText, settings));
+    }
+
+    static double wordSimilarity(List<String> leftWords, List<String> rightWords) {
+        if (leftWords.isEmpty() && rightWords.isEmpty()) {
+            return 1.0;
+        }
+        if (leftWords.isEmpty() || rightWords.isEmpty()) {
+            return 0.0;
+        }
+        Map<String, Integer> leftCounts = wordCounts(leftWords);
+        Map<String, Integer> rightCounts = wordCounts(rightWords);
+        int intersection = 0;
+        for (Map.Entry<String, Integer> entry : leftCounts.entrySet()) {
+            Integer rightCount = rightCounts.get(entry.getKey());
+            if (rightCount != null) {
+                intersection += Math.min(entry.getValue(), rightCount);
+            }
+        }
+        int leftSize = leftWords.size();
+        int rightSize = rightWords.size();
+        int union = leftSize + rightSize - intersection;
+        double jaccard = union == 0 ? 0.0 : (double) intersection / union;
+        // Containment catches split-boundary cases where one side is a subset of the other.
+        double containment = (double) intersection / Math.min(leftSize, rightSize);
+        return Math.max(jaccard, containment);
+    }
+
+    static List<String> words(String text, CompareSongsSettings settings) {
+        CompareNormalizeOptions options = settings.getEffectiveNormalizeOptions();
+        String normalized = CompareNormalizeUtil.buildComparisonString(
+                CompareNormalizeUtil.repeatChorusText(text, settings.isRepeatChorus()), options);
+        if (normalized == null || normalized.isEmpty()) {
+            return List.of();
+        }
+        String[] parts = normalized.split(" ");
+        List<String> words = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                words.add(part);
+            }
+        }
+        return words;
+    }
+
+    private static Map<String, Integer> wordCounts(List<String> words) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (String word : words) {
+            counts.merge(word, 1, Integer::sum);
+        }
+        return counts;
+    }
+
+    private static String joinVerseTexts(List<SongVerse> verses) {
+        if (verses == null || verses.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (SongVerse verse : verses) {
+            if (verse == null || verse.getText() == null || verse.getText().isEmpty()) {
+                continue;
+            }
+            if (!builder.isEmpty()) {
+                builder.append('\n');
+            }
+            builder.append(verse.getText());
+        }
+        return builder.toString();
     }
 }

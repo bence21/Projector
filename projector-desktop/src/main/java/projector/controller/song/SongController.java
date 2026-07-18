@@ -914,14 +914,26 @@ public class SongController {
         }
         CompareSongsSettings compareSettings = CompareSongsSettings.load();
         if (focusVerseText != null && !focusVerseText.isEmpty()) {
+            // Build unique ordered verses from list items (title/end slides have null songVerse).
+            List<SongVerse> verses = new ArrayList<>();
+            List<Integer> firstListIndexByVerse = new ArrayList<>();
+            SongVerse previous = null;
             for (int i = 0; i < songListViewItems.size(); i++) {
                 SongVersePartTextFlow part = songListViewItems.get(i);
                 if (part == null || part.getSongVerse() == null) {
                     continue;
                 }
-                if (SongCompareEngine.textsEqual(focusVerseText, part.getSongVerse().getText(), compareSettings)) {
-                    return i;
+                SongVerse verse = part.getSongVerse();
+                if (verse != previous) {
+                    verses.add(verse);
+                    firstListIndexByVerse.add(i);
+                    previous = verse;
                 }
+            }
+            int matchedVerseIndex = SongCompareEngine.findBestMatchingVerseIndex(
+                    focusVerseText, verses, -1, compareSettings);
+            if (matchedVerseIndex >= 0 && matchedVerseIndex < firstListIndexByVerse.size()) {
+                return firstListIndexByVerse.get(matchedVerseIndex);
             }
         }
         if (fallbackListIndex >= 0 && fallbackListIndex < songListViewItems.size()) {
@@ -1546,13 +1558,9 @@ public class SongController {
             }
             CaptureSwapFocusContext focusContext = captureSwapFocusContext();
             CompareSongsSettings compareSettings = CompareSongsSettings.load();
-            boolean textMatched = false;
-            if (focusContext.verseText != null && !focusContext.verseText.isEmpty()) {
-                textMatched = SongCompareEngine.findMatchingVerseIndex(
-                        focusContext.verseText, counterpart.getSongVersesByVerseOrder(), -1, compareSettings) >= 0;
-            }
-            showVersionsDifferHint = !textMatched
-                    || SongCompareEngine.versionsLookVeryDifferent(selectedSong, counterpart, compareSettings);
+            // Hint only for truly different wording — not for split/whitespace-only mismatches.
+            showVersionsDifferHint = SongCompareEngine.versionsLookVeryDifferent(
+                    selectedSong, counterpart, compareSettings);
             pendingSwapFocusVerseText = focusContext.verseText;
             pendingSwapFocusListIndex = focusContext.listIndex;
             // Load counterpart into SongController without changing song-list selection or live projection.
