@@ -222,6 +222,14 @@
         </button>
         <div *ngIf="showSimilarities">
           <div *ngIf="similar.length>0">
+            <div *ngIf="similarSongsSharingYouTube.length > 0" class="youtube-duplicate-warning">
+              <mat-icon>warning</mat-icon>
+              <span>
+                This song shares its YouTube video ID with
+                {{ similarSongsSharingYouTube.length }} similar song{{ similarSongsSharingYouTube.length === 1 ? '' : 's' }}.
+                Confirm the video matches these lyrics; otherwise clear or change the ID on the wrong song.
+              </span>
+            </div>
             <mat-expansion-panel>
               <mat-expansion-panel-header>
                 <mat-panel-title>
@@ -230,8 +238,10 @@
               </mat-expansion-panel-header>
               <mat-nav-list>
                 <mat-list-item *ngFor="let song of similar" (click)="selectSecondSong(song)"
-                  [class.marked]="isInSongsByVersionGroup(song)">
+                  [class.marked]="isInSongsByVersionGroup(song)"
+                  [class.youtube-shared]="sharesYouTubeWithSimilar(song)">
                   <mat-icon *ngIf="!isInSongsByVersionGroup(song)">layers_clear</mat-icon>
+                  <mat-icon *ngIf="sharesYouTubeWithSimilar(song)" class="youtube-shared-icon" title="Shares YouTube ID">videocam</mat-icon>
                   <a>{{ song.title + " "}}</a>
                   <a href="/#/song/{{song.uuid}}" target="_blank">{{'. Open'}}</a>
                 </mat-list-item>

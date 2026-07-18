@@ -144,3 +144,27 @@
   border-radius: 3px;
   transition: width 0.35s ease;
 }
+
+.youtube-duplicate-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #6d4c00;
+}
+
+.youtube-duplicate-warning mat-icon {
+  flex-shrink: 0;
+}
+
+.youtube-shared-icon {
+  color: #f9a825;
+  margin-right: 4px;
+}
+
+mat-list-item.youtube-shared {
+  background: #fffde7;
+}
