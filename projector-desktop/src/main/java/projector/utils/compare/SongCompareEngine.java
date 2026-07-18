@@ -114,28 +114,52 @@ public final class SongCompareEngine {
         return VerseDiffKind.CONTENT_DIFF;
     }
 
-    private static int findMatchingVerseIndex(String text, List<SongVerse> verses, int excludeIndex,
-                                              CompareSongsSettings settings) {
-        if (text == null || text.isEmpty()) {
+    /**
+     * Finds the best matching verse by normalized text comparison.
+     * Prefer an exact normalized match; returns -1 when none is found.
+     */
+    public static int findMatchingVerseIndex(String text, List<SongVerse> verses, int excludeIndex,
+                                             CompareSongsSettings settings) {
+        if (text == null || text.isEmpty() || verses == null) {
             return -1;
         }
         for (int i = 0; i < verses.size(); i++) {
             if (i == excludeIndex) {
                 continue;
             }
-            if (textsEqual(text, verses.get(i).getText(), settings)) {
+            SongVerse verse = verses.get(i);
+            if (verse == null) {
+                continue;
+            }
+            if (textsEqual(text, verse.getText(), settings)) {
                 return i;
             }
         }
         return -1;
     }
 
-    private static boolean textsEqual(String leftText, String rightText, CompareSongsSettings settings) {
+    public static boolean textsEqual(String leftText, String rightText, CompareSongsSettings settings) {
         CompareNormalizeOptions options = settings.getEffectiveNormalizeOptions();
         String normalizedLeft = CompareNormalizeUtil.buildComparisonString(
                 CompareNormalizeUtil.repeatChorusText(leftText, settings.isRepeatChorus()), options);
         String normalizedRight = CompareNormalizeUtil.buildComparisonString(
                 CompareNormalizeUtil.repeatChorusText(rightText, settings.isRepeatChorus()), options);
         return normalizedLeft.equals(normalizedRight);
+    }
+
+    /**
+     * True when content differences cover at least half of the longer song's verse count.
+     */
+    public static boolean versionsLookVeryDifferent(Song left, Song right, CompareSongsSettings settings) {
+        if (left == null || right == null) {
+            return false;
+        }
+        List<VerseCompareEntry> entries = buildVerseEntries(left, right, settings);
+        int contentDiffs = countContentDifferences(entries);
+        int maxVerses = Math.max(left.getVerses().size(), right.getVerses().size());
+        if (maxVerses <= 0) {
+            return false;
+        }
+        return contentDiffs * 2 >= maxVerses;
     }
 }

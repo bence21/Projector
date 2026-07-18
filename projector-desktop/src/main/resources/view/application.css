@@ -477,6 +477,24 @@
     -fx-wrap-text: true;
 }
 
+.song-version-status-label-clickable {
+    -fx-underline: true;
+    -fx-cursor: hand;
+}
+
+.song-version-status-label:disabled {
+    -fx-opacity: 0.55;
+    -fx-underline: false;
+    -fx-cursor: default;
+}
+
+.song-versions-differ-hint-label {
+    -fx-text-fill: derive(-fx-text-base-color, 15%);
+    -fx-font-size: 11px;
+    -fx-font-style: italic;
+    -fx-wrap-text: true;
+}
+
 .song-badge-icon {
     -fx-fit-width: 16;
     -fx-fit-height: 16;

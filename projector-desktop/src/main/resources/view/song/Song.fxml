@@ -352,6 +352,13 @@
                                                         <Insets left="10.0" top="2.0"/>
                                                     </VBox.margin>
                                                 </Label>
+                                                <Label fx:id="versionsDifferHintLabel" managed="false"
+                                                       styleClass="song-versions-differ-hint-label" visible="false"
+                                                       wrapText="true">
+                                                    <VBox.margin>
+                                                        <Insets left="10.0"/>
+                                                    </VBox.margin>
+                                                </Label>
                                                 <HBox fx:id="authorBox" alignment="CENTER_LEFT" spacing="4.0">
                                                     <Label text="Author"/>
                                                     <TextField fx:id="authorTextField" editable="false"

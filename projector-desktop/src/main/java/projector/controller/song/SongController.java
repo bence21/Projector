@@ -14,6 +14,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Orientation;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -108,6 +109,8 @@ import projector.utils.IntegerFilter;
 import projector.utils.SongForkBadgeFactory;
 import projector.utils.SongForkBadgeFactory.ForkBadgeKind;
 import projector.utils.SongVerseHolder;
+import projector.utils.compare.CompareSongsSettings;
+import projector.utils.compare.SongCompareEngine;
 import projector.utils.scene.text.MyTextFlow;
 import projector.utils.scene.text.SongVersePartTextFlow;
 
@@ -241,6 +244,8 @@ public class SongController {
     @FXML
     private Label versionStatusLabel;
     @FXML
+    private Label versionsDifferHintLabel;
+    @FXML
     private TextField authorTextField;
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
     private ProjectionScreenController projectionScreenController;
@@ -255,6 +260,9 @@ public class SongController {
     private int previousSelectedVerseIndex;
     private int pendingSongVerseSelectedIndex = -1;
     private boolean skipProjectionOnVerseSelection = false;
+    private String pendingSwapFocusVerseText;
+    private int pendingSwapFocusListIndex = -1;
+    private boolean showVersionsDifferHint;
     private ScheduledExecutorService opacityScheduler;
     private SongVerseTimeService songVerseTimeService;
     private MyController mainController;
@@ -544,6 +552,9 @@ public class SongController {
             ObservableList<SongVersePartTextFlow> songListViewItems = songListView.getItems();
             songListViewItems.clear();
             selectedSong = selectedSong1;
+            if (pendingSwapFocusVerseText == null && pendingSwapFocusListIndex < 0) {
+                showVersionsDifferHint = false;
+            }
 
             updateShowVersionsButton(selectedSong);
             updateVersionStatusLabel(selectedSong);
@@ -867,6 +878,7 @@ public class SongController {
     }
 
     private void applyPendingSongVerseSelection(ObservableList<SongVersePartTextFlow> songListViewItems) {
+        resolvePendingSwapFocusSelection(songListViewItems);
         if (pendingSongVerseSelectedIndex < 0) {
             skipProjectionOnVerseSelection = false;
             return;
@@ -882,6 +894,43 @@ public class SongController {
                 skipProjectionOnVerseSelection = false;
             }
         }
+    }
+
+    private void resolvePendingSwapFocusSelection(ObservableList<SongVersePartTextFlow> songListViewItems) {
+        if (pendingSwapFocusVerseText == null && pendingSwapFocusListIndex < 0) {
+            return;
+        }
+        String focusText = pendingSwapFocusVerseText;
+        int fallbackIndex = pendingSwapFocusListIndex;
+        pendingSwapFocusVerseText = null;
+        pendingSwapFocusListIndex = -1;
+        pendingSongVerseSelectedIndex = findSongListIndexForVerseFocus(songListViewItems, focusText, fallbackIndex);
+    }
+
+    static int findSongListIndexForVerseFocus(List<SongVersePartTextFlow> songListViewItems,
+                                              String focusVerseText, int fallbackListIndex) {
+        if (songListViewItems == null || songListViewItems.isEmpty()) {
+            return -1;
+        }
+        CompareSongsSettings compareSettings = CompareSongsSettings.load();
+        if (focusVerseText != null && !focusVerseText.isEmpty()) {
+            for (int i = 0; i < songListViewItems.size(); i++) {
+                SongVersePartTextFlow part = songListViewItems.get(i);
+                if (part == null || part.getSongVerse() == null) {
+                    continue;
+                }
+                if (SongCompareEngine.textsEqual(focusVerseText, part.getSongVerse().getText(), compareSettings)) {
+                    return i;
+                }
+            }
+        }
+        if (fallbackListIndex >= 0 && fallbackListIndex < songListViewItems.size()) {
+            return fallbackListIndex;
+        }
+        if (songListViewItems.size() > 1) {
+            return 1;
+        }
+        return 0;
     }
 
     /**
@@ -1243,6 +1292,7 @@ public class SongController {
         importButton.setOnAction(event -> importButtonOnAction());
         initializeShowVersionsButton();
         initializeCompareWithOriginalButton();
+        initializeVersionStatusSwapControl();
         initializeDragListeners();
         initializeSongs();
         initializeVerseOrderList();
@@ -1391,15 +1441,59 @@ public class SongController {
             return;
         }
         ResourceBundle resourceBundle = settings.getResourceBundle();
-        if (song.isFork()) {
+        if (song != null && song.isFork()) {
             versionStatusLabel.setText(resourceBundle.getString("Showing local edit"));
             setVisibleAndManaged(versionStatusLabel, true);
-        } else if (song.hasLocalFork()) {
+            updateVersionStatusSwapAffordances(song);
+        } else if (song != null && song.hasLocalFork()) {
             versionStatusLabel.setText(resourceBundle.getString("Showing original local edit available"));
             setVisibleAndManaged(versionStatusLabel, true);
+            updateVersionStatusSwapAffordances(song);
         } else {
             setVisibleAndManaged(versionStatusLabel, false);
+            versionStatusLabel.setDisable(true);
+            versionStatusLabel.setCursor(Cursor.DEFAULT);
+            versionStatusLabel.getStyleClass().remove("song-version-status-label-clickable");
+            versionStatusLabel.setTooltip(null);
+            clearVersionsDifferHint();
         }
+        updateVersionsDifferHintVisibility();
+    }
+
+    private void updateVersionStatusSwapAffordances(Song song) {
+        ResourceBundle resourceBundle = settings.getResourceBundle();
+        Song counterpart = resolveCounterpartForSwap(song);
+        boolean canSwap = counterpart != null;
+        versionStatusLabel.setDisable(!canSwap);
+        versionStatusLabel.getStyleClass().remove("song-version-status-label-clickable");
+        if (canSwap) {
+            if (!versionStatusLabel.getStyleClass().contains("song-version-status-label-clickable")) {
+                versionStatusLabel.getStyleClass().add("song-version-status-label-clickable");
+            }
+            versionStatusLabel.setCursor(Cursor.HAND);
+            versionStatusLabel.setTooltip(new Tooltip(resourceBundle.getString("Swap song version tooltip")));
+        } else {
+            versionStatusLabel.setCursor(Cursor.DEFAULT);
+            versionStatusLabel.setTooltip(new Tooltip(resourceBundle.getString("Download songs for version swap tooltip")));
+        }
+    }
+
+    private void updateVersionsDifferHintVisibility() {
+        if (versionsDifferHintLabel == null) {
+            return;
+        }
+        ResourceBundle resourceBundle = settings.getResourceBundle();
+        if (showVersionsDifferHint && versionStatusLabel != null && versionStatusLabel.isVisible()) {
+            versionsDifferHintLabel.setText(resourceBundle.getString("Song versions differ a lot"));
+            setVisibleAndManaged(versionsDifferHintLabel, true);
+        } else {
+            setVisibleAndManaged(versionsDifferHintLabel, false);
+        }
+    }
+
+    private void clearVersionsDifferHint() {
+        showVersionsDifferHint = false;
+        updateVersionsDifferHintVisibility();
     }
 
     private void updateCompareButtonVisibility(Song song) {
@@ -1424,6 +1518,81 @@ public class SongController {
             }
         });
         setVisibleAndManaged(compareWithOriginalButton, false);
+    }
+
+    private void initializeVersionStatusSwapControl() {
+        if (versionStatusLabel == null) {
+            return;
+        }
+        versionStatusLabel.setOnMouseClicked(event -> {
+            if (event.getButton() != MouseButton.PRIMARY || versionStatusLabel.isDisabled()) {
+                return;
+            }
+            swapToCounterpartVersion();
+        });
+        if (versionsDifferHintLabel != null) {
+            setVisibleAndManaged(versionsDifferHintLabel, false);
+        }
+    }
+
+    private void swapToCounterpartVersion() {
+        try {
+            if (selectedSong == null) {
+                return;
+            }
+            Song counterpart = resolveCounterpartForSwap(selectedSong);
+            if (counterpart == null) {
+                return;
+            }
+            CaptureSwapFocusContext focusContext = captureSwapFocusContext();
+            CompareSongsSettings compareSettings = CompareSongsSettings.load();
+            boolean textMatched = false;
+            if (focusContext.verseText != null && !focusContext.verseText.isEmpty()) {
+                textMatched = SongCompareEngine.findMatchingVerseIndex(
+                        focusContext.verseText, counterpart.getSongVersesByVerseOrder(), -1, compareSettings) >= 0;
+            }
+            showVersionsDifferHint = !textMatched
+                    || SongCompareEngine.versionsLookVeryDifferent(selectedSong, counterpart, compareSettings);
+            pendingSwapFocusVerseText = focusContext.verseText;
+            pendingSwapFocusListIndex = focusContext.listIndex;
+            // Load counterpart into SongController without changing song-list selection or live projection.
+            prepareSelectedSong(counterpart);
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
+    private CaptureSwapFocusContext captureSwapFocusContext() {
+        CaptureSwapFocusContext context = new CaptureSwapFocusContext();
+        if (songListView == null) {
+            return context;
+        }
+        context.listIndex = songListView.getSelectionModel().getSelectedIndex();
+        SongVersePartTextFlow selectedPart = songListView.getSelectionModel().getSelectedItem();
+        if (selectedPart != null && selectedPart.getSongVerse() != null) {
+            context.verseText = selectedPart.getSongVerse().getText();
+        }
+        return context;
+    }
+
+    private Song resolveCounterpartForSwap(Song song) {
+        if (song == null) {
+            return null;
+        }
+        Song current = songService.getFromMemoryOrSong(song);
+        if (current.isFork()) {
+            // Local-only check: do not hit the server for a missing downloaded original.
+            return songService.findMirrorByUuid(current.getOriginalSongUuid());
+        }
+        if (current.hasLocalFork()) {
+            return songService.findForkForSong(current);
+        }
+        return null;
+    }
+
+    private static final class CaptureSwapFocusContext {
+        private String verseText;
+        private int listIndex = -1;
     }
 
     private void searchAgain() {
