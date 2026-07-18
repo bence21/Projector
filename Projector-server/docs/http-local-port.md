@@ -54,6 +54,39 @@ automatically to links/emails. Prefer Option A if you need a non-localhost base 
 Default in committed `application.properties` / `app.properties` remains **8081**
 for everyone else.
 
-### 3. Verify
+### 3. Point client apps at the same port
+
+The server local override does **not** change desktop / Songbook by itself.
+Committed defaults stay **8081**; use gitignored local files on your machine.
+
+**Desktop**
+
+```bash
+cp projector-desktop/src/main/resources/credentials-local.properties.example \
+   projector-desktop/src/main/resources/credentials-local.properties
+```
+
+Uncomment and set:
+
+```properties
+port=8400
+```
+
+Or set `$env:PORT = "8400"` (used if the local file has no `port` / `domain`).
+Rebuild / restart desktop. Committed `Credentials.java` stays on `localhost:8081`.
+
+**Songbook** — `Songbook/local.properties` (gitignored; already used for SDK path):
+
+```properties
+# Emulator → host machine
+test.api.base.url=http://10.0.2.2:8400
+# Physical device → your PC LAN IP
+test.api.second.base.url=http://192.168.1.134:8400
+```
+
+Rebuild Songbook after changing these so `BuildConfig.API_BASE_URL` picks them up.
+
+### 4. Verify
 
 Restart the server and open http://localhost:8400 (or your chosen port).
+Confirm desktop / Songbook call the same host:port.

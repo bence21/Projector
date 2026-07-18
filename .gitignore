@@ -48,3 +48,4 @@ mysql/
 /projector-desktop-updater/bin
 Projector-server/src/main/resources/application-local.properties
 Projector-server/scripts/set-mysql-port.local.ps1
+projector-desktop/src/main/resources/credentials-local.properties
