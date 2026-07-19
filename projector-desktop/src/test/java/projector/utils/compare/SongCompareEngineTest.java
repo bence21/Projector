@@ -21,6 +21,22 @@ public class SongCompareEngineTest {
     }
 
     @Test
+    public void findContinueReadingVerseIndex_prefersLaterChorusAfterAlreadyRead() {
+        CompareSongsSettings settings = new CompareSongsSettings();
+        String chorus = "Dicsérjük az Urat\nŐ a király";
+        List<SongVerse> verses = verses(
+                "Első versszak",
+                chorus,
+                "Második versszak",
+                chorus,
+                "Záró versszak");
+        String alreadyRead = "Első versszak\n" + chorus + "\nMásodik versszak";
+
+        Assert.assertEquals(1, SongCompareEngine.findBestMatchingVerseIndex(chorus, verses, -1, settings));
+        Assert.assertEquals(3, SongCompareEngine.findContinueReadingVerseIndex(alreadyRead, chorus, verses, settings));
+    }
+
+    @Test
     public void findBestMatchingVerseIndex_matchesAcrossVerseSplitBoundaries() {
         CompareSongsSettings settings = new CompareSongsSettings();
         // Same words as a single verse, but the counterpart stores them as two verses.

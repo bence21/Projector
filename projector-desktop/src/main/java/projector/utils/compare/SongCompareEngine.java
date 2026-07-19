@@ -153,7 +153,83 @@ public final class SongCompareEngine {
      */
     public static int findBestMatchingVerseIndex(String text, List<SongVerse> verses, int excludeIndex,
                                                  CompareSongsSettings settings) {
-        int exact = findMatchingVerseIndex(text, verses, excludeIndex, settings);
+        return findBestMatchingVerseIndexFrom(text, verses, 0, excludeIndex, settings);
+    }
+
+    /**
+     * Prefer the occurrence of {@code currentVerseText} that continues reading after
+     * {@code alreadyReadText} (so a later chorus is chosen over an earlier identical one).
+     */
+    public static int findContinueReadingVerseIndex(String alreadyReadText, String currentVerseText,
+                                                    List<SongVerse> verses, CompareSongsSettings settings) {
+        if (verses == null || verses.isEmpty()) {
+            return -1;
+        }
+        int fromIndex = estimateVerseIndexAfterAlreadyRead(alreadyReadText, verses, settings);
+        int match = findBestMatchingVerseIndexFrom(currentVerseText, verses, fromIndex, -1, settings);
+        if (match >= 0) {
+            return match;
+        }
+        // Soft fallback: still prefer later occurrences when scores tie.
+        return findBestMatchingVerseIndexFrom(currentVerseText, verses, 0, -1, settings);
+    }
+
+    /**
+     * Estimates the first counterpart verse index at/after the already-sung content.
+     */
+    static int estimateVerseIndexAfterAlreadyRead(String alreadyReadText, List<SongVerse> verses,
+                                                  CompareSongsSettings settings) {
+        List<String> alreadyWords = words(alreadyReadText, settings);
+        if (alreadyWords.isEmpty() || verses == null || verses.isEmpty()) {
+            return 0;
+        }
+        StringBuilder prefix = new StringBuilder();
+        double bestScore = -1.0;
+        int bestEndExclusive = 0;
+        for (int i = 0; i < verses.size(); i++) {
+            SongVerse verse = verses.get(i);
+            if (verse == null) {
+                continue;
+            }
+            if (!prefix.isEmpty()) {
+                prefix.append('\n');
+            }
+            prefix.append(verse.getText());
+            double score = wordSimilarity(alreadyWords, words(prefix.toString(), settings));
+            if (score >= bestScore) {
+                bestScore = score;
+                bestEndExclusive = i + 1;
+            }
+            // Once we have a strong cover of already-read words, stop extending.
+            if (score >= WORD_SIMILARITY_THRESHOLD
+                    && containmentOfLeftInRight(alreadyWords, words(prefix.toString(), settings)) >= 0.9) {
+                bestEndExclusive = i + 1;
+                break;
+            }
+        }
+        return Math.min(bestEndExclusive, verses.size());
+    }
+
+    private static double containmentOfLeftInRight(List<String> leftWords, List<String> rightWords) {
+        if (leftWords.isEmpty()) {
+            return 1.0;
+        }
+        if (rightWords.isEmpty()) {
+            return 0.0;
+        }
+        Map<String, Integer> rightCounts = wordCounts(rightWords);
+        int covered = 0;
+        Map<String, Integer> leftCounts = wordCounts(leftWords);
+        for (Map.Entry<String, Integer> entry : leftCounts.entrySet()) {
+            int available = rightCounts.getOrDefault(entry.getKey(), 0);
+            covered += Math.min(entry.getValue(), available);
+        }
+        return (double) covered / leftWords.size();
+    }
+
+    static int findBestMatchingVerseIndexFrom(String text, List<SongVerse> verses, int fromIndex,
+                                              int excludeIndex, CompareSongsSettings settings) {
+        int exact = findMatchingVerseIndexFrom(text, verses, fromIndex, excludeIndex, settings);
         if (exact >= 0) {
             return exact;
         }
@@ -164,18 +240,40 @@ public final class SongCompareEngine {
         if (focusWords.isEmpty()) {
             return -1;
         }
-        VerseMatchBest best = bestSingleVerseSimilarity(focusWords, verses, excludeIndex, settings);
-        best = betterMatch(best, bestConcatenatedSpanSimilarity(focusWords, verses, excludeIndex, settings));
+        int start = Math.max(0, fromIndex);
+        VerseMatchBest best = bestSingleVerseSimilarityFrom(focusWords, verses, start, excludeIndex, settings);
+        best = betterMatch(best, bestConcatenatedSpanSimilarityFrom(focusWords, verses, start, excludeIndex, settings));
         if (best.index < 0 || best.score < WORD_SIMILARITY_THRESHOLD) {
             return -1;
         }
         return best.index;
     }
 
-    private static VerseMatchBest bestSingleVerseSimilarity(List<String> focusWords, List<SongVerse> verses,
-                                                            int excludeIndex, CompareSongsSettings settings) {
+    private static int findMatchingVerseIndexFrom(String text, List<SongVerse> verses, int fromIndex,
+                                                  int excludeIndex, CompareSongsSettings settings) {
+        if (text == null || text.isEmpty() || verses == null) {
+            return -1;
+        }
+        for (int i = Math.max(0, fromIndex); i < verses.size(); i++) {
+            if (i == excludeIndex) {
+                continue;
+            }
+            SongVerse verse = verses.get(i);
+            if (verse == null) {
+                continue;
+            }
+            if (textsEqual(text, verse.getText(), settings)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static VerseMatchBest bestSingleVerseSimilarityFrom(List<String> focusWords, List<SongVerse> verses,
+                                                                int fromIndex, int excludeIndex,
+                                                                CompareSongsSettings settings) {
         VerseMatchBest best = VerseMatchBest.none();
-        for (int i = 0; i < verses.size(); i++) {
+        for (int i = Math.max(0, fromIndex); i < verses.size(); i++) {
             if (i == excludeIndex) {
                 continue;
             }
@@ -189,10 +287,11 @@ public final class SongCompareEngine {
         return best;
     }
 
-    private static VerseMatchBest bestConcatenatedSpanSimilarity(List<String> focusWords, List<SongVerse> verses,
-                                                                 int excludeIndex, CompareSongsSettings settings) {
+    private static VerseMatchBest bestConcatenatedSpanSimilarityFrom(List<String> focusWords, List<SongVerse> verses,
+                                                                     int fromIndex, int excludeIndex,
+                                                                     CompareSongsSettings settings) {
         VerseMatchBest best = VerseMatchBest.none();
-        for (int start = 0; start < verses.size(); start++) {
+        for (int start = Math.max(0, fromIndex); start < verses.size(); start++) {
             if (start == excludeIndex) {
                 continue;
             }
@@ -210,7 +309,7 @@ public final class SongCompareEngine {
                 }
                 concatenated.append(verse.getText());
                 if (end == start) {
-                    continue; // single verse handled by bestSingleVerseSimilarity
+                    continue; // single verse handled by bestSingleVerseSimilarityFrom
                 }
                 double score = wordSimilarity(focusWords, words(concatenated.toString(), settings));
                 best = betterMatch(best, new VerseMatchBest(start, score));

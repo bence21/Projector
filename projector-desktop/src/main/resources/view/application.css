@@ -99,7 +99,8 @@
 
 #bookListView .list-cell:filled:focused,
 #partListView .list-cell:filled:focused,
-#verseListView .list-cell:filled:focused {
+#verseListView .list-cell:filled:focused,
+#songListView .list-cell:filled:focused {
     -fx-border-color: #b1b1b1;
     -fx-border-width: 1;
     -fx-border-radius: 2, 2, 2, 2;
