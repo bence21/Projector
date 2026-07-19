@@ -164,8 +164,17 @@ public final class SongCompareEngine {
         if (focusWords.isEmpty()) {
             return -1;
         }
-        double bestScore = -1.0;
-        int bestIndex = -1;
+        VerseMatchBest best = bestSingleVerseSimilarity(focusWords, verses, excludeIndex, settings);
+        best = betterMatch(best, bestConcatenatedSpanSimilarity(focusWords, verses, excludeIndex, settings));
+        if (best.index < 0 || best.score < WORD_SIMILARITY_THRESHOLD) {
+            return -1;
+        }
+        return best.index;
+    }
+
+    private static VerseMatchBest bestSingleVerseSimilarity(List<String> focusWords, List<SongVerse> verses,
+                                                            int excludeIndex, CompareSongsSettings settings) {
+        VerseMatchBest best = VerseMatchBest.none();
         for (int i = 0; i < verses.size(); i++) {
             if (i == excludeIndex) {
                 continue;
@@ -175,12 +184,14 @@ public final class SongCompareEngine {
                 continue;
             }
             double score = wordSimilarity(focusWords, words(verse.getText(), settings));
-            if (score > bestScore) {
-                bestScore = score;
-                bestIndex = i;
-            }
+            best = betterMatch(best, new VerseMatchBest(i, score));
         }
-        // Across split boundaries: compare focus text to concatenations of consecutive verses.
+        return best;
+    }
+
+    private static VerseMatchBest bestConcatenatedSpanSimilarity(List<String> focusWords, List<SongVerse> verses,
+                                                                 int excludeIndex, CompareSongsSettings settings) {
+        VerseMatchBest best = VerseMatchBest.none();
         for (int start = 0; start < verses.size(); start++) {
             if (start == excludeIndex) {
                 continue;
@@ -199,19 +210,37 @@ public final class SongCompareEngine {
                 }
                 concatenated.append(verse.getText());
                 if (end == start) {
-                    continue; // single verse already scored above
+                    continue; // single verse handled by bestSingleVerseSimilarity
                 }
                 double score = wordSimilarity(focusWords, words(concatenated.toString(), settings));
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestIndex = start;
-                }
+                best = betterMatch(best, new VerseMatchBest(start, score));
             }
         }
-        if (bestIndex < 0 || bestScore < WORD_SIMILARITY_THRESHOLD) {
-            return -1;
+        return best;
+    }
+
+    private static VerseMatchBest betterMatch(VerseMatchBest current, VerseMatchBest candidate) {
+        if (candidate == null || candidate.index < 0) {
+            return current;
         }
-        return bestIndex;
+        if (current == null || current.index < 0 || candidate.score > current.score) {
+            return candidate;
+        }
+        return current;
+    }
+
+    private static final class VerseMatchBest {
+        private final int index;
+        private final double score;
+
+        private VerseMatchBest(int index, double score) {
+            this.index = index;
+            this.score = score;
+        }
+
+        private static VerseMatchBest none() {
+            return new VerseMatchBest(-1, -1.0);
+        }
     }
 
     public static boolean textsEqual(String leftText, String rightText, CompareSongsSettings settings) {
