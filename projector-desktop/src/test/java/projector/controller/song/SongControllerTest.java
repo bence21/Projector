@@ -2,6 +2,7 @@ package projector.controller.song;
 
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
@@ -103,28 +104,20 @@ public class SongControllerTest extends BaseTest {
         interact(newSongButton::fire);
         Pane root = waitForSongEditorRoot();
         TextField titleTextField = find("#titleTextField", root);
-        clickOn(titleTextField).write(test_songTitle);
-        Button newVerseButton = find("#newVerseButton", root);
-        clickOn(newVerseButton);
-        TextArea verseTextArea = waitForSongEditorTextArea(root);
-        clickOn(verseTextArea).write("First verse");
-        ComboBox<Language> languageComboBoxForNewSong = find("#languageComboBoxForNewSong", root);
-        clickOn(languageComboBoxForNewSong).sleep(100);
+        interact(() -> titleTextField.setText(test_songTitle));
+        addFirstVerseInEditor(root);
+        TextArea verseTextArea = waitForVisibleVerseTextArea(root);
+        interact(() -> verseTextArea.setText("First verse"));
         final ComboBox<Language> languageComboBox = find("#languageComboBoxForNewSong", root);
-        Platform.runLater(() -> languageComboBox.getSelectionModel().selectFirst());
-        sleep(100);
-        Button saveButton = find("#saveButton", root);
-        clickOn(saveButton);
-        ListView<SearchedSong> listView = find("#searchedSongListView");
-        boolean was = false;
-        ObservableList<SearchedSong> items = listView.getItems();
-        for (SearchedSong song : items) {
-            if (song.getSong().getTitle().equals(test_songTitle)) {
-                was = true;
-                break;
+        interact(() -> {
+            if (!languageComboBox.getItems().isEmpty()) {
+                languageComboBox.getSelectionModel().selectFirst();
             }
-        }
-        Assert.assertTrue(was);
+        });
+        Button saveButton = find("#saveButton", root);
+        interact(saveButton::fire);
+        waitForSongSearch(test_songTitle, 1);
+        Assert.assertNotNull(findSearchedSong(test_songTitle));
         editSong();
         deleteASong();
     }
@@ -162,6 +155,16 @@ public class SongControllerTest extends BaseTest {
         ListView<SearchedSong> listView = find("#searchedSongListView");
         Assert.fail("Expected " + expectedMatches + " search result(s) for '" + title + "', list size="
                 + listView.getItems().size());
+    }
+
+    private SearchedSong findSearchedSong(String title) {
+        ListView<SearchedSong> listView = find("#searchedSongListView");
+        for (SearchedSong item : listView.getItems()) {
+            if (item.getSong().getTitle().equals(title)) {
+                return item;
+            }
+        }
+        return null;
     }
 
     private void waitForAuthorField() {
@@ -236,37 +239,27 @@ public class SongControllerTest extends BaseTest {
         Assert.assertTrue(activeTextLength > songVerseTextLength2);
     }
 
-    //	@Test
     private void editSong() {
         clearAndSearch();
-        final ListView<SearchedSong> searchedSongListView = find("#searchedSongListView");
-        Platform.runLater(() -> {
-            for (SearchedSong item : searchedSongListView.getItems()) {
-                if (item.getSong().getTitle().equals(test_songTitle)) {
-                    searchedSongListView.getSelectionModel().select(item);
-                    break;
-                }
+        SearchedSong songToEdit = findSearchedSong(test_songTitle);
+        Assert.assertNotNull("Created song not found for edit", songToEdit);
+        NewSongController.resetGlobalRootForTesting();
+        SongController songController = MyController.getInstance().getSongController();
+        interact(() -> {
+            try {
+                songController.openSongEditor(songToEdit);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         });
-        sleep(200);
-        rightClickOn("#searchedSongListView");
-        sleep(100);
-        NewSongController.resetGlobalRootForTesting();
-        clickOn("Edit");
         Pane root = waitForSongEditorRoot();
         final String edited_text = "Edited text";
-        TextArea verseTextArea = waitForSongEditorTextArea(root);
-        clickOn(verseTextArea).write(edited_text);
-        Button saveButton = find("#saveButton", root);
-        clickOn(saveButton);
-        ListView<SearchedSong> listView = find("#searchedSongListView");
-        SearchedSong editedSong = null;
-        for (SearchedSong song : listView.getItems()) {
-            if (song.getSong().getTitle().equals(test_songTitle)) {
-                editedSong = song;
-                break;
-            }
-        }
+        TextArea verseTextArea = waitForVisibleVerseTextArea(root);
+        interact(() -> verseTextArea.appendText(edited_text));
+        Button saveButton = waitForVisibleSaveButton(root);
+        interact(saveButton::fire);
+        waitForSongSearch(test_songTitle, 1);
+        SearchedSong editedSong = findSearchedSong(test_songTitle);
         Assert.assertNotNull(editedSong);
         Assert.assertTrue(editedSong.getSong().getVerses().get(0).getText().contains(edited_text));
     }
@@ -286,38 +279,69 @@ public class SongControllerTest extends BaseTest {
         return null;
     }
 
-    private TextArea waitForSongEditorTextArea(Pane root) {
-        int count = 0;
-        do {
-            try {
-                return find("#textArea", root);
-            } catch (Exception e) {
-                ++count;
-                sleep(100);
+    private void addFirstVerseInEditor(Pane root) {
+        Button newVerseButton = find("#newVerseButton", root);
+        for (int attempt = 0; attempt < 50; attempt++) {
+            if (findVisibleVerseTextArea(root) != null) {
+                return;
             }
-        } while (count < 100);
-        Assert.fail("Song editor textArea not found");
+            interact(newVerseButton::fire);
+            sleep(100);
+        }
+        Assert.fail("Could not add a verse in the song editor");
+    }
+
+    private TextArea waitForVisibleVerseTextArea(Pane root) {
+        for (int attempt = 0; attempt < 100; attempt++) {
+            TextArea textArea = findVisibleVerseTextArea(root);
+            if (textArea != null) {
+                return textArea;
+            }
+            sleep(100);
+        }
+        Assert.fail("Visible verse editor textArea not found");
         return null;
     }
 
-    //	@Test
-    private void deleteASong() {
-        clearAndSearch();
-        final ListView<SearchedSong> searchedSongListView = find("#searchedSongListView");
-        Platform.runLater(() -> {
-            for (SearchedSong item : searchedSongListView.getItems()) {
-                if (item.getSong().getTitle().equals(test_songTitle)) {
-                    searchedSongListView.getSelectionModel().select(item);
-                    break;
+    private TextArea findVisibleVerseTextArea(Pane root) {
+        try {
+            Pane textAreas = find("#textAreas", root);
+            for (Node child : textAreas.getChildren()) {
+                Node verseTextArea = child.lookup("#textArea");
+                if (verseTextArea instanceof TextArea textArea && textArea.isVisible()) {
+                    return textArea;
                 }
             }
-        });
-        sleep(200);
-        rightClickOn("#searchedSongListView");
-        sleep(100);
-        clickOn("Delete");
-        sleep(100);
-        clickOn("#confirmButton").sleep(50);
+        } catch (Exception ignored) {
+            // Editor UI still loading
+        }
+        return null;
+    }
+
+    private Button waitForVisibleSaveButton(Pane root) {
+        int count = 0;
+        do {
+            try {
+                Button saveButton = find("#saveButton", root);
+                if (saveButton.isVisible() && saveButton.isManaged() && !saveButton.isDisabled()) {
+                    return saveButton;
+                }
+            } catch (Exception ignored) {
+                // Save button still hidden until editor reports changes
+            }
+            ++count;
+            sleep(100);
+        } while (count < 100);
+        Assert.fail("Visible save button not found after editing");
+        return null;
+    }
+
+    private void deleteASong() {
+        clearAndSearch();
+        SearchedSong songToDelete = findSearchedSong(test_songTitle);
+        Assert.assertNotNull("Edited song not found for delete", songToDelete);
+        SongController songController = MyController.getInstance().getSongController();
+        interact(() -> songController.deleteSong(songToDelete));
         searchForTitle(test_songTitle, 0);
     }
 }

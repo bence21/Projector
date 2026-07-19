@@ -3381,7 +3381,7 @@ public class SongController {
         return songListView;
     }
 
-    private void deleteSong(SearchedSong selectedSong) {
+    void deleteSong(SearchedSong selectedSong) {
         if (selectedSong == null) {
             return;
         }
@@ -3436,6 +3436,7 @@ public class SongController {
             NewSongController newSongController = loader.getController();
             newSongController.setSongController(songController);
             newSongController.setRoot(root); // only for testing
+            newSongController.setNewSong();
             Stage stage = getCustomStage3(getClass(), root);
             stage.setTitle(Settings.getInstance().getResourceBundle().getString("Song Edit"));
             stage.show();
@@ -3471,7 +3472,6 @@ public class SongController {
             previewProjectionScreenController.setStage(stage2);
 
             stage.setOnCloseRequest(we -> stage2.close());
-            newSongController.setNewSong();
             newSongController.setStage(stage, stage2);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
