@@ -345,13 +345,19 @@
                                         </right>
                                         <bottom>
                                             <VBox spacing="2.0">
-                                                <Label fx:id="versionStatusLabel" managed="false"
-                                                       styleClass="song-version-status-label" visible="false"
-                                                       wrapText="true">
+                                                <Button fx:id="swapSongVersionButton" managed="false"
+                                                        mnemonicParsing="false"
+                                                        styleClass="song-version-swap-button" visible="false">
+                                                    <tooltip>
+                                                        <Tooltip text="%Swap song version tooltip"/>
+                                                    </tooltip>
+                                                    <padding>
+                                                        <Insets bottom="4.0" left="8.0" right="8.0" top="4.0"/>
+                                                    </padding>
                                                     <VBox.margin>
                                                         <Insets left="10.0" top="2.0"/>
                                                     </VBox.margin>
-                                                </Label>
+                                                </Button>
                                                 <Label fx:id="versionsDifferHintLabel" managed="false"
                                                        styleClass="song-versions-differ-hint-label" visible="false"
                                                        wrapText="true">

@@ -501,21 +501,12 @@
     -fx-underline: true;
 }
 
-.song-version-status-label {
-    -fx-text-fill: derive(-primaryTextColor, 25%);
-    -fx-font-size: 11px;
-    -fx-wrap-text: true;
+.song-version-swap-button {
+    -fx-font-size: 12px;
 }
 
-.song-version-status-label-clickable {
-    -fx-underline: true;
-    -fx-cursor: hand;
-}
-
-.song-version-status-label:disabled {
-    -fx-opacity: 0.55;
-    -fx-underline: false;
-    -fx-cursor: default;
+.song-version-swap-icon {
+    -fx-font-size: 13px;
 }
 
 .song-versions-differ-hint-label {

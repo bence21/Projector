@@ -14,7 +14,6 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Orientation;
-import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -22,6 +21,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -242,7 +242,7 @@ public class SongController {
     @FXML
     private Button compareWithOriginalButton;
     @FXML
-    private Label versionStatusLabel;
+    private Button swapSongVersionButton;
     @FXML
     private Label versionsDifferHintLabel;
     @FXML
@@ -559,7 +559,7 @@ public class SongController {
             }
 
             updateShowVersionsButton(selectedSong);
-            updateVersionStatusLabel(selectedSong);
+            updateSwapSongVersionButton(selectedSong);
             updateCompareButtonVisibility(selectedSong);
 
             Scene scene = projectionScreenController.getScene();
@@ -1472,46 +1472,26 @@ public class SongController {
         iconBox.getChildren().add(imageView);
     }
 
-    private void updateVersionStatusLabel(Song song) {
-        if (versionStatusLabel == null) {
+    private void updateSwapSongVersionButton(Song song) {
+        if (swapSongVersionButton == null) {
             return;
         }
         ResourceBundle resourceBundle = settings.getResourceBundle();
-        if (song != null && song.isFork()) {
-            versionStatusLabel.setText(resourceBundle.getString("Showing local edit"));
-            setVisibleAndManaged(versionStatusLabel, true);
-            updateVersionStatusSwapAffordances(song);
-        } else if (song != null && song.hasLocalFork()) {
-            versionStatusLabel.setText(resourceBundle.getString("Showing original local edit available"));
-            setVisibleAndManaged(versionStatusLabel, true);
-            updateVersionStatusSwapAffordances(song);
-        } else {
-            setVisibleAndManaged(versionStatusLabel, false);
-            versionStatusLabel.setDisable(true);
-            versionStatusLabel.setCursor(Cursor.DEFAULT);
-            versionStatusLabel.getStyleClass().remove("song-version-status-label-clickable");
-            versionStatusLabel.setTooltip(null);
+        Song counterpart = song == null ? null : resolveCounterpartForSwap(song);
+        if (counterpart == null) {
+            setVisibleAndManaged(swapSongVersionButton, false);
             clearVersionsDifferHint();
+            updateVersionsDifferHintVisibility();
+            return;
         }
-        updateVersionsDifferHintVisibility();
-    }
-
-    private void updateVersionStatusSwapAffordances(Song song) {
-        ResourceBundle resourceBundle = settings.getResourceBundle();
-        Song counterpart = resolveCounterpartForSwap(song);
-        boolean canSwap = counterpart != null;
-        versionStatusLabel.setDisable(!canSwap);
-        versionStatusLabel.getStyleClass().remove("song-version-status-label-clickable");
-        if (canSwap) {
-            if (!versionStatusLabel.getStyleClass().contains("song-version-status-label-clickable")) {
-                versionStatusLabel.getStyleClass().add("song-version-status-label-clickable");
-            }
-            versionStatusLabel.setCursor(Cursor.HAND);
-            versionStatusLabel.setTooltip(new Tooltip(resourceBundle.getString("Swap song version tooltip")));
+        if (song.isFork()) {
+            swapSongVersionButton.setText(resourceBundle.getString("Show original"));
         } else {
-            versionStatusLabel.setCursor(Cursor.DEFAULT);
-            versionStatusLabel.setTooltip(new Tooltip(resourceBundle.getString("Download songs for version swap tooltip")));
+            swapSongVersionButton.setText(resourceBundle.getString("Show local edit"));
         }
+        swapSongVersionButton.setTooltip(new Tooltip(resourceBundle.getString("Swap song version tooltip")));
+        setVisibleAndManaged(swapSongVersionButton, true);
+        updateVersionsDifferHintVisibility();
     }
 
     private void updateVersionsDifferHintVisibility() {
@@ -1519,7 +1499,7 @@ public class SongController {
             return;
         }
         ResourceBundle resourceBundle = settings.getResourceBundle();
-        if (showVersionsDifferHint && versionStatusLabel != null && versionStatusLabel.isVisible()) {
+        if (showVersionsDifferHint && swapSongVersionButton != null && swapSongVersionButton.isVisible()) {
             versionsDifferHintLabel.setText(resourceBundle.getString("Song versions differ a lot"));
             setVisibleAndManaged(versionsDifferHintLabel, true);
         } else {
@@ -1557,15 +1537,16 @@ public class SongController {
     }
 
     private void initializeVersionStatusSwapControl() {
-        if (versionStatusLabel == null) {
+        if (swapSongVersionButton == null) {
             return;
         }
-        versionStatusLabel.setOnMouseClicked(event -> {
-            if (event.getButton() != MouseButton.PRIMARY || versionStatusLabel.isDisabled()) {
-                return;
-            }
-            swapToCounterpartVersion();
-        });
+        Text swapIcon = new Text("\u21C4");
+        swapIcon.getStyleClass().add("song-version-swap-icon");
+        swapSongVersionButton.setGraphic(swapIcon);
+        swapSongVersionButton.setContentDisplay(ContentDisplay.LEFT);
+        swapSongVersionButton.setGraphicTextGap(6.0);
+        swapSongVersionButton.setOnAction(event -> swapToCounterpartVersion());
+        setVisibleAndManaged(swapSongVersionButton, false);
         if (versionsDifferHintLabel != null) {
             setVisibleAndManaged(versionsDifferHintLabel, false);
         }
