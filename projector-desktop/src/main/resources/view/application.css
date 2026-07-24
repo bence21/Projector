@@ -99,7 +99,8 @@
 
 #bookListView .list-cell:filled:focused,
 #partListView .list-cell:filled:focused,
-#verseListView .list-cell:filled:focused {
+#verseListView .list-cell:filled:focused,
+#songListView .list-cell:filled:focused {
     -fx-border-color: #b1b1b1;
     -fx-border-width: 1;
     -fx-border-radius: 2, 2, 2, 2;
@@ -471,9 +472,26 @@
     -fx-underline: true;
 }
 
-.song-version-status-label {
-    -fx-text-fill: derive(-fx-text-base-color, 30%);
+.song-version-swap-button {
+    -fx-font-size: 12px;
+    -fx-wrap-text: true;
+    -fx-padding: 4 8 4 8;
+}
+
+.song-version-actions-group {
+    -fx-spacing: 4;
+    -fx-alignment: center;
+    -fx-padding: 0 0 0 4;
+}
+
+.song-version-swap-icon {
+    -fx-font-size: 13px;
+}
+
+.song-versions-differ-hint-label {
+    -fx-text-fill: derive(-fx-text-base-color, 15%);
     -fx-font-size: 11px;
+    -fx-font-style: italic;
     -fx-wrap-text: true;
 }
 

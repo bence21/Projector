@@ -306,24 +306,48 @@
                                                 </ToggleButton>
                                                 <CheckBox fx:id="aspectRatioCheckBox" text="%Aspect ratio"
                                                           BorderPane.alignment="CENTER"/>
-                                                <Button fx:id="compareWithOriginalButton" contentDisplay="CENTER"
-                                                        graphicTextGap="0.0"
-                                                        managed="false" maxHeight="-Infinity" maxWidth="-Infinity"
-                                                        mnemonicParsing="false" prefHeight="32.0" prefWidth="32.0"
-                                                        textAlignment="CENTER" visible="false">
-                                                    <graphic>
-                                                        <ImageView fitHeight="24.0" fitWidth="24.0" pickOnBounds="true"
-                                                                   preserveRatio="true">
-                                                            <Image url="@../../icons/compare.png"/>
-                                                        </ImageView>
-                                                    </graphic>
-                                                    <tooltip>
-                                                        <Tooltip text="%Compare with original"/>
-                                                    </tooltip>
-                                                    <padding>
-                                                        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
-                                                    </padding>
-                                                </Button>
+                                                <VBox fx:id="versionActionsVBox" alignment="CENTER" managed="false"
+                                                      spacing="0.0" visible="false">
+                                                    <HBox fx:id="versionActionsBox" alignment="CENTER" spacing="4.0"
+                                                          styleClass="song-version-actions-group">
+                                                        <Button fx:id="swapSongVersionButton" managed="false"
+                                                                maxHeight="32.0" maxWidth="220.0"
+                                                                mnemonicParsing="false" prefHeight="32.0"
+                                                                styleClass="song-version-swap-button" visible="false"
+                                                                wrapText="true">
+                                                            <tooltip>
+                                                                <Tooltip text="%Swap song version tooltip"/>
+                                                            </tooltip>
+                                                        </Button>
+                                                        <Button fx:id="compareWithOriginalButton" contentDisplay="CENTER"
+                                                                graphicTextGap="0.0"
+                                                                managed="false" maxHeight="-Infinity"
+                                                                maxWidth="-Infinity" mnemonicParsing="false"
+                                                                prefHeight="32.0" prefWidth="32.0"
+                                                                textAlignment="CENTER" visible="false">
+                                                            <graphic>
+                                                                <ImageView fitHeight="24.0" fitWidth="24.0"
+                                                                           pickOnBounds="true" preserveRatio="true">
+                                                                    <Image url="@../../icons/compare.png"/>
+                                                                </ImageView>
+                                                            </graphic>
+                                                            <tooltip>
+                                                                <Tooltip text="%Compare with original"/>
+                                                            </tooltip>
+                                                            <padding>
+                                                                <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                                                            </padding>
+                                                        </Button>
+                                                    </HBox>
+                                                    <Label fx:id="versionsDifferHintLabel" managed="false"
+                                                           maxWidth="240.0"
+                                                           styleClass="song-versions-differ-hint-label" visible="false"
+                                                           wrapText="true">
+                                                        <VBox.margin>
+                                                            <Insets top="1.0"/>
+                                                        </VBox.margin>
+                                                    </Label>
+                                                </VBox>
                                                 <Button fx:id="starButton" contentDisplay="CENTER" graphicTextGap="0.0"
                                                         layoutX="815.0" layoutY="163.0" maxHeight="-Infinity"
                                                         maxWidth="-Infinity" mnemonicParsing="false" prefHeight="20.0"
@@ -345,13 +369,6 @@
                                         </right>
                                         <bottom>
                                             <VBox spacing="2.0">
-                                                <Label fx:id="versionStatusLabel" managed="false"
-                                                       styleClass="song-version-status-label" visible="false"
-                                                       wrapText="true">
-                                                    <VBox.margin>
-                                                        <Insets left="10.0" top="2.0"/>
-                                                    </VBox.margin>
-                                                </Label>
                                                 <HBox fx:id="authorBox" alignment="CENTER_LEFT" spacing="4.0">
                                                     <Label text="Author"/>
                                                     <TextField fx:id="authorTextField" editable="false"
