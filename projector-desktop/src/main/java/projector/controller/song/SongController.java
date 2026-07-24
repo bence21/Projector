@@ -50,6 +50,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -243,6 +244,10 @@ public class SongController {
     private Button compareWithOriginalButton;
     @FXML
     private Button swapSongVersionButton;
+    @FXML
+    private VBox versionActionsVBox;
+    @FXML
+    private HBox versionActionsBox;
     @FXML
     private Label versionsDifferHintLabel;
     @FXML
@@ -1482,6 +1487,7 @@ public class SongController {
             setVisibleAndManaged(swapSongVersionButton, false);
             clearVersionsDifferHint();
             updateVersionsDifferHintVisibility();
+            updateVersionActionsGroupVisibility();
             return;
         }
         if (song.isFork()) {
@@ -1492,6 +1498,16 @@ public class SongController {
         swapSongVersionButton.setTooltip(new Tooltip(resourceBundle.getString("Swap song version tooltip")));
         setVisibleAndManaged(swapSongVersionButton, true);
         updateVersionsDifferHintVisibility();
+        updateVersionActionsGroupVisibility();
+    }
+
+    private void updateVersionActionsGroupVisibility() {
+        if (versionActionsVBox == null) {
+            return;
+        }
+        boolean showSwap = swapSongVersionButton != null && swapSongVersionButton.isVisible();
+        boolean showCompare = compareWithOriginalButton != null && compareWithOriginalButton.isVisible();
+        setVisibleAndManaged(versionActionsVBox, showSwap || showCompare);
     }
 
     private void updateVersionsDifferHintVisibility() {
@@ -1518,6 +1534,7 @@ public class SongController {
         }
         boolean show = song.isFork() || song.hasLocalFork();
         setVisibleAndManaged(compareWithOriginalButton, show);
+        updateVersionActionsGroupVisibility();
     }
 
     private void initializeCompareWithOriginalButton() {
@@ -1534,6 +1551,9 @@ public class SongController {
             }
         });
         setVisibleAndManaged(compareWithOriginalButton, false);
+        if (versionActionsVBox != null) {
+            setVisibleAndManaged(versionActionsVBox, false);
+        }
     }
 
     private void initializeVersionStatusSwapControl() {
@@ -1549,6 +1569,9 @@ public class SongController {
         setVisibleAndManaged(swapSongVersionButton, false);
         if (versionsDifferHintLabel != null) {
             setVisibleAndManaged(versionsDifferHintLabel, false);
+        }
+        if (versionActionsVBox != null) {
+            setVisibleAndManaged(versionActionsVBox, false);
         }
     }
 

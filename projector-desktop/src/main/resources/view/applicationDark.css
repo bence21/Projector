@@ -503,6 +503,16 @@
 
 .song-version-swap-button {
     -fx-font-size: 12px;
+    -fx-wrap-text: true;
+}
+
+.song-version-actions-group {
+    -fx-background-color: derive(-generalBackgroundColor, 8%);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 2 4 2 4;
 }
 
 .song-version-swap-icon {
