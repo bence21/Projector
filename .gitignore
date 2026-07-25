@@ -42,6 +42,8 @@ Projector-server/src/main/java/com/bence/projector/server/Import.java
 !projector-web/src/tsconfig.app.json
 !projector-web/src/tsconfig.spec.json
 !.vscode/tasks.json
+!projector-desktop/.vscode/tasks.json
+!projector-desktop/deploy.config.example.json
 /Songbook/*.pem
 /Songbook/*.jks
 /Projector-server/src/main/resources/static/.well-known/acme-challenge/
@@ -57,3 +59,4 @@ mysql/
 Projector-server/src/main/resources/application-local.properties
 Projector-server/scripts/set-mysql-port.local.ps1
 projector-desktop/src/main/resources/credentials-local.properties
+projector-desktop/deploy.config.json

@@ -13,7 +13,11 @@
       },
       "group": {
         "kind": "build",
-        "isDefault": false
+        "isDefault": true
+      },
+      "icon": {
+        "id": "rocket",
+        "color": "terminal.ansiYellow"
       },
       "presentation": {
         "reveal": "always",

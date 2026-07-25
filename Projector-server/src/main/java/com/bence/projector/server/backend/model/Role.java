@@ -6,7 +6,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public enum Role {
     ROLE_USER(0),
     ROLE_ADMIN(1),
-    ROLE_REVIEWER(2);
+    ROLE_REVIEWER(2),
+    ROLE_DEPLOYER(3);
     private static ConcurrentHashMap<Integer, Role> roleMap;
     private final int value;
 

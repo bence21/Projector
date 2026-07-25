@@ -3,15 +3,20 @@ package com.bence.projector.server.api.resources;
 import com.bence.projector.common.dto.ProjectorVersionDTO;
 import com.bence.projector.server.api.assembler.ProjectorVersionAssembler;
 import com.bence.projector.server.backend.model.ProjectorVersion;
+import com.bence.projector.server.backend.repository.ProjectorVersionRepository;
 import com.bence.projector.server.backend.service.ProjectorVersionService;
 import com.bence.projector.server.backend.service.StatisticsService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 import java.util.List;
 
 import static com.bence.projector.server.api.resources.StatisticsResource.saveStatistics;
@@ -19,12 +24,16 @@ import static com.bence.projector.server.api.resources.StatisticsResource.saveSt
 @RestController
 public class ProjectorVersionResource {
 
+    private static final String DEFAULT_DESCRIPTION = "Performance improvements and bug fixes.";
+
     @Autowired
     private ProjectorVersionService projectorVersionService;
     @Autowired
     private ProjectorVersionAssembler projectorVersionAssembler;
     @Autowired
     private StatisticsService statisticsService;
+    @Autowired
+    private ProjectorVersionRepository projectorVersionRepository;
 
     private List<ProjectorVersionDTO> findAllAfterDate_(HttpServletRequest httpServletRequest, List<ProjectorVersion> projectorVersions) {
         saveStatistics(httpServletRequest, statisticsService);
@@ -53,5 +62,30 @@ public class ProjectorVersionResource {
     @RequestMapping(method = RequestMethod.GET, value = "/api/projectorVersionsAfterNr/v5/{nr}")
     public List<ProjectorVersionDTO> findAllAfterDate_v5(HttpServletRequest httpServletRequest, @PathVariable("nr") int nr) {
         return findAllAfterDate_(httpServletRequest, projectorVersionService.findAllAfterCreatedNr(nr));
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/deployer/api/projectorVersion")
+    public ResponseEntity<?> createProjectorVersion(@RequestBody ProjectorVersionDTO projectorVersionDTO) {
+        if (projectorVersionDTO.getVersion() == null || projectorVersionDTO.getVersion().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("version is required");
+        }
+        if (projectorVersionDTO.getVersionId() <= 0) {
+            return ResponseEntity.badRequest().body("versionId must be positive");
+        }
+        if (projectorVersionRepository.existsByVersionId(projectorVersionDTO.getVersionId())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("A projector version with versionId " + projectorVersionDTO.getVersionId() + " already exists");
+        }
+
+        ProjectorVersion projectorVersion = projectorVersionAssembler.createModel(projectorVersionDTO);
+        if (projectorVersion.getCreatedDate() == null) {
+            projectorVersion.setCreatedDate(new Date());
+        }
+        if (projectorVersion.getDescription() == null || projectorVersion.getDescription().trim().isEmpty()) {
+            projectorVersion.setDescription(DEFAULT_DESCRIPTION);
+        }
+
+        ProjectorVersion saved = projectorVersionService.save(projectorVersion);
+        return new ResponseEntity<>(projectorVersionAssembler.createDto(saved), HttpStatus.CREATED);
     }
 }
