@@ -3,7 +3,10 @@ import {SectionType, Song, SongService, SongVerseDTO, SongVerseUI} from '../../s
 import {FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
 import {Router} from '@angular/router';
 import {LanguageDataService} from "../../services/language-data.service";
-import {selectLanguageFromList} from "../../util/language-dialog.util";
+import {
+  openNewLanguageDialog as presentNewLanguageDialog,
+  selectLanguageFromList
+} from "../../util/language-dialog.util";
 import {MatDialog, MatIconRegistry, MatSnackBar} from "@angular/material";
 import {DomSanitizer, SafeResourceUrl} from "@angular/platform-browser";
 import {replace, SubmitOrPublish, valueRefactorable} from "../new-song/new-song.component";
