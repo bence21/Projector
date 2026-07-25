@@ -156,7 +156,7 @@ public class DownloadLanguagesController {
                     continue;
                 }
                 softDeletedUuids.add(uuid);
-                deleteLocalSoftDeletedLanguageIfEmpty(languageService, uuid);
+                syncLocalSoftDeletedLanguage(languageService, uuid);
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -164,7 +164,7 @@ public class DownloadLanguagesController {
         return softDeletedUuids;
     }
 
-    private void deleteLocalSoftDeletedLanguageIfEmpty(LanguageService languageService, String uuid) {
+    private void syncLocalSoftDeletedLanguage(LanguageService languageService, String uuid) {
         Language byUuid = languageService.findByUuid(uuid);
         if (byUuid == null) {
             return;
