@@ -1302,8 +1302,7 @@ public class SongController {
             }
         });
         Settings settings = Settings.getInstance();
-        SplitPane.setResizableWithParent(leftBorderPane, false);
-        horizontalSplitPane.getDividers().get(0).setPosition(settings.getSongTabHorizontalSplitPaneDividerPosition());
+        horizontalSplitPane.setDividerPositions(settings.getSongTabHorizontalSplitPaneDividerPosition());
         verticalSplitPane.setDividerPositions(settings.getSongTabVerticalSplitPaneDividerPosition());
         songHeightSlider.setValue(settings.getSongHeightSliderValue());
         songHeightSlider.valueProperty().addListener((observable, oldValue, newValue) -> {

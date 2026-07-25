@@ -15,7 +15,6 @@
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -140,8 +139,7 @@
                         <bottom>
                             <BorderPane prefWidth="300.0" BorderPane.alignment="CENTER">
                                 <top>
-                                    <FlowPane alignment="CENTER_LEFT" hgap="7.0"
-                                              vgap="4.0" BorderPane.alignment="CENTER">
+                                    <HBox alignment="CENTER_LEFT" spacing="7.0" BorderPane.alignment="CENTER">
                                         <CheckBox fx:id="searchInTextCheckBox" mnemonicParsing="false"
                                                   text="%Search in text">
                                             <padding>
@@ -186,7 +184,7 @@
                                                 <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
                                             </padding>
                                         </Button>
-                                    </FlowPane>
+                                    </HBox>
                                 </top>
                                 <left>
                                     <Label text="%Search" BorderPane.alignment="CENTER"/>
