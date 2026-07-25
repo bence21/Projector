@@ -21,7 +21,9 @@ import com.bence.songbook.R;
 import com.bence.songbook.api.LanguageApiBean;
 import com.bence.songbook.models.Language;
 import com.bence.songbook.repository.LanguageRepository;
+import com.bence.songbook.repository.SongRepository;
 import com.bence.songbook.repository.impl.ormLite.LanguageRepositoryImpl;
+import com.bence.songbook.repository.impl.ormLite.SongRepositoryImpl;
 import com.bence.songbook.ui.adapter.LanguageAdapter;
 import com.bence.songbook.utils.LanguageUtils;
 
@@ -107,6 +109,13 @@ public class LanguagesActivity extends BaseActivity {
             if (onlineLanguages != null) {
                 List<Language> newLanguages = LanguageUtils.findNewLanguages(languages, onlineLanguages, true);
                 languages.addAll(newLanguages);
+            }
+            List<Language> deletedLanguages = languageApi.getDeletedLanguages();
+            if (deletedLanguages != null) {
+                LanguageRepository languageRepository = new LanguageRepositoryImpl(getApplicationContext());
+                SongRepository songRepository = new SongRepositoryImpl(getApplicationContext());
+                LanguageUtils.applySoftDeletedDownloadPolicy(
+                        languages, deletedLanguages, languageRepository, songRepository);
             }
             return null;
         }
