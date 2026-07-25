@@ -38,7 +38,7 @@ echo "Directory and subdirectory created, file copied successfully."
 
 endlocal
 
-powershell Compress-Archive -Path "C:\workspace\Projector\Projector\Projector-server\aPublic_folder\update\*" -DestinationPath "%~dp0projectorUpdate102.zip" -Force
+powershell Compress-Archive -Path "C:\workspace\Projector\Projector\Projector-server\aPublic_folder\update\*" -DestinationPath "%~dp0projectorUpdate103.zip" -Force
 
 echo "Update tried to create!"
 
