@@ -41,6 +41,7 @@ Projector-server/src/main/java/com/bence/projector/server/Import.java
 !projector-web/tslint.json
 !projector-web/src/tsconfig.app.json
 !projector-web/src/tsconfig.spec.json
+!.vscode/tasks.json
 /Songbook/*.pem
 /Songbook/*.jks
 /Projector-server/src/main/resources/static/.well-known/acme-challenge/
