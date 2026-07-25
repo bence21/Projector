@@ -14,9 +14,9 @@ import projector.repository.RepositoryException;
 import projector.repository.SongDAO;
 import projector.repository.ormLite.DatabaseHelper;
 import projector.service.FavouriteSongService;
+import projector.service.ForkMirrorMigrationResult;
 import projector.service.ServiceException;
 import projector.service.ServiceManager;
-import projector.service.ForkMirrorMigrationResult;
 import projector.service.SongService;
 import projector.service.SongVerseService;
 import projector.utils.ForkMirrorMigrationState;
@@ -347,10 +347,11 @@ public class SongServiceImpl extends AbstractBaseService<Song> implements SongSe
         if (song.isFork()) {
             return song;
         }
-        if (forkIndexBuilt) {
-            return song.getLocalFork();
+        Song fork = song.getLocalFork();
+        if (fork == null) {
+            fork = findForkByOriginalUuid(song.getServerSourceUuid());
         }
-        return findForkByOriginalUuid(song.getServerSourceUuid());
+        return fork;
     }
 
     @Override
@@ -359,7 +360,7 @@ public class SongServiceImpl extends AbstractBaseService<Song> implements SongSe
             return false;
         }
         song = getFromMemoryOrSong(song);
-        return !song.isFork() && song.hasLocalFork();
+        return !song.isFork() && findForkForSong(song) != null;
     }
 
     @Override

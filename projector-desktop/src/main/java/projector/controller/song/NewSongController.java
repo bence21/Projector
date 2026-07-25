@@ -590,6 +590,9 @@ public class NewSongController {
             alert.showAndWait();
             return false;
         }
+        if (songController != null) {
+            songController.refreshAfterSongEdit(newSong);
+        }
         stage.close();
         stage2.close();
         return true;

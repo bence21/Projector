@@ -515,6 +515,7 @@
 
 .song-version-swap-icon {
     -fx-font-size: 13px;
+    -fx-fill: -primaryTextColor;
 }
 
 .song-versions-differ-hint-label {
@@ -533,6 +534,6 @@
     -fx-effect: dropshadow(gaussian, rgba(249, 187, 95, 0.55), 4, 0.4, 0, 0);
 }
 
-.song-badge-local-fork {
+.song-badge-online-version {
     -fx-effect: dropshadow(gaussian, rgba(66, 165, 245, 0.55), 4, 0.4, 0, 0);
 }

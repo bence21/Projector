@@ -307,7 +307,7 @@
                                                 <CheckBox fx:id="aspectRatioCheckBox" text="%Aspect ratio"
                                                           BorderPane.alignment="CENTER"/>
                                                 <VBox fx:id="versionActionsVBox" alignment="CENTER" managed="false"
-                                                      spacing="0.0" visible="false">
+                                                      visible="false">
                                                     <HBox fx:id="versionActionsBox" alignment="CENTER" spacing="4.0"
                                                           styleClass="song-version-actions-group">
                                                         <Button fx:id="swapSongVersionButton" managed="false"
@@ -318,8 +318,12 @@
                                                             <tooltip>
                                                                 <Tooltip text="%Swap song version tooltip"/>
                                                             </tooltip>
+                                                            <padding>
+                                                                <Insets bottom="4.0" left="6.0" right="6.0" top="4.0"/>
+                                                            </padding>
                                                         </Button>
-                                                        <Button fx:id="compareWithOriginalButton" contentDisplay="CENTER"
+                                                        <Button fx:id="compareWithOriginalButton"
+                                                                contentDisplay="CENTER"
                                                                 graphicTextGap="0.0"
                                                                 managed="false" maxHeight="-Infinity"
                                                                 maxWidth="-Infinity" mnemonicParsing="false"

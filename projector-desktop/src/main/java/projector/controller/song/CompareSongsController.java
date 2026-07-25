@@ -8,11 +8,13 @@ import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import projector.application.Settings;
 import projector.model.Song;
+import projector.utils.SongForkBadgeFactory;
 import projector.utils.compare.CompareSongsSettings;
 import projector.utils.compare.SongCompareEngine;
 import projector.utils.compare.VerseCompareEntry;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.ResourceBundle;
 
 public class CompareSongsController {
@@ -42,8 +44,10 @@ public class CompareSongsController {
 
     private final ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
     private CompareSongsSettings settings;
-    private Song originalSong;
-    private Song changedSong;
+    private Song leftSong;
+    private Song rightSong;
+    private Song mirrorSong;
+    private Song forkSong;
     private Stage stage;
     private boolean syncingScroll;
 
@@ -61,16 +65,26 @@ public class CompareSongsController {
         bindLinkedScrolling();
     }
 
-    public void setSongs(Song originalSong, Song changedSong) {
-        this.originalSong = originalSong;
-        this.changedSong = changedSong;
-        if (originalSong != null) {
-            leftTitleLabel.setText(resourceBundle.getString("Original") + ": " + originalSong.getTitle());
+    public void setSongs(Song displaySong, Song mirror, Song fork) {
+        mirrorSong = mirror;
+        forkSong = fork;
+        if (isSameSong(displaySong, fork)) {
+            leftSong = fork;
+            rightSong = mirror;
+        } else {
+            leftSong = mirror;
+            rightSong = fork;
         }
-        if (changedSong != null) {
-            rightTitleLabel.setText(resourceBundle.getString("Your version") + ": " + changedSong.getTitle());
-        }
+        SongForkBadgeFactory.configureCompareColumnLabel(leftTitleLabel, leftSong);
+        SongForkBadgeFactory.configureCompareColumnLabel(rightTitleLabel, rightSong);
         recalculateDiff();
+    }
+
+    public String buildWindowTitle(Song displaySong) {
+        if (displaySong == null || displaySong.getTitle() == null) {
+            return resourceBundle.getString("Compare with original");
+        }
+        return String.format(resourceBundle.getString("Compare window title"), displaySong.getTitle());
     }
 
     public void setStage(Stage stage) {
@@ -82,6 +96,16 @@ public class CompareSongsController {
         if (stage != null) {
             stage.close();
         }
+    }
+
+    private static boolean isSameSong(Song left, Song right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        if (left.getId() != null && right.getId() != null) {
+            return Objects.equals(left.getId(), right.getId());
+        }
+        return left == right;
     }
 
     private void onSettingsChanged() {
@@ -102,11 +126,11 @@ public class CompareSongsController {
     }
 
     private void recalculateDiff() {
-        if (originalSong == null || changedSong == null) {
+        if (leftSong == null || rightSong == null) {
             return;
         }
-        String leftText = originalSong.getVersesText();
-        String rightText = changedSong.getVersesText();
+        String leftText = leftSong.getVersesText();
+        String rightText = rightSong.getVersesText();
         SongCompareEngine.renderDiff(leftTextFlow, leftText, rightText, settings);
         SongCompareEngine.renderDiff(rightTextFlow, rightText, leftText, settings);
         leftScrollPane.setVvalue(0);
@@ -115,10 +139,10 @@ public class CompareSongsController {
     }
 
     private void updateSummaryLabel() {
-        List<VerseCompareEntry> verseEntries = SongCompareEngine.buildVerseEntries(originalSong, changedSong, settings);
+        List<VerseCompareEntry> verseEntries = SongCompareEngine.buildVerseEntries(mirrorSong, forkSong, settings);
         int contentDiffs = SongCompareEngine.countContentDifferences(verseEntries);
         int orderDiffs = SongCompareEngine.countOrderOnlyDifferences(verseEntries);
-        boolean orderOnlySong = SongCompareEngine.isSectionOrderOnlyDifference(originalSong, changedSong, verseEntries);
+        boolean orderOnlySong = SongCompareEngine.isSectionOrderOnlyDifference(mirrorSong, forkSong, verseEntries);
         if (orderOnlySong && contentDiffs == 0) {
             diffSummaryLabel.setText(resourceBundle.getString("Compare order only sections"));
         } else if (contentDiffs == 0 && orderDiffs == 0) {

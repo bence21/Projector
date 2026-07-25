@@ -291,6 +291,38 @@ public class ForkMirrorMigrationLanguageTest {
         Assert.assertEquals(1, forkFromDb.getVerses().size());
     }
 
+    @Test
+    public void findForkForSong_fallsBackToCacheWhenLocalForkLinkMissing() {
+        Language language = createLanguage();
+        String serverUuid = UUID.randomUUID().toString();
+
+        Song mirror = new Song();
+        mirror.setUuid(serverUuid);
+        mirror.setTitle("Mirror");
+        mirror.setPublished(true);
+        mirror.setServerMirror(true);
+        mirror.setLanguage(language);
+        mirror.setVerses(List.of(verse("Mirror verse")));
+        mirror = songService.create(mirror);
+
+        Song fork = new Song();
+        fork.setUuid(UUID.randomUUID().toString());
+        fork.setOriginalSongUuid(serverUuid);
+        fork.setTitle("Fork");
+        fork.setPublished(false);
+        fork.setLanguage(language);
+        fork.setVerses(List.of(verse("Fork verse")));
+        songService.create(fork);
+
+        songService.rebuildForkIndex();
+        mirror = songService.getFromMemoryOrSong(mirror);
+        mirror.setLocalFork(null);
+
+        Assert.assertNull(mirror.getLocalFork());
+        Assert.assertNotNull(songService.findForkForSong(mirror));
+        Assert.assertTrue(songService.hasLocalFork(mirror));
+    }
+
     private static void ensureTestTables() throws SQLException {
         DatabaseHelper databaseHelper = DatabaseHelper.getInstance();
         var connectionSource = databaseHelper.getSongDao().getConnectionSource();

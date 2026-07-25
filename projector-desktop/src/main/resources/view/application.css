@@ -486,6 +486,7 @@
 
 .song-version-swap-icon {
     -fx-font-size: 13px;
+    -fx-fill: -fx-text-base-color;
 }
 
 .song-versions-differ-hint-label {
@@ -504,6 +505,6 @@
     -fx-opacity: 1.0;
 }
 
-.song-badge-local-fork {
+.song-badge-online-version {
     -fx-opacity: 1.0;
 }

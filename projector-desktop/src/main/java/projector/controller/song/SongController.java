@@ -50,8 +50,8 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
@@ -1490,11 +1490,13 @@ public class SongController {
             updateVersionActionsGroupVisibility();
             return;
         }
-        if (song.isFork()) {
-            swapSongVersionButton.setText(resourceBundle.getString("Show original"));
-        } else {
+        boolean targetIsLocalEdit = !song.isFork();
+        if (targetIsLocalEdit) {
             swapSongVersionButton.setText(resourceBundle.getString("Show local edit"));
+        } else {
+            swapSongVersionButton.setText(resourceBundle.getString("Show original"));
         }
+        swapSongVersionButton.setGraphic(SongForkBadgeFactory.createSwapButtonGraphic(targetIsLocalEdit));
         swapSongVersionButton.setTooltip(new Tooltip(resourceBundle.getString("Swap song version tooltip")));
         setVisibleAndManaged(swapSongVersionButton, true);
         updateVersionsDifferHintVisibility();
@@ -1532,9 +1534,31 @@ public class SongController {
         if (compareWithOriginalButton == null) {
             return;
         }
-        boolean show = song.isFork() || song.hasLocalFork();
-        setVisibleAndManaged(compareWithOriginalButton, show);
+        setVisibleAndManaged(compareWithOriginalButton, canCompareWithOriginal(song));
         updateVersionActionsGroupVisibility();
+    }
+
+    private boolean canCompareWithOriginal(Song song) {
+        return resolveCompareSongs(song) != null;
+    }
+
+    private Song[] resolveCompareSongs(Song displaySong) {
+        if (displaySong == null) {
+            return null;
+        }
+        Song canonical = songService.getFromMemoryOrSong(displaySong);
+        Song fork = songService.findForkForSong(canonical);
+        if (fork == null) {
+            return null;
+        }
+        Song mirror = songService.findMirrorByUuid(fork.getOriginalSongUuid());
+        if (mirror == null && !canonical.isFork()) {
+            mirror = canonical;
+        }
+        if (mirror == null) {
+            return null;
+        }
+        return new Song[]{mirror, fork};
     }
 
     private void initializeCompareWithOriginalButton() {
@@ -1560,10 +1584,7 @@ public class SongController {
         if (swapSongVersionButton == null) {
             return;
         }
-        Text swapIcon = new Text("\u21C4");
-        swapIcon.getStyleClass().add("song-version-swap-icon");
-        swapSongVersionButton.setGraphic(swapIcon);
-        swapSongVersionButton.setContentDisplay(ContentDisplay.LEFT);
+        swapSongVersionButton.setContentDisplay(ContentDisplay.RIGHT);
         swapSongVersionButton.setGraphicTextGap(6.0);
         swapSongVersionButton.setOnAction(event -> swapToCounterpartVersion());
         setVisibleAndManaged(swapSongVersionButton, false);
@@ -3449,7 +3470,7 @@ public class SongController {
                         } else {
                             cm.getItems().add(addToCollectionMenuItem);
                         }
-                        if (selectedSong.isFork() || songService.hasLocalFork(selectedSong)) {
+                        if (canCompareWithOriginal(selectedSong)) {
                             cm.getItems().add(compareMenuItem);
                         }
                         if (selectedSong.isFork()) {
@@ -3882,6 +3903,34 @@ public class SongController {
         return searchedSongListView;
     }
 
+    void refreshAfterSongEdit(Song savedSong) {
+        try {
+            songService.rebuildForkIndex();
+            Song canonical = songService.getFromMemoryOrSong(savedSong);
+            if (canonical != null && canonical.isFork()) {
+                boolean alreadyInList = false;
+                for (Song existing : songs) {
+                    if (existing.getId() != null && existing.getId().equals(canonical.getId())) {
+                        alreadyInList = true;
+                        break;
+                    }
+                }
+                if (!alreadyInList) {
+                    songs.add(canonical);
+                    sortSongs(songs);
+                }
+            }
+            addSongCollections();
+            addAllSongs();
+            updateSearchFilterControlsVisibility();
+            if (selectedSong != null) {
+                prepareSelectedSong(songService.getFromMemoryOrSong(selectedSong));
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+    }
+
     void addSong(Song song) {
         try {
             songService.rebuildForkIndex();
@@ -4286,28 +4335,27 @@ public class SongController {
     }
 
     void openCompareWithOriginal(Song displaySong) throws Exception {
-        if (displaySong == null) {
+        Song[] compareSongs = resolveCompareSongs(displaySong);
+        if (compareSongs == null) {
+            ResourceBundle resourceBundle = settings.getResourceBundle();
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(resourceBundle.getString("Compare with original"));
+            alert.setHeaderText(resourceBundle.getString("Compare original unavailable"));
+            alert.setContentText(resourceBundle.getString("Compare original unavailable detail"));
+            alert.showAndWait();
             return;
         }
-        Song fork = songService.findForkForSong(displaySong);
-        if (fork == null) {
-            return;
-        }
-        Song mirror = songService.findMirrorByUuid(fork.getOriginalSongUuid());
-        if (mirror == null) {
-            mirror = displaySong.isFork() ? null : displaySong;
-        }
-        if (mirror == null) {
-            return;
-        }
+        Song mirror = compareSongs[0];
+        Song fork = compareSongs[1];
+        Song displaySongCanonical = songService.getFromMemoryOrSong(displaySong);
         FXMLLoader loader = new FXMLLoader();
         loader.setLocation(MainDesktop.class.getResource("/view/song/CompareSongs.fxml"));
         loader.setResources(Settings.getInstance().getResourceBundle());
         Pane root = loader.load();
         CompareSongsController compareSongsController = loader.getController();
-        compareSongsController.setSongs(mirror, fork);
+        compareSongsController.setSongs(displaySongCanonical, mirror, fork);
         Stage stage = ControllerUtil.getStageWithRoot(getClass(), root);
-        stage.setTitle(Settings.getInstance().getResourceBundle().getString("Compare with original"));
+        stage.setTitle(compareSongsController.buildWindowTitle(displaySongCanonical));
         compareSongsController.setStage(stage);
         CompareWindowTracker.register(stage);
         stage.show();
