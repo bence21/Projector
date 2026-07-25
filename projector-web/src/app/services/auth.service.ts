@@ -1,11 +1,11 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 import 'rxjs/add/observable/of';
 import 'rxjs/add/operator/do';
 import 'rxjs/add/operator/delay';
 import 'rxjs/add/operator/catch';
 import 'rxjs/add/operator/map';
-import { Headers, Http, RequestOptions } from '@angular/http';
-import { User } from '../models/user';
+import {Headers, Http, RequestOptions} from '@angular/http';
+import {User} from '../models/user';
 
 @Injectable()
 export class AuthService {
@@ -63,6 +63,26 @@ export class AuthService {
     return this.http.get('/api/username')
       .map(res => res.json());
   }
+
+/**
+ * localStorage keeps the user across server restarts (desired UX), but the HTTP session does not.
+ * Refresh profile when the session is still valid; on failure leave localStorage as-is so the UI
+ * can stay "logged in" and AuthenticateComponent can prefill email when an API call gets 401.
+ */
+confirmServerSession()
+{
+  if (!this.isLoggedIn) {
+    return;
+  }
+  this.getUserFromServer().subscribe(
+      (resp) => {
+        this.setUserAlsoToLocalStorage(new User(resp));
+      },
+      () => {
+        // Session dead after restart — keep currentUser; API error handlers prompt re-auth.
+      }
+  );
+}
 
   getUserFromLocalStorage() {
     const currentUser = localStorage.getItem('currentUser');

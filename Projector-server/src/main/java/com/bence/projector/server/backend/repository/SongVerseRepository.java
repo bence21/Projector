@@ -1,19 +1,26 @@
 package com.bence.projector.server.backend.repository;
 
-import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.SongVerse;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 
 import javax.transaction.Transactional;
-import java.util.Date;
-import java.util.List;
 
 public interface SongVerseRepository extends CrudRepository<SongVerse, Long> {
+    /**
+     * Bulk delete (not SELECT + {@code EntityManager#remove}). Derived {@code deleteAllBy...}
+     * schedules entity deletes that can collide with delete-and-recreate in the same transaction
+     * ({@code StaleStateException} / unexpected row count on {@code delete from song_verse}).
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("delete from SongVerse sv where sv.song.id = :songId")
     @Transactional
-    void deleteAllBySongId(Long songId);
+    void deleteAllBySongId(@Param("songId") Long songId);
 
-    List<SongVerse> findAllBySong_LanguageAndSong_ModifiedDateGreaterThan(Language language, Date modifiedDate);
-
+    @Modifying(flushAutomatically = true)
+    @Query("delete from SongVerse sv where sv.suggestion.id = :suggestionId")
     @Transactional
-    void deleteAllBySuggestionId(Long suggestionId);
+    void deleteAllBySuggestionId(@Param("suggestionId") Long suggestionId);
 }

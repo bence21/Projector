@@ -1,24 +1,21 @@
-import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Song, SongService, SongVerseDTO, SongVerseUI, SectionType } from '../../services/song-service.service';
-import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { LanguageDataService } from "../../services/language-data.service";
-import {
-  openNewLanguageDialog as presentNewLanguageDialog,
-  selectLanguageFromList
-} from "../../util/language-dialog.util";
-import { MatDialog, MatIconRegistry, MatSnackBar } from "@angular/material";
-import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
-import { SubmitOrPublish, replace, valueRefactorable } from "../new-song/new-song.component";
-import { AuthenticateComponent } from "../authenticate/authenticate.component";
-import { CdkDragDrop, moveItemInArray, copyArrayItem } from '@angular/cdk/drag-drop';
-import { AuthService } from '../../services/auth.service';
-import { addNewVerse_, calculateOrder_, validateWordsAndSave } from '../../util/song.utils';
-import { Language } from '../../models/language';
-import { debounceTime } from 'rxjs/operators';
-import { SongWordValidationService } from '../../services/song-word-validation.service';
-import { normalizeForPersistence } from '../../util/unicode-text-normalizer';
-import { extractYouTubeVideoId, getYouTubeUrlProblem } from '../../util/youtube.util';
+import {ChangeDetectorRef, Component, Input, OnInit} from '@angular/core';
+import {SectionType, Song, SongService, SongVerseDTO, SongVerseUI} from '../../services/song-service.service';
+import {FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
+import {Router} from '@angular/router';
+import {LanguageDataService} from "../../services/language-data.service";
+import {selectLanguageFromList} from "../../util/language-dialog.util";
+import {MatDialog, MatIconRegistry, MatSnackBar} from "@angular/material";
+import {DomSanitizer, SafeResourceUrl} from "@angular/platform-browser";
+import {replace, SubmitOrPublish, valueRefactorable} from "../new-song/new-song.component";
+import {CdkDragDrop, copyArrayItem, moveItemInArray} from '@angular/cdk/drag-drop';
+import {AuthService} from '../../services/auth.service';
+import {addNewVerse_, calculateOrder_, validateWordsAndSave} from '../../util/song.utils';
+import {Language} from '../../models/language';
+import {debounceTime} from 'rxjs/operators';
+import {SongWordValidationService} from '../../services/song-word-validation.service';
+import {normalizeForPersistence} from '../../util/unicode-text-normalizer';
+import {extractYouTubeVideoId, getYouTubeUrlProblem} from '../../util/youtube.util';
+import {generalError} from '../../util/error-util';
 
 @Component({
   selector: 'app-edit-song',
@@ -250,14 +247,9 @@ export class EditSongComponent implements OnInit {
         this.router.navigate(['/songs']);
       },
       (err) => {
-        if (err.status === 405) {
-          this.openAuthenticateDialog();
-        } else {
-          console.log(err);
-          this.snackBar.open(err._body, 'Close', {
-            duration: 5000
-          })
-        }
+        // After server restart the browser still looks logged in (localStorage),
+        // but the session cookie is dead → 401. Re-auth and retry.
+        generalError(this.onApplyLanguageButtonClick, this, err, this.dialog, this.snackBar);
       }
     );
   }
@@ -693,28 +685,10 @@ export class EditSongComponent implements OnInit {
         window.location.reload();
       },
       (err) => {
-        if (err.status === 405) {
-          this.openAuthenticateDialog();
-        } else {
-          console.log(err);
-        }
+        // 401 after server restart (UI still has localStorage user) or legacy 405.
+        generalError(this.updateSong, this, err, this.dialog, this.snackBar);
       }
     );
-  }
-
-  private openAuthenticateDialog() {
-    let user = JSON.parse(localStorage.getItem('currentUser'));
-    const dialogRef = this.dialog.open(AuthenticateComponent, {
-      data: {
-        email: user.email
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result === 'ok') {
-        this.updateSong();
-      }
-    });
   }
 
   private addVerses() {

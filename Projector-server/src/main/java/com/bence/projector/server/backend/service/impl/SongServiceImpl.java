@@ -1071,6 +1071,10 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
             if (songVerseOrderListItems == null) {
                 songVerseOrderListItems = new ArrayList<>();
             }
+            // Clear child collections before bulk delete so Hibernate does not keep
+            // managed rows that collide with delete-and-recreate on flush.
+            song.setVerses(new ArrayList<>());
+            song.setSongVerseOrderListItems(new ArrayList<>());
             songRepository.save(song);
             songVerseService.deleteBySong(song);
             songVerseService.save(verses);

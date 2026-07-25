@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { AuthService } from './services/auth.service';
+import {Component} from '@angular/core';
+import {AuthService} from './services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -13,6 +13,11 @@ export class AppComponent {
     public auth: AuthService,
   ) {
     auth.getUserFromLocalStorage();
+
+  auth
+.
+
+  confirmServerSession();
     setInterval(() => auth.getUserFromLocalStorage(), 2000);
   }
 }

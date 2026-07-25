@@ -120,6 +120,47 @@ public class SongServiceImplTest extends BaseServiceTest {
     }
 
     @Test
+    public void save_recreatesVerses_repeatedUpdateDoesNotThrowStaleState() {
+        Song song = getASong(languageService);
+        song.setVerseOrderList(List.of((short) 0));
+        songService.save(song);
+
+        // Match admin update path: load via repository, replace verses with new transient entities.
+        Song loaded = songRepository.findOneByUuid(song.getUuid());
+        Assert.assertNotNull(loaded);
+        List<SongVerse> updatedVerses = getSongVerses();
+        updatedVerses.get(0).setText("Updated verse text");
+        SongVerse second = new SongVerse();
+        second.setSectionType(SectionType.VERSE);
+        second.setText("Second verse");
+        updatedVerses.add(second);
+        loaded.setVerses(updatedVerses);
+        loaded.setVerseOrderList(List.of((short) 0, (short) 1));
+        loaded.setModifiedDate(new Date());
+        songService.save(loaded);
+
+        Song loadedAgain = songRepository.findOneByUuid(song.getUuid());
+        Assert.assertNotNull(loadedAgain);
+        Assert.assertEquals(2, loadedAgain.getVerses().size());
+        List<SongVerse> again = getSongVerses();
+        again.get(0).setText("Updated again");
+        SongVerse secondAgain = new SongVerse();
+        secondAgain.setSectionType(SectionType.VERSE);
+        secondAgain.setText("Second verse");
+        again.add(secondAgain);
+        loadedAgain.setVerses(again);
+        loadedAgain.setVerseOrderList(List.of((short) 0, (short) 1));
+        loadedAgain.setModifiedDate(new Date());
+        songService.save(loadedAgain);
+
+        Song finalSong = songRepository.findOneByUuid(song.getUuid());
+        Assert.assertNotNull(finalSong);
+        Assert.assertEquals("Updated again", finalSong.getVerses().get(0).getText());
+        Assert.assertEquals(2, finalSong.getVerses().size());
+        songService.deleteByUuid(song.getUuid());
+    }
+
+    @Test
     public void evaluateLcsForSimilarTexts_preciseMode_recomputesUncappedForLongIdenticalPair() {
         String body = "\nór isten, kérlek, kegyelmezz nékem\n";
         String s = body.repeat(120);
