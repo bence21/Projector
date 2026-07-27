@@ -30,6 +30,8 @@ import javafx.scene.text.TextFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
+import projector.controller.biblesearch.BibleContentSnapshots;
+import projector.controller.biblesearch.BibleSearchFilterSnapshot;
 import projector.controller.biblesearch.BibleSearchMatcher;
 import projector.controller.biblesearch.BibleSearchPreferences;
 import projector.controller.biblesearch.BookFilterEntry;
@@ -289,6 +291,7 @@ public class BibleSearchController {
             boolean caseSensitive = preferences.isCaseSensitive();
             boolean wholeWord = preferences.isWholeWord();
             String normalizedQuery = BibleSearchMatcher.normalizeQuery(querySnapshot, withAccents, caseSensitive);
+            BibleSearchFilterSnapshot filters = BibleSearchFilterSnapshot.from(preferences);
             if (normalizedQuery.isEmpty()) {
                 fillResults(List.of(), List.of(), List.of(), List.of(), List.of());
                 updateFilterSummary(0);
@@ -300,7 +303,7 @@ public class BibleSearchController {
             List<Integer> tmpSearchIBook = new ArrayList<>();
             List<Integer> tmpSearchIPart = new ArrayList<>();
             List<Integer> tmpSearchIVerse = new ArrayList<>();
-            List<Bible> biblesToSearch = getBiblesToSearch();
+            List<Bible> biblesToSearch = new ArrayList<>(getBiblesToSearch());
             if (biblesToSearch.isEmpty()) {
                 fillResults(tmpSearchListView, tmpSearchIBook, tmpSearchIPart, tmpSearchIVerse, tmpSearchIBible);
                 updateFilterSummary(0);
@@ -309,7 +312,7 @@ public class BibleSearchController {
             boolean addAbbreviation = biblesToSearch.size() > 1;
             for (Bible bible : biblesToSearch) {
                 searchInBible(normalizedQuery, tmpSearchListView, tmpSearchIBook, tmpSearchIPart, tmpSearchIVerse,
-                        bible, tmpSearchIBible, addAbbreviation, withAccents, caseSensitive, wholeWord);
+                        bible, tmpSearchIBible, addAbbreviation, withAccents, caseSensitive, wholeWord, filters);
             }
             fillResults(tmpSearchListView, tmpSearchIBook, tmpSearchIPart, tmpSearchIVerse, tmpSearchIBible);
             updateFilterSummary(tmpSearchListView.size());
@@ -324,21 +327,22 @@ public class BibleSearchController {
     private void searchInBible(String normalizedQuery, List<TextFlow> tmpSearchListView, List<Integer> tmpSearchIBook,
                                List<Integer> tmpSearchIPart, List<Integer> tmpSearchIVerse, Bible bible,
                                List<Bible> tmpSearchIBible, boolean addBibleAbbreviation,
-                               boolean withAccents, boolean caseSensitive, boolean wholeWord) {
+                               boolean withAccents, boolean caseSensitive, boolean wholeWord,
+                               BibleSearchFilterSnapshot filters) {
         int results = 0;
-        List<Book> books = bible.getBooks();
+        List<Book> books = BibleContentSnapshots.books(bible);
         for (int iBook = 0; iBook < books.size() && results < maxResults; ++iBook) {
-            if (!isBookIncluded(iBook)) {
+            if (!filters.isBookIncluded(iBook)) {
                 continue;
             }
             Book book = books.get(iBook);
-            List<Chapter> chapters = book.getChapters();
+            List<Chapter> chapters = BibleContentSnapshots.chapters(book);
             for (int iPart = 0; iPart < chapters.size() && results < maxResults; ++iPart) {
-                if (!isChapterIncluded(iBook, iPart + 1)) {
+                if (!filters.isChapterIncluded(iBook, iPart + 1)) {
                     continue;
                 }
                 Chapter chapter = chapters.get(iPart);
-                List<BibleVerse> bibleVerses = chapter.getVerses();
+                List<BibleVerse> bibleVerses = BibleContentSnapshots.verses(chapter);
                 for (int iVerse = 0; iVerse < bibleVerses.size(); ++iVerse) {
                     BibleVerse bibleVerse = bibleVerses.get(iVerse);
                     String searchableText = BibleSearchMatcher.verseTextForSearch(bibleVerse, withAccents, caseSensitive);
@@ -439,31 +443,6 @@ public class BibleSearchController {
             searchIPart = tmpSearchIPart;
             searchIVerse = tmpSearchIVerse;
         });
-    }
-
-    private boolean isBookIncluded(int bookIndex) {
-        return !preferences.getExcludedBookIndices().contains(bookIndex);
-    }
-
-    private boolean isChapterIncluded(int bookIndex, int chapterNumber) {
-        boolean hasRange = preferences.getChapterFrom() != null || preferences.getChapterTo() != null;
-        Set<Integer> checkedChapters = preferences.getChaptersByBook().get(bookIndex);
-        boolean hasChecked = checkedChapters != null && !checkedChapters.isEmpty();
-        if (!hasRange && !hasChecked) {
-            return true;
-        }
-        if (hasRange && isChapterInRange(chapterNumber)) {
-            return true;
-        }
-        return hasChecked && checkedChapters.contains(chapterNumber);
-    }
-
-    private boolean isChapterInRange(int chapterNumber) {
-        Integer from = preferences.getChapterFrom();
-        Integer to = preferences.getChapterTo();
-        int min = from != null ? from : 1;
-        int max = to != null ? to : Integer.MAX_VALUE;
-        return chapterNumber >= min && chapterNumber <= max;
     }
 
     private void rebuildScopeUi() {
@@ -766,10 +745,11 @@ public class BibleSearchController {
         boolean caseSensitive = preferences.isCaseSensitive();
         boolean wholeWord = preferences.isWholeWord();
         String normalizedQuery = BibleSearchMatcher.normalizeQuery(querySnapshot, withAccents, caseSensitive);
+        BibleSearchFilterSnapshot filters = BibleSearchFilterSnapshot.from(preferences);
         Map<Integer, Integer> counts = new HashMap<>();
         if (!normalizedQuery.isEmpty()) {
-            for (Bible bible : getBiblesToSearch()) {
-                countMatchesInBible(bible, normalizedQuery, withAccents, caseSensitive, wholeWord, counts);
+            for (Bible bible : new ArrayList<>(getBiblesToSearch())) {
+                countMatchesInBible(bible, normalizedQuery, withAccents, caseSensitive, wholeWord, counts, filters);
             }
         }
         if (generation != countGeneration.get()) {
@@ -791,19 +771,22 @@ public class BibleSearchController {
     }
 
     private void countMatchesInBible(Bible bible, String normalizedQuery, boolean withAccents,
-                                     boolean caseSensitive, boolean wholeWord, Map<Integer, Integer> counts) {
-        List<Book> books = bible.getBooks();
+                                     boolean caseSensitive, boolean wholeWord, Map<Integer, Integer> counts,
+                                     BibleSearchFilterSnapshot filters) {
+        List<Book> books = BibleContentSnapshots.books(bible);
         for (int iBook = 0; iBook < books.size(); ++iBook) {
-            if (!isBookIncluded(iBook)) {
+            if (!filters.isBookIncluded(iBook)) {
                 continue;
             }
             Book book = books.get(iBook);
-            List<Chapter> chapters = book.getChapters();
+            List<Chapter> chapters = BibleContentSnapshots.chapters(book);
             for (int iPart = 0; iPart < chapters.size(); ++iPart) {
-                if (!isChapterIncluded(iBook, iPart + 1)) {
+                if (!filters.isChapterIncluded(iBook, iPart + 1)) {
                     continue;
                 }
-                for (BibleVerse bibleVerse : chapters.get(iPart).getVerses()) {
+                List<BibleVerse> bibleVerses = BibleContentSnapshots.verses(chapters.get(iPart));
+                for (int iVerse = 0; iVerse < bibleVerses.size(); ++iVerse) {
+                    BibleVerse bibleVerse = bibleVerses.get(iVerse);
                     String searchableText = BibleSearchMatcher.verseTextForSearch(bibleVerse, withAccents, caseSensitive);
                     if (BibleSearchMatcher.matches(searchableText, normalizedQuery, wholeWord)) {
                         counts.merge(iBook, 1, Integer::sum);
