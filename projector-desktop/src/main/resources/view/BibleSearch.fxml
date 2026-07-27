@@ -1,51 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <BorderPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="560" prefWidth="800"
             styleClass="border-pane"
             xmlns="http://javafx.com/javafx/8.0.121" fx:controller="projector.controller.BibleSearchController">
     <center>
-        <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
-            <top>
+        <SplitPane fx:id="mainSplitPane" dividerPositions="0.72" BorderPane.alignment="CENTER">
+            <BorderPane>
+                <top>
+                    <VBox spacing="4.0">
+                        <TextField fx:id="bibleSearchTextField">
+                            <VBox.margin>
+                                <Insets bottom="2.0" left="4.0" right="4.0" top="4.0"/>
+                            </VBox.margin>
+                        </TextField>
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <Label fx:id="filterSummaryLabel" styleClass="subdued-label"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Hyperlink fx:id="clearFiltersLink" mnemonicParsing="false" text="%Clear filters"/>
+                            <HBox.margin>
+                                <Insets bottom="2.0" left="4.0" right="4.0"/>
+                            </HBox.margin>
+                        </HBox>
+                    </VBox>
+                </top>
+                <center>
+                    <StackPane BorderPane.alignment="CENTER">
+                        <ListView fx:id="searchListView" maxWidth="700.0">
+                            <StackPane.margin>
+                                <Insets bottom="4.0" left="4.0" right="4.0"/>
+                            </StackPane.margin>
+                        </ListView>
+                    </StackPane>
+                </center>
+            </BorderPane>
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER">
                 <VBox spacing="4.0">
-                    <TextField fx:id="bibleSearchTextField">
-                        <VBox.margin>
-                            <Insets bottom="2.0" left="4.0" right="4.0" top="4.0"/>
-                        </VBox.margin>
-                    </TextField>
-                    <HBox alignment="CENTER_LEFT" spacing="8.0">
-                        <Label fx:id="searchScopeLabel" text="%Bible search in"/>
-                        <FlowPane fx:id="searchScopePane" hgap="8.0" vgap="4.0" HBox.hgrow="ALWAYS"/>
-                        <MenuButton fx:id="addBibleMenuButton" text="%Add" mnemonicParsing="false"/>
-                        <HBox.margin>
-                            <Insets left="4.0" right="4.0"/>
-                        </HBox.margin>
-                    </HBox>
-                    <HBox fx:id="searchScopeSuggestionsPane" alignment="CENTER_LEFT" spacing="12.0">
-                        <Hyperlink fx:id="addSameLanguageLink" mnemonicParsing="false" text=" "/>
-                        <Hyperlink fx:id="addAllBiblesLink" mnemonicParsing="false" text="%Search all bibles"/>
-                        <HBox.margin>
-                            <Insets bottom="4.0" left="4.0" right="4.0"/>
-                        </HBox.margin>
-                    </HBox>
+                    <padding>
+                        <Insets bottom="4.0" left="2.0" right="4.0" top="4.0"/>
+                    </padding>
+                    <TitledPane fx:id="biblesPane" collapsible="true" expanded="true" text="%Bibles">
+                        <VBox spacing="6.0">
+                            <ScrollPane fitToWidth="true" maxHeight="140.0" vbarPolicy="AS_NEEDED">
+                                <VBox fx:id="bibleCheckboxesPane" spacing="4.0"/>
+                            </ScrollPane>
+                            <CheckBox fx:id="sameLanguageCheckBox" mnemonicParsing="false"/>
+                            <CheckBox fx:id="allBiblesCheckBox" mnemonicParsing="false" text="%Search all bibles"/>
+                        </VBox>
+                    </TitledPane>
+                    <TitledPane fx:id="optionsPane" collapsible="true" expanded="false" text="%Search options">
+                        <VBox spacing="6.0">
+                            <CheckBox fx:id="caseSensitiveCheckBox" mnemonicParsing="false" text="%Case sensitive"/>
+                            <CheckBox fx:id="wholeWordCheckBox" mnemonicParsing="false" text="%Whole word"/>
+                            <CheckBox fx:id="accentsCheckBox" mnemonicParsing="false" text="%Search with accents"/>
+                            <Button fx:id="restoreDefaultsButton" mnemonicParsing="false" text="%Restore defaults"/>
+                        </VBox>
+                    </TitledPane>
+                    <TitledPane fx:id="rangePane" collapsible="true" expanded="false" text="%Search range">
+                        <VBox spacing="6.0">
+                            <HBox spacing="12.0">
+                                <CheckBox fx:id="oldTestamentCheckBox" mnemonicParsing="false" text="%Old Testament"/>
+                                <CheckBox fx:id="newTestamentCheckBox" mnemonicParsing="false" text="%New Testament"/>
+                            </HBox>
+                            <ListView fx:id="bookFilterListView" prefHeight="160.0"/>
+                            <HBox alignment="CENTER_LEFT" spacing="6.0">
+                                <Label text="%Chapters from"/>
+                                <TextField fx:id="chapterFromField" prefWidth="48.0"/>
+                                <Label text="%to"/>
+                                <TextField fx:id="chapterToField" prefWidth="48.0"/>
+                            </HBox>
+                            <FlowPane fx:id="chapterCheckboxesPane" hgap="6.0" vgap="4.0"/>
+                        </VBox>
+                    </TitledPane>
                 </VBox>
-            </top>
-            <center>
-                <ListView fx:id="searchListView" BorderPane.alignment="CENTER">
-                    <BorderPane.margin>
-                        <Insets bottom="4.0" left="4.0" right="4.0"/>
-                    </BorderPane.margin>
-                </ListView>
-            </center>
-        </BorderPane>
+            </ScrollPane>
+        </SplitPane>
     </center>
 </BorderPane>
