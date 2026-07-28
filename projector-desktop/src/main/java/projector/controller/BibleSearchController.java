@@ -566,7 +566,7 @@ public class BibleSearchController {
         includeLanguageBiblesButton.setVisible(showLanguageButton);
         includeLanguageBiblesButton.setManaged(showLanguageButton);
         if (showLanguageButton) {
-            String language = languageLabel(currentBible != null ? currentBible.getLanguage() : null);
+            String language = resolveCurrentLanguageLabel();
             includeLanguageBiblesButton.setText(MessageFormat.format(bundle.getString("Search in language bibles"), language));
         }
 
@@ -660,6 +660,23 @@ public class BibleSearchController {
             }
         }
         return result;
+    }
+
+    private String resolveCurrentLanguageLabel() {
+        ResourceBundle bundle = Settings.getInstance().getResourceBundle();
+        if (currentBible != null) {
+            String label = languageLabel(currentBible.getLanguage());
+            if (!label.isBlank()) {
+                return label;
+            }
+        }
+        for (Bible bible : getSameLanguageBibles()) {
+            String label = languageLabel(bible.getLanguage());
+            if (!label.isBlank()) {
+                return label;
+            }
+        }
+        return bundle.getString("Same language");
     }
 
     private static String languageLabel(Language language) {
