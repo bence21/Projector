@@ -41,6 +41,7 @@ import projector.model.BibleVerse;
 import projector.model.Book;
 import projector.model.Chapter;
 import projector.model.Language;
+import projector.service.ServiceManager;
 import projector.utils.BibleVerseTextFlow;
 
 import java.text.MessageFormat;
@@ -680,15 +681,43 @@ public class BibleSearchController {
     }
 
     private static String languageLabel(Language language) {
-        if (language == null) {
+        Language resolved = resolveLanguageRecord(language);
+        if (resolved == null) {
             return "";
         }
+        Locale locale = Settings.getInstance().getPreferredLanguage();
+        boolean preferNative = "hu".equalsIgnoreCase(locale.getLanguage())
+                || "ro".equalsIgnoreCase(locale.getLanguage());
+        String primary = preferNative ? resolved.getNativeName() : resolved.getEnglishName();
+        String fallback = preferNative ? resolved.getEnglishName() : resolved.getNativeName();
+        if (primary != null && !primary.isBlank()) {
+            return primary;
+        }
+        return fallback != null ? fallback : "";
+    }
+
+    private static Language resolveLanguageRecord(Language language) {
+        if (language == null) {
+            return null;
+        }
+        if (hasLanguageName(language)) {
+            return language;
+        }
+        String uuid = language.getUuid();
+        if (uuid == null || uuid.isBlank()) {
+            return language;
+        }
+        Language loaded = ServiceManager.getLanguageService().findByUuid(uuid);
+        return loaded != null ? loaded : language;
+    }
+
+    private static boolean hasLanguageName(Language language) {
         String nativeName = language.getNativeName();
         if (nativeName != null && !nativeName.isBlank()) {
-            return nativeName;
+            return true;
         }
         String englishName = language.getEnglishName();
-        return englishName != null ? englishName : "";
+        return englishName != null && !englishName.isBlank();
     }
 
     private static String bibleLabel(Bible bible) {
