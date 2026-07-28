@@ -56,8 +56,8 @@
                             <ScrollPane fitToWidth="true" maxHeight="140.0" vbarPolicy="AS_NEEDED">
                                 <VBox fx:id="bibleCheckboxesPane" spacing="4.0"/>
                             </ScrollPane>
-                            <CheckBox fx:id="sameLanguageCheckBox" mnemonicParsing="false"/>
-                            <CheckBox fx:id="allBiblesCheckBox" mnemonicParsing="false" text="%Search all bibles"/>
+                            <Button fx:id="includeLanguageBiblesButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"/>
+                            <Button fx:id="includeAllBiblesButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"/>
                         </VBox>
                     </TitledPane>
                     <TitledPane fx:id="optionsPane" collapsible="true" expanded="false" text="%Search options">

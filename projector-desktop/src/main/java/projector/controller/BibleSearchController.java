@@ -89,9 +89,9 @@ public class BibleSearchController {
     @FXML
     private VBox bibleCheckboxesPane;
     @FXML
-    private CheckBox sameLanguageCheckBox;
+    private Button includeLanguageBiblesButton;
     @FXML
-    private CheckBox allBiblesCheckBox;
+    private Button includeAllBiblesButton;
     @FXML
     private CheckBox caseSensitiveCheckBox;
     @FXML
@@ -131,7 +131,7 @@ public class BibleSearchController {
     private final ObservableList<BookFilterEntry> bookFilterEntries = FXCollections.observableArrayList();
     private boolean updatingScopeUi;
     private boolean updatingTestamentUi;
-    private boolean updatingBulkBibleUi;
+    private boolean suppressResultNavigation;
     private int selectedBookForChapters = -1;
     private ExecutorService searchExecutor;
     private final AtomicInteger searchGeneration = new AtomicInteger();
@@ -156,7 +156,7 @@ public class BibleSearchController {
         bibleSearchTextField.setOnKeyPressed(event -> mainController.globalKeyEventHandler().handle(event));
         searchListView.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             int index = searchListView.getSelectionModel().getSelectedIndex();
-            if (index < 0) {
+            if (index < 0 || suppressResultNavigation) {
                 return;
             }
             navigateToVerse(index);
@@ -205,8 +205,8 @@ public class BibleSearchController {
         ResourceBundle bundle = Settings.getInstance().getResourceBundle();
         clearFiltersLink.setText(bundle.getString("Clear filters"));
         restoreDefaultsButton.setText(bundle.getString("Restore defaults"));
-        sameLanguageCheckBox.setOnAction(event -> toggleSameLanguageBibles());
-        allBiblesCheckBox.setOnAction(event -> toggleAllBibles());
+        includeLanguageBiblesButton.setOnAction(event -> includeSameLanguageBibles());
+        includeAllBiblesButton.setOnAction(event -> includeAllRemainingBibles());
         caseSensitiveCheckBox.setOnAction(event -> {
             preferences.setCaseSensitive(caseSensitiveCheckBox.isSelected());
             savePreferences();
@@ -548,71 +548,83 @@ public class BibleSearchController {
                         includedBibles.remove(target);
                     }
                     persistIncludedBibles();
-                    syncBulkBibleCheckboxes();
+                    syncBulkBibleButtons();
                     search();
                 });
                 bibleCheckboxesPane.getChildren().add(checkBox);
             }
         }
-        syncBulkBibleCheckboxes();
+        syncBulkBibleButtons();
         updatingScopeUi = false;
         updateFilterSummary(searchListView.getItems().size());
     }
 
-    private void syncBulkBibleCheckboxes() {
-        updatingBulkBibleUi = true;
+    private void syncBulkBibleButtons() {
         ResourceBundle bundle = Settings.getInstance().getResourceBundle();
-        List<Bible> sameLanguage = getSameLanguageBibles();
-        boolean allSameLanguageIncluded = !sameLanguage.isEmpty() && includedBibles.containsAll(sameLanguage);
-        sameLanguageCheckBox.setVisible(!sameLanguage.isEmpty());
-        sameLanguageCheckBox.setManaged(!sameLanguage.isEmpty());
-        if (!sameLanguage.isEmpty()) {
+        List<Bible> sameLanguageNotIncluded = getSameLanguageBiblesNotIncluded();
+        boolean showLanguageButton = !sameLanguageNotIncluded.isEmpty();
+        includeLanguageBiblesButton.setVisible(showLanguageButton);
+        includeLanguageBiblesButton.setManaged(showLanguageButton);
+        if (showLanguageButton) {
             String language = languageLabel(currentBible != null ? currentBible.getLanguage() : null);
-            if (language.isBlank()) {
-                sameLanguageCheckBox.setText(bundle.getString("Search in same-language bibles"));
-            } else {
-                sameLanguageCheckBox.setText(MessageFormat.format(bundle.getString("Search in language bibles"), language));
+            includeLanguageBiblesButton.setText(MessageFormat.format(bundle.getString("Search in language bibles"), language));
+        }
+
+        List<Bible> otherLanguageNotIncluded = getOtherLanguageBiblesNotIncluded();
+        boolean showAllButton = !otherLanguageNotIncluded.isEmpty();
+        includeAllBiblesButton.setVisible(showAllButton);
+        includeAllBiblesButton.setManaged(showAllButton);
+        if (showAllButton) {
+            includeAllBiblesButton.setText(MessageFormat.format(
+                    bundle.getString("Include all remaining bibles"), otherLanguageNotIncluded.size()));
+        }
+    }
+
+    private void includeSameLanguageBibles() {
+        includedBibles.addAll(getSameLanguageBiblesNotIncluded());
+        persistIncludedBibles();
+        rebuildScopeUi();
+        search();
+    }
+
+    private void includeAllRemainingBibles() {
+        if (bibles == null) {
+            return;
+        }
+        for (Bible bible : bibles) {
+            includedBibles.add(bible);
+        }
+        persistIncludedBibles();
+        rebuildScopeUi();
+        search();
+    }
+
+    private List<Bible> getSameLanguageBiblesNotIncluded() {
+        List<Bible> result = new ArrayList<>();
+        for (Bible bible : getSameLanguageBibles()) {
+            if (!includedBibles.contains(bible)) {
+                result.add(bible);
             }
-            sameLanguageCheckBox.setSelected(allSameLanguageIncluded);
         }
-        boolean showAll = hasBiblesOutsideCurrentLanguage();
-        allBiblesCheckBox.setVisible(showAll);
-        allBiblesCheckBox.setManaged(showAll);
-        if (showAll) {
-            allBiblesCheckBox.setSelected(bibles != null && includedBibles.containsAll(bibles));
-        }
-        updatingBulkBibleUi = false;
+        return result;
     }
 
-    private void toggleSameLanguageBibles() {
-        if (updatingBulkBibleUi) {
-            return;
+    private List<Bible> getOtherLanguageBiblesNotIncluded() {
+        List<Bible> result = new ArrayList<>();
+        if (bibles == null || currentBible == null || currentBible.getLanguage() == null) {
+            return result;
         }
-        if (sameLanguageCheckBox.isSelected()) {
-            includedBibles.addAll(getSameLanguageBibles());
-        } else {
-            includedBibles.removeAll(getSameLanguageBibles());
+        Language currentLanguage = currentBible.getLanguage();
+        for (Bible bible : bibles) {
+            if (includedBibles.contains(bible)) {
+                continue;
+            }
+            Language language = bible.getLanguage();
+            if (language == null || !language.equivalent(currentLanguage)) {
+                result.add(bible);
+            }
         }
-        persistIncludedBibles();
-        rebuildScopeUi();
-        search();
-    }
-
-    private void toggleAllBibles() {
-        if (updatingBulkBibleUi || bibles == null) {
-            return;
-        }
-        if (allBiblesCheckBox.isSelected()) {
-            includedBibles.addAll(bibles);
-        } else if (currentBible != null) {
-            includedBibles.clear();
-            includedBibles.add(currentBible);
-        } else {
-            includedBibles.clear();
-        }
-        persistIncludedBibles();
-        rebuildScopeUi();
-        search();
+        return result;
     }
 
     private List<Bible> orderedIncludedBibles() {
@@ -648,20 +660,6 @@ public class BibleSearchController {
             }
         }
         return result;
-    }
-
-    private boolean hasBiblesOutsideCurrentLanguage() {
-        if (bibles == null || currentBible == null || currentBible.getLanguage() == null) {
-            return false;
-        }
-        Language currentLanguage = currentBible.getLanguage();
-        for (Bible bible : bibles) {
-            Language language = bible.getLanguage();
-            if (language == null || !language.equivalent(currentLanguage)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static String languageLabel(Language language) {
@@ -842,8 +840,13 @@ public class BibleSearchController {
         }
         for (int i = 0; i < searchIBook.size(); ++i) {
             if (searchIBook.get(i).equals(bookIndex)) {
-                searchListView.getSelectionModel().select(i);
-                searchListView.scrollTo(i);
+                suppressResultNavigation = true;
+                try {
+                    searchListView.getSelectionModel().select(i);
+                    searchListView.scrollTo(i);
+                } finally {
+                    suppressResultNavigation = false;
+                }
                 return;
             }
         }
@@ -1051,13 +1054,21 @@ public class BibleSearchController {
             HBox.setHgrow(nameLabel, Priority.ALWAYS);
             countLabel.getStyleClass().add("subdued-label");
             nameLabel.setOnMouseClicked(event -> {
-                if (!isEmpty() && getListView() != null) {
+                if (isEmpty() || getItem() == null) {
+                    return;
+                }
+                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                    navigateToBookResults(getItem().getBookIndex());
+                    event.consume();
+                    return;
+                }
+                if (event.getClickCount() == 1 && getListView() != null) {
                     getListView().getSelectionModel().select(getItem());
                     event.consume();
                 }
             });
             countLabel.setOnMouseClicked(event -> {
-                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2 && !isEmpty()) {
+                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2 && !isEmpty() && getItem() != null) {
                     navigateToBookResults(getItem().getBookIndex());
                     event.consume();
                 }
