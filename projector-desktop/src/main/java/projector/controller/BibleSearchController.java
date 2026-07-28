@@ -149,6 +149,7 @@ public class BibleSearchController {
         });
         initializeFilterControls();
         restoreIncludedBiblesFromPreferences();
+        pruneEmptyChapterPicks();
         rebuildScopeUi();
         rebuildBookFilterList();
         search();
@@ -721,20 +722,21 @@ public class BibleSearchController {
         }
         Book book = books.get(selectedBookForChapters);
         int chapterCount = book.getChapters().size();
-        Set<Integer> selectedChapters = preferences.getChaptersByBook()
-                .computeIfAbsent(selectedBookForChapters, key -> new HashSet<>());
+        Set<Integer> selectedChapters = preferences.getChaptersByBook().get(selectedBookForChapters);
         for (int chapter = 1; chapter <= chapterCount; ++chapter) {
             CheckBox checkBox = new CheckBox(String.valueOf(chapter));
-            checkBox.setSelected(selectedChapters.contains(chapter));
+            checkBox.setSelected(selectedChapters != null && selectedChapters.contains(chapter));
             int chapterNumber = chapter;
             checkBox.selectedProperty().addListener((obs, oldValue, selected) -> {
+                Set<Integer> chapters = preferences.getChaptersByBook()
+                        .computeIfAbsent(selectedBookForChapters, key -> new HashSet<>());
                 if (selected) {
-                    selectedChapters.add(chapterNumber);
+                    chapters.add(chapterNumber);
                 } else {
-                    selectedChapters.remove(chapterNumber);
-                }
-                if (selectedChapters.isEmpty()) {
-                    preferences.getChaptersByBook().remove(selectedBookForChapters);
+                    chapters.remove(chapterNumber);
+                    if (chapters.isEmpty()) {
+                        preferences.getChaptersByBook().remove(selectedBookForChapters);
+                    }
                 }
                 savePreferences();
                 search();
@@ -832,8 +834,9 @@ public class BibleSearchController {
             String to = preferences.getChapterTo() != null ? String.valueOf(preferences.getChapterTo()) : "…";
             parts.add(MessageFormat.format(bundle.getString("Bible search summary chapters"), from, to));
         }
-        if (!preferences.getChaptersByBook().isEmpty()) {
-            parts.add(bundle.getString("Bible search summary chapter picks"));
+        int checkedChapterCount = countCheckedChapterPicks();
+        if (checkedChapterCount > 0) {
+            parts.add(MessageFormat.format(bundle.getString("Bible search summary chapter picks"), checkedChapterCount));
         }
         if (!getNewSearchText().isBlank()) {
             parts.add(MessageFormat.format(bundle.getString("Bible search summary results"), resultCount));
@@ -859,7 +862,7 @@ public class BibleSearchController {
         if (preferences.getChapterFrom() != null || preferences.getChapterTo() != null) {
             return true;
         }
-        if (!preferences.getChaptersByBook().isEmpty()) {
+        if (countCheckedChapterPicks() > 0) {
             return true;
         }
         if (includedBibles.size() > 1) {
@@ -870,6 +873,7 @@ public class BibleSearchController {
 
     private void restoreDefaults() {
         preferences.resetToDefaults();
+        pruneEmptyChapterPicks();
         if (currentBible != null) {
             includedBibles.clear();
             includedBibles.add(currentBible);
@@ -888,6 +892,21 @@ public class BibleSearchController {
         rebuildScopeUi();
         savePreferences();
         search();
+        updateFilterSummary(searchListView.getItems().size());
+    }
+
+    private int countCheckedChapterPicks() {
+        int count = 0;
+        for (Set<Integer> chapters : preferences.getChaptersByBook().values()) {
+            if (chapters != null) {
+                count += chapters.size();
+            }
+        }
+        return count;
+    }
+
+    private void pruneEmptyChapterPicks() {
+        preferences.getChaptersByBook().entrySet().removeIf(entry -> entry.getValue() == null || entry.getValue().isEmpty());
     }
 
     private void persistIncludedBibles() {
