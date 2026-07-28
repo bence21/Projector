@@ -35,6 +35,7 @@ import projector.controller.biblesearch.BibleSearchFilterSnapshot;
 import projector.controller.biblesearch.BibleSearchMatcher;
 import projector.controller.biblesearch.BibleSearchPreferences;
 import projector.controller.biblesearch.BookFilterEntry;
+import projector.controller.biblesearch.SearchHit;
 import projector.model.Bible;
 import projector.model.BibleVerse;
 import projector.model.Book;
@@ -52,7 +53,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static projector.controller.BibleController.addTextWithBackGround;
 import static projector.controller.BibleController.setFoundTextColor;
@@ -63,6 +67,8 @@ public class BibleSearchController {
 
     private static final Logger LOG = LoggerFactory.getLogger(BibleSearchController.class);
     private static final int STANDARD_OLD_TESTAMENT_BOOKS = 39;
+    private static final int SEARCH_DEBOUNCE_MS = 400;
+    private static final int SEARCH_CANCEL_CHECK_INTERVAL = 64;
 
     @FXML
     private TextField bibleSearchTextField;
@@ -127,6 +133,8 @@ public class BibleSearchController {
     private boolean updatingTestamentUi;
     private boolean updatingBulkBibleUi;
     private int selectedBookForChapters = -1;
+    private ExecutorService searchExecutor;
+    private final AtomicInteger searchGeneration = new AtomicInteger();
 
     void lazyInitialize() {
         if (initialized) {
@@ -134,6 +142,12 @@ public class BibleSearchController {
         }
         initialized = true;
         maxResults = 1200;
+        searchExecutor = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "bible-search");
+            thread.setDaemon(true);
+            thread.setPriority(Thread.MIN_PRIORITY);
+            return thread;
+        });
         applyPreferencesToUi();
         bibleSearchTextField.textProperty().addListener((observable, oldValue, newValue) -> {
             setNewSearchText(newValue);
@@ -270,60 +284,108 @@ public class BibleSearchController {
     }
 
     private void search() {
-        Thread thread = new Thread(() -> {
-            String querySnapshot = getNewSearchText();
-            try {
-                TimeUnit.MILLISECONDS.sleep(400);
-            } catch (InterruptedException e) {
-                LOG.error(e.getMessage(), e);
-            }
-            if (!querySnapshot.equals(getNewSearchText())) {
+        int generation = searchGeneration.incrementAndGet();
+        searchExecutor.execute(() -> runSearch(generation));
+    }
+
+    private void runSearch(int generation) {
+        String querySnapshot = getNewSearchText();
+        try {
+            TimeUnit.MILLISECONDS.sleep(SEARCH_DEBOUNCE_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+        if (!isCurrentSearch(generation, querySnapshot)) {
+            return;
+        }
+        boolean withAccents = resolveWithAccents();
+        boolean caseSensitive = preferences.isCaseSensitive();
+        boolean wholeWord = preferences.isWholeWord();
+        String normalizedQuery = BibleSearchMatcher.normalizeQuery(querySnapshot, withAccents, caseSensitive);
+        BibleSearchFilterSnapshot filters = BibleSearchFilterSnapshot.from(preferences);
+        if (normalizedQuery.isEmpty()) {
+            publishResults(generation, List.of(), Map.of(), 0);
+            return;
+        }
+
+        List<SearchHit> hits = new ArrayList<>();
+        Map<Integer, Integer> bookCounts = new HashMap<>();
+        List<Bible> biblesToSearch = new ArrayList<>(getBiblesToSearch());
+        if (biblesToSearch.isEmpty()) {
+            publishResults(generation, List.of(), bookCounts, 0);
+            return;
+        }
+        for (Bible bible : biblesToSearch) {
+            if (!isCurrentSearch(generation, querySnapshot)) {
                 return;
             }
+            collectSearchHits(normalizedQuery, bible, withAccents, caseSensitive, wholeWord, filters, hits, bookCounts, generation, querySnapshot);
+        }
+        if (!isCurrentSearch(generation, querySnapshot)) {
+            return;
+        }
+        publishResults(generation, hits, bookCounts, hits.size());
+    }
+
+    private boolean isCurrentSearch(int generation, String querySnapshot) {
+        return generation == searchGeneration.get() && querySnapshot.equals(getNewSearchText());
+    }
+
+    private void publishResults(int generation, List<SearchHit> hits, Map<Integer, Integer> bookCounts, int resultCount) {
+        Platform.runLater(() -> {
+            if (generation != searchGeneration.get()) {
+                return;
+            }
+            boolean addAbbreviation = includedBibles.size() > 1;
+            List<TextFlow> textFlows = new ArrayList<>(hits.size());
+            List<Bible> tmpSearchIBible = new ArrayList<>(hits.size());
+            List<Integer> tmpSearchIBook = new ArrayList<>(hits.size());
+            List<Integer> tmpSearchIPart = new ArrayList<>(hits.size());
+            List<Integer> tmpSearchIVerse = new ArrayList<>(hits.size());
             boolean withAccents = resolveWithAccents();
             boolean caseSensitive = preferences.isCaseSensitive();
-            boolean wholeWord = preferences.isWholeWord();
-            String normalizedQuery = BibleSearchMatcher.normalizeQuery(querySnapshot, withAccents, caseSensitive);
-            BibleSearchFilterSnapshot filters = BibleSearchFilterSnapshot.from(preferences);
-            if (normalizedQuery.isEmpty()) {
-                fillResults(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
-                updateFilterSummary(0);
-                return;
+            String normalizedQuery = BibleSearchMatcher.normalizeQuery(getNewSearchText(), withAccents, caseSensitive);
+            for (SearchHit hit : hits) {
+                TextFlow textFlow = buildHighlightedResult(hit.getVerseText(), normalizedQuery, withAccents, caseSensitive);
+                if (addAbbreviation) {
+                    addBibleAbbreviationForOther(textFlow, hit.getBible());
+                }
+                Text reference = new Text(hit.getBookLabel() + " " + (hit.getChapterIndex() + 1) + ":" + (hit.getVerseIndex() + 1) + " ");
+                setReferenceTextColor(reference);
+                textFlow.getChildren().add(0, reference);
+                textFlow.setTextAlignment(TextAlignment.JUSTIFY);
+                textFlow.setPrefWidth(500.0);
+                textFlows.add(textFlow);
+                tmpSearchIBible.add(hit.getBible());
+                tmpSearchIBook.add(hit.getBookIndex());
+                tmpSearchIPart.add(hit.getChapterIndex());
+                tmpSearchIVerse.add(hit.getVerseIndex());
             }
-
-            List<TextFlow> tmpSearchListView = new ArrayList<>();
-            List<Bible> tmpSearchIBible = new ArrayList<>();
-            List<Integer> tmpSearchIBook = new ArrayList<>();
-            List<Integer> tmpSearchIPart = new ArrayList<>();
-            List<Integer> tmpSearchIVerse = new ArrayList<>();
-            Map<Integer, Integer> bookCounts = new HashMap<>();
-            List<Bible> biblesToSearch = new ArrayList<>(getBiblesToSearch());
-            if (biblesToSearch.isEmpty()) {
-                fillResults(tmpSearchListView, tmpSearchIBook, tmpSearchIPart, tmpSearchIVerse, tmpSearchIBible, bookCounts);
-                updateFilterSummary(0);
-                return;
+            ObservableList<TextFlow> searchListViewItems = searchListView.getItems();
+            searchListViewItems.clear();
+            searchListViewItems.addAll(textFlows);
+            searchIBible = tmpSearchIBible;
+            searchIBook = tmpSearchIBook;
+            searchIPart = tmpSearchIPart;
+            searchIVerse = tmpSearchIVerse;
+            for (BookFilterEntry entry : bookFilterEntries) {
+                if (bookCounts.isEmpty()) {
+                    entry.matchCountProperty().set(-1);
+                } else {
+                    entry.matchCountProperty().set(bookCounts.getOrDefault(entry.getBookIndex(), 0));
+                }
             }
-            boolean addAbbreviation = biblesToSearch.size() > 1;
-            for (Bible bible : biblesToSearch) {
-                searchInBible(normalizedQuery, tmpSearchListView, tmpSearchIBook, tmpSearchIPart, tmpSearchIVerse,
-                        bible, tmpSearchIBible, addAbbreviation, withAccents, caseSensitive, wholeWord, filters, bookCounts);
-            }
-            fillResults(tmpSearchListView, tmpSearchIBook, tmpSearchIPart, tmpSearchIVerse, tmpSearchIBible, bookCounts);
-            updateFilterSummary(tmpSearchListView.size());
+            bookFilterListView.refresh();
+            updateFilterSummary(resultCount);
         });
-        thread.start();
     }
 
-    private List<Bible> getBiblesToSearch() {
-        return orderedIncludedBibles();
-    }
-
-    private void searchInBible(String normalizedQuery, List<TextFlow> tmpSearchListView, List<Integer> tmpSearchIBook,
-                               List<Integer> tmpSearchIPart, List<Integer> tmpSearchIVerse, Bible bible,
-                               List<Bible> tmpSearchIBible, boolean addBibleAbbreviation,
-                               boolean withAccents, boolean caseSensitive, boolean wholeWord,
-                               BibleSearchFilterSnapshot filters, Map<Integer, Integer> bookCounts) {
+    private void collectSearchHits(String normalizedQuery, Bible bible, boolean withAccents, boolean caseSensitive,
+                                   boolean wholeWord, BibleSearchFilterSnapshot filters, List<SearchHit> hits,
+                                   Map<Integer, Integer> bookCounts, int generation, String querySnapshot) {
         int results = 0;
+        int versesScanned = 0;
         List<Book> books = BibleContentSnapshots.books(bible);
         for (int iBook = 0; iBook < books.size(); ++iBook) {
             if (!filters.isBookIncluded(iBook)) {
@@ -338,6 +400,9 @@ public class BibleSearchController {
                 Chapter chapter = chapters.get(iPart);
                 List<BibleVerse> bibleVerses = BibleContentSnapshots.verses(chapter);
                 for (int iVerse = 0; iVerse < bibleVerses.size(); ++iVerse) {
+                    if (++versesScanned % SEARCH_CANCEL_CHECK_INTERVAL == 0 && !isCurrentSearch(generation, querySnapshot)) {
+                        return;
+                    }
                     BibleVerse bibleVerse = bibleVerses.get(iVerse);
                     String searchableText = BibleSearchMatcher.verseTextForSearch(bibleVerse, withAccents, caseSensitive);
                     if (!BibleSearchMatcher.matches(searchableText, normalizedQuery, wholeWord)) {
@@ -348,24 +413,15 @@ public class BibleSearchController {
                         continue;
                     }
                     String verse = bibleVerse.getText();
-                    TextFlow textFlow = buildHighlightedResult(verse, normalizedQuery, withAccents, caseSensitive);
-                    if (addBibleAbbreviation) {
-                        addBibleAbbreviationForOther(textFlow, bible);
-                    }
-                    Text reference = new Text(book.getShortOrTitle() + " " + (iPart + 1) + ":" + (iVerse + 1) + " ");
-                    setReferenceTextColor(reference);
-                    textFlow.getChildren().add(0, reference);
-                    textFlow.setTextAlignment(TextAlignment.JUSTIFY);
-                    textFlow.setPrefWidth(500.0);
-                    tmpSearchListView.add(textFlow);
-                    tmpSearchIBible.add(bible);
-                    tmpSearchIBook.add(iBook);
-                    tmpSearchIPart.add(iPart);
-                    tmpSearchIVerse.add(iVerse);
+                    hits.add(new SearchHit(bible, iBook, iPart, iVerse, book.getShortOrTitle(), verse));
                     ++results;
                 }
             }
         }
+    }
+
+    private List<Bible> getBiblesToSearch() {
+        return orderedIncludedBibles();
     }
 
     private TextFlow buildHighlightedResult(String verse, String normalizedQuery, boolean withAccents, boolean caseSensitive) {
@@ -468,28 +524,6 @@ public class BibleSearchController {
         bibleShortNameText.setFont(Font.font(font.getName(), FontWeight.BOLD, FontPosture.REGULAR, font.getSize()));
         setReferenceTextColor(bibleShortNameText);
         textFlow.getChildren().add(0, bibleShortNameText);
-    }
-
-    private void fillResults(List<TextFlow> tmpSearchListView, List<Integer> tmpSearchIBook,
-                             List<Integer> tmpSearchIPart, List<Integer> tmpSearchIVerse, List<Bible> tmpSearchIBible,
-                             Map<Integer, Integer> bookCounts) {
-        Platform.runLater(() -> {
-            ObservableList<TextFlow> searchListViewItems = searchListView.getItems();
-            searchListViewItems.clear();
-            searchListViewItems.addAll(tmpSearchListView);
-            searchIBible = tmpSearchIBible;
-            searchIBook = tmpSearchIBook;
-            searchIPart = tmpSearchIPart;
-            searchIVerse = tmpSearchIVerse;
-            for (BookFilterEntry entry : bookFilterEntries) {
-                if (bookCounts.isEmpty()) {
-                    entry.matchCountProperty().set(-1);
-                } else {
-                    entry.matchCountProperty().set(bookCounts.getOrDefault(entry.getBookIndex(), 0));
-                }
-            }
-            bookFilterListView.refresh();
-        });
     }
 
     private void rebuildScopeUi() {
@@ -843,13 +877,19 @@ public class BibleSearchController {
         }
         String summary = parts.isEmpty() ? "" : String.join(" · ", parts);
         boolean showClear = hasFiltersToClear();
-        Platform.runLater(() -> {
-            filterSummaryLabel.setText(summary);
-            filterSummaryLabel.setManaged(!summary.isBlank());
-            filterSummaryLabel.setVisible(!summary.isBlank());
-            clearFiltersLink.setVisible(showClear);
-            clearFiltersLink.setManaged(showClear);
-        });
+        if (Platform.isFxApplicationThread()) {
+            applyFilterSummaryUi(summary, showClear);
+        } else {
+            Platform.runLater(() -> applyFilterSummaryUi(summary, showClear));
+        }
+    }
+
+    private void applyFilterSummaryUi(String summary, boolean showClear) {
+        filterSummaryLabel.setText(summary);
+        filterSummaryLabel.setManaged(!summary.isBlank());
+        filterSummaryLabel.setVisible(!summary.isBlank());
+        clearFiltersLink.setVisible(showClear);
+        clearFiltersLink.setManaged(showClear);
     }
 
     private boolean hasFiltersToClear() {

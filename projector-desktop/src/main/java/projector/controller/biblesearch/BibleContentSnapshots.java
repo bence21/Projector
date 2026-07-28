@@ -22,7 +22,11 @@ public final class BibleContentSnapshots {
     }
 
     public static List<BibleVerse> verses(Chapter chapter) {
-        return snapshot(chapter != null ? chapter.getVerses() : null);
+        try {
+            return snapshot(chapter != null ? chapter.getVerses() : null);
+        } catch (RuntimeException e) {
+            return List.of();
+        }
     }
 
     private static <T> List<T> snapshot(List<T> source) {
