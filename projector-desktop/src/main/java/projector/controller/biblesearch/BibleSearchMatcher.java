@@ -16,11 +16,14 @@ public final class BibleSearchMatcher {
             return "";
         }
         String normalized = query.trim();
+        if (!withAccents) {
+            normalized = projector.utils.StringUtils.stripAccentsPreservingStructure(normalized);
+        }
         if (!caseSensitive) {
             normalized = normalized.toLowerCase(Locale.US);
         }
         if (!withAccents) {
-            normalized = stripForSearch(normalized);
+            normalized = normalized.replaceAll("[^a-zA-Z]", "");
         }
         return normalized.replace("]", "").replace("[", "");
     }
@@ -32,6 +35,9 @@ public final class BibleSearchMatcher {
         String text;
         if (withAccents) {
             text = bibleVerse.getText();
+        } else if (caseSensitive) {
+            String raw = bibleVerse.getText();
+            text = raw != null ? projector.utils.StringUtils.stripAccentsPreservingStructure(raw) : null;
         } else {
             text = bibleVerse.getStrippedText();
             if (text == null) {
@@ -46,6 +52,9 @@ public final class BibleSearchMatcher {
         }
         if (!caseSensitive) {
             text = text.toLowerCase(Locale.US);
+        }
+        if (!withAccents) {
+            text = text.replaceAll("[^a-zA-Z]", "");
         }
         return text;
     }
@@ -76,12 +85,5 @@ public final class BibleSearchMatcher {
         int end = index + length;
         boolean endOk = end >= text.length() || !Character.isLetter(text.charAt(end));
         return startOk && endOk;
-    }
-
-    private static String stripForSearch(String s) {
-        return projector.utils.StringUtils.stripAccentsPreservingStructure(s)
-                .replaceAll("[^a-zA-Z]", "")
-                .toLowerCase(Locale.US)
-                .trim();
     }
 }

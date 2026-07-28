@@ -19,6 +19,13 @@ public class BibleSearchMatcherTest {
     }
 
     @Test
+    public void preservesCaseWhenCaseSensitive() {
+        Assert.assertEquals("Engem", BibleSearchMatcher.normalizeQuery("Engem", false, true));
+        Assert.assertFalse(BibleSearchMatcher.matches("engem", "Engem", false));
+        Assert.assertTrue(BibleSearchMatcher.matches("Engem", "Engem", false));
+    }
+
+    @Test
     public void normalizesWithoutAccents() {
         String query = BibleSearchMatcher.normalizeQuery("Ádám", false, false);
         Assert.assertEquals("adam", query);
