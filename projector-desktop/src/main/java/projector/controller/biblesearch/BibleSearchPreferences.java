@@ -302,11 +302,15 @@ public class BibleSearchPreferences {
         chaptersByBook.clear();
     }
 
-    public void resetToDefaults() {
+    public void clearFilterValues() {
         caseSensitive = false;
         wholeWord = false;
         accentsOverride = null;
         clearRangeFilters();
+    }
+
+    public void resetToDefaults() {
+        clearFilterValues();
         optionsPaneExpanded = false;
         rangePaneExpanded = false;
     }

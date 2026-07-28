@@ -228,7 +228,7 @@ public class BibleSearchController {
             search();
         });
         restoreDefaultsButton.setOnAction(event -> restoreDefaults());
-        clearFiltersLink.setOnAction(event -> restoreDefaults());
+        clearFiltersLink.setOnAction(event -> clearFilters());
         oldTestamentCheckBox.setOnAction(event -> applyTestamentSelection(true, oldTestamentCheckBox.isSelected()));
         newTestamentCheckBox.setOnAction(event -> applyTestamentSelection(false, newTestamentCheckBox.isSelected()));
         chapterFromField.focusedProperty().addListener((obs, oldValue, focused) -> {
@@ -911,8 +911,16 @@ public class BibleSearchController {
         return currentBible != null && !includedBibles.contains(currentBible);
     }
 
+    private void clearFilters() {
+        applyFilterReset(preferences::clearFilterValues, false);
+    }
+
     private void restoreDefaults() {
-        preferences.resetToDefaults();
+        applyFilterReset(preferences::resetToDefaults, true);
+    }
+
+    private void applyFilterReset(Runnable preferenceReset, boolean collapseOptionPanels) {
+        preferenceReset.run();
         pruneEmptyChapterPicks();
         if (currentBible != null) {
             includedBibles.clear();
@@ -926,8 +934,10 @@ public class BibleSearchController {
         accentsCheckBox.setSelected(Settings.getInstance().isWithAccents());
         chapterFromField.clear();
         chapterToField.clear();
-        optionsPane.setExpanded(false);
-        rangePane.setExpanded(false);
+        if (collapseOptionPanels) {
+            optionsPane.setExpanded(false);
+            rangePane.setExpanded(false);
+        }
         rebuildBookFilterList();
         rebuildScopeUi();
         savePreferences();
