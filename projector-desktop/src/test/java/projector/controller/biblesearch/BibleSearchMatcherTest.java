@@ -12,6 +12,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BibleSearchMatcherTest {
 
     @Test
+    void matchesCollapsedSubstringWithoutAccents() {
+        BibleVerse verse = verse("Mert mondom nektek, mostantól nem láttok engem mindaddig");
+
+        assertTrue(BibleSearchMatcher.matchesVerse(verse, "engemm", false, false, false));
+        assertTrue(BibleSearchMatcher.matchesVerse(verse, "engem", false, false, false));
+    }
+
+    @Test
+    void wholeWordDoesNotMatchAcrossSkippedLetters() {
+        BibleVerse verse = verse("láttok engem mindaddig");
+
+        assertFalse(BibleSearchMatcher.matchesVerse(verse, "engemm", false, false, true));
+    }
+
+    @Test
     void matchesAcrossWhitespaceInQueryWithoutAccents() {
         BibleVerse verse = verse("Mert mondom nektek, mostantól nem láttok engem mindaddig");
 

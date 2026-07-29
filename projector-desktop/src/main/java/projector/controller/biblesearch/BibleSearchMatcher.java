@@ -57,7 +57,8 @@ public final class BibleSearchMatcher {
         if (!caseSensitive) {
             preparedVerse = preparedVerse.toLowerCase(Locale.US);
         }
-        return findLetterSubsequenceSpans(verse, preparedVerse, normalizedQuery.toCharArray(), wholeWord);
+        boolean skipNonLetters = !wholeWord;
+        return findLetterSubsequenceSpans(verse, preparedVerse, normalizedQuery.toCharArray(), wholeWord, skipNonLetters);
     }
 
     private static List<MatchSpan> findSubstringSpans(String verse, String haystack, String needle, boolean wholeWord) {
@@ -77,14 +78,14 @@ public final class BibleSearchMatcher {
     }
 
     private static List<MatchSpan> findLetterSubsequenceSpans(String verse, String preparedVerse, char[] queryChars,
-                                                              boolean wholeWord) {
+                                                              boolean wholeWord, boolean skipNonLetters) {
         List<MatchSpan> spans = new ArrayList<>();
         int queryIndex = 0;
         int matchStart = -1;
         for (int i = 0; i < preparedVerse.length(); ++i) {
             char verseChar = preparedVerse.charAt(i);
             if (!Character.isLetter(verseChar)) {
-                if (queryIndex != 0) {
+                if (!skipNonLetters && queryIndex != 0) {
                     i = matchStart;
                     queryIndex = 0;
                     matchStart = -1;
