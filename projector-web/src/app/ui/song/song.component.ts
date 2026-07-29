@@ -16,7 +16,7 @@ import { Suggestion } from '../../models/suggestion';
 import { SongCollectionElementComponent } from '../song-collection-element/song.collection.element';
 import { checkAuthenticationError, ErrorUtil, generalError, openAuthenticateDialog } from '../../util/error-util';
 import { YoutubeIdCheckResult, YoutubeIdCheckResultType } from '../youtube-id-check/youtube-id-check.component';
-import { extractYouTubeVideoId } from '../../util/youtube.util';
+import { extractYouTubeVideoId, findSimilarSongsSharingYouTubeId } from '../../util/youtube.util';
 import { SongWordValidationService } from '../../services/song-word-validation.service';
 import { SongWordValidationResult } from '../../models/songWordValidationResult';
 import { ReviewedWordStatus } from '../../models/reviewedWord';
@@ -32,6 +32,7 @@ export class SongComponent implements OnInit, OnDestroy {
   editing = false;
   showSimilarities = false;
   similar: Song[];
+  similarSongsSharingYouTube: Song[] = [];
   secondSong: Song;
   receivedSimilar = false;
   markText = "Mark for version group";
@@ -289,15 +290,25 @@ export class SongComponent implements OnInit, OnDestroy {
 
   showSimilar() {
     this.similar = [];
+    this.similarSongsSharingYouTube = [];
     this.receivedSimilar = false;
     this.songService.getSimilar(this.song).subscribe((songs) => {
       this.similar = songs;
+      this.similarSongsSharingYouTube = findSimilarSongsSharingYouTubeId(this.song, songs) as Song[];
       if (songs.length > 0) {
         this.secondSong = this.similar[0];
       }
       this.receivedSimilar = true;
     });
     this.showSimilarities = true;
+  }
+
+  sharesYouTubeWithSimilar(song: Song): boolean {
+    if (!song || !this.similarSongsSharingYouTube) {
+      return false;
+    }
+    const key = song.uuid || song.id;
+    return this.similarSongsSharingYouTube.some(s => (s.uuid || s.id) === key);
   }
 
   selectSecondSong(song: Song) {
