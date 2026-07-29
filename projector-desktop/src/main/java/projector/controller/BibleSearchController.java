@@ -258,13 +258,14 @@ public class BibleSearchController {
         if (bibles != null && !savedIds.isEmpty()) {
             for (Bible bible : bibles) {
                 Long id = bible.getId();
-                if (id != null && savedIds.contains(id)) {
-                    includedBibles.add(bible);
+                if (id == null || !savedIds.contains(id)) {
+                    continue;
                 }
+                if (isCurrentSearchBible(bible)) {
+                    continue;
+                }
+                includedBibles.add(bible);
             }
-        }
-        if (includedBibles.isEmpty() && currentBible != null) {
-            includedBibles.add(currentBible);
         }
     }
 
@@ -338,7 +339,7 @@ public class BibleSearchController {
             if (generation != searchGeneration.get()) {
                 return;
             }
-            boolean addAbbreviation = includedBibles.size() > 1;
+            boolean addAbbreviation = orderedIncludedBibles().size() > 1;
             List<TextFlow> textFlows = new ArrayList<>(hits.size());
             List<Bible> tmpSearchIBible = new ArrayList<>(hits.size());
             List<Integer> tmpSearchIBook = new ArrayList<>(hits.size());
@@ -536,7 +537,9 @@ public class BibleSearchController {
         if (bibles != null) {
             for (Bible bible : bibles) {
                 CheckBox checkBox = new CheckBox(bibleLabel(bible));
-                checkBox.setSelected(includedBibles.contains(bible));
+                boolean isCurrent = isCurrentSearchBible(bible);
+                checkBox.setSelected(isCurrent || includedBibles.contains(bible));
+                checkBox.setDisable(isCurrent);
                 checkBox.setUserData(bible);
                 checkBox.selectedProperty().addListener((obs, oldValue, selected) -> {
                     if (updatingScopeUi) {
@@ -601,7 +604,9 @@ public class BibleSearchController {
             return;
         }
         for (Bible bible : bibles) {
-            includedBibles.add(bible);
+            if (!isCurrentSearchBible(bible)) {
+                includedBibles.add(bible);
+            }
         }
         persistIncludedBibles();
         rebuildScopeUi();
@@ -611,6 +616,9 @@ public class BibleSearchController {
     private List<Bible> getSameLanguageBiblesNotIncluded() {
         List<Bible> result = new ArrayList<>();
         for (Bible bible : getSameLanguageBibles()) {
+            if (isCurrentSearchBible(bible)) {
+                continue;
+            }
             if (!includedBibles.contains(bible)) {
                 result.add(bible);
             }
@@ -624,9 +632,10 @@ public class BibleSearchController {
             return result;
         }
         for (Bible bible : bibles) {
-            if (!includedBibles.contains(bible)) {
-                result.add(bible);
+            if (isCurrentSearchBible(bible) || includedBibles.contains(bible)) {
+                continue;
             }
+            result.add(bible);
         }
         return result;
     }
@@ -638,7 +647,7 @@ public class BibleSearchController {
         }
         Language currentLanguage = currentBible.getLanguage();
         for (Bible bible : bibles) {
-            if (includedBibles.contains(bible)) {
+            if (isCurrentSearchBible(bible) || includedBibles.contains(bible)) {
                 continue;
             }
             Language language = bible.getLanguage();
@@ -649,9 +658,13 @@ public class BibleSearchController {
         return result;
     }
 
+    private boolean isCurrentSearchBible(Bible bible) {
+        return currentBible != null && currentBible.equivalent(bible);
+    }
+
     private List<Bible> orderedIncludedBibles() {
         List<Bible> ordered = new ArrayList<>();
-        if (currentBible != null && includedBibles.contains(currentBible)) {
+        if (currentBible != null) {
             ordered.add(currentBible);
         }
         if (bibles != null) {
@@ -660,10 +673,11 @@ public class BibleSearchController {
                     ordered.add(bible);
                 }
             }
-        }
-        for (Bible bible : includedBibles) {
-            if (!ordered.contains(bible)) {
-                ordered.add(bible);
+        } else {
+            for (Bible bible : includedBibles) {
+                if (!ordered.contains(bible)) {
+                    ordered.add(bible);
+                }
             }
         }
         return ordered;
@@ -938,7 +952,7 @@ public class BibleSearchController {
         }
         ResourceBundle bundle = Settings.getInstance().getResourceBundle();
         List<String> parts = new ArrayList<>();
-        int bibleCount = includedBibles.size();
+        int bibleCount = orderedIncludedBibles().size();
         if (bibleCount > 1) {
             parts.add(MessageFormat.format(bundle.getString("Bible search summary bibles"), bibleCount));
         }
@@ -988,10 +1002,10 @@ public class BibleSearchController {
         if (countCheckedChapterPicks() > 0) {
             return true;
         }
-        if (includedBibles.size() > 1) {
+        if (!includedBibles.isEmpty()) {
             return true;
         }
-        return currentBible != null && !includedBibles.contains(currentBible);
+        return false;
     }
 
     private void clearFilters() {
@@ -1005,12 +1019,7 @@ public class BibleSearchController {
     private void applyFilterReset(Runnable preferenceReset, boolean collapseOptionPanels) {
         preferenceReset.run();
         pruneEmptyChapterPicks();
-        if (currentBible != null) {
-            includedBibles.clear();
-            includedBibles.add(currentBible);
-        } else {
-            includedBibles.clear();
-        }
+        includedBibles.clear();
         persistIncludedBibles();
         caseSensitiveCheckBox.setSelected(false);
         wholeWordCheckBox.setSelected(false);
@@ -1045,6 +1054,9 @@ public class BibleSearchController {
     private void persistIncludedBibles() {
         Set<Long> ids = new LinkedHashSet<>();
         for (Bible bible : includedBibles) {
+            if (isCurrentSearchBible(bible)) {
+                continue;
+            }
             if (bible.getId() != null) {
                 ids.add(bible.getId());
             }
@@ -1096,12 +1108,9 @@ public class BibleSearchController {
         }
         this.currentBible = bible;
         if (initialized) {
-            if (bible != null && !includedBibles.contains(bible)) {
-                includedBibles.add(bible);
-                persistIncludedBibles();
-            }
             rebuildBookFilterList();
             rebuildScopeUi();
+            syncBulkBibleButtons();
             search();
         }
     }
@@ -1110,9 +1119,6 @@ public class BibleSearchController {
         this.bibles = bibles;
         if (initialized) {
             includedBibles.retainAll(bibles != null ? bibles : Set.of());
-            if (includedBibles.isEmpty() && currentBible != null) {
-                includedBibles.add(currentBible);
-            }
             restoreIncludedBiblesFromPreferences();
             rebuildScopeUi();
         }
