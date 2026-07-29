@@ -579,12 +579,13 @@ public class BibleSearchController {
         }
 
         List<Bible> otherLanguageNotIncluded = getOtherLanguageBiblesNotIncluded();
+        List<Bible> remainingNotIncluded = getBiblesNotIncluded();
         boolean showAllButton = !otherLanguageNotIncluded.isEmpty();
         includeAllBiblesButton.setVisible(showAllButton);
         includeAllBiblesButton.setManaged(showAllButton);
         if (showAllButton) {
             includeAllBiblesButton.setText(MessageFormat.format(
-                    bundle.getString("Include all remaining bibles"), otherLanguageNotIncluded.size()));
+                    bundle.getString("Include all remaining bibles"), remainingNotIncluded.size()));
         }
     }
 
@@ -610,6 +611,19 @@ public class BibleSearchController {
     private List<Bible> getSameLanguageBiblesNotIncluded() {
         List<Bible> result = new ArrayList<>();
         for (Bible bible : getSameLanguageBibles()) {
+            if (!includedBibles.contains(bible)) {
+                result.add(bible);
+            }
+        }
+        return result;
+    }
+
+    private List<Bible> getBiblesNotIncluded() {
+        List<Bible> result = new ArrayList<>();
+        if (bibles == null) {
+            return result;
+        }
+        for (Bible bible : bibles) {
             if (!includedBibles.contains(bible)) {
                 result.add(bible);
             }
