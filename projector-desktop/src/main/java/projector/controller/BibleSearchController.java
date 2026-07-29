@@ -568,7 +568,14 @@ public class BibleSearchController {
         includeLanguageBiblesButton.setManaged(showLanguageButton);
         if (showLanguageButton) {
             String language = resolveCurrentLanguageLabel();
-            includeLanguageBiblesButton.setText(MessageFormat.format(bundle.getString("Search in language bibles"), language));
+            if (language.isBlank()) {
+                LOG.warn("Could not resolve language name for bible-search include button");
+                includeLanguageBiblesButton.setVisible(false);
+                includeLanguageBiblesButton.setManaged(false);
+            } else {
+                includeLanguageBiblesButton.setText(MessageFormat.format(
+                        bundle.getString("Search in language bibles"), language));
+            }
         }
 
         List<Bible> otherLanguageNotIncluded = getOtherLanguageBiblesNotIncluded();
@@ -664,20 +671,18 @@ public class BibleSearchController {
     }
 
     private String resolveCurrentLanguageLabel() {
-        ResourceBundle bundle = Settings.getInstance().getResourceBundle();
-        if (currentBible != null) {
-            String label = languageLabel(currentBible.getLanguage());
-            if (!label.isBlank()) {
-                return label;
-            }
+        if (currentBible == null || currentBible.getLanguage() == null) {
+            return "";
         }
-        for (Bible bible : getSameLanguageBibles()) {
-            String label = languageLabel(bible.getLanguage());
-            if (!label.isBlank()) {
-                return label;
-            }
+        String label = languageLabel(resolveLanguageRecord(currentBible.getLanguage()));
+        if (!label.isBlank()) {
+            return label;
         }
-        return bundle.getString("Same language");
+        Language songLanguage = Settings.getInstance().getSongSelectedLanguage();
+        if (songLanguage != null && songLanguage.equivalent(currentBible.getLanguage())) {
+            return languageLabel(resolveLanguageRecord(songLanguage));
+        }
+        return "";
     }
 
     private static String languageLabel(Language language) {
@@ -703,12 +708,27 @@ public class BibleSearchController {
         if (hasLanguageName(language)) {
             return language;
         }
+        var languageService = ServiceManager.getLanguageService();
         String uuid = language.getUuid();
-        if (uuid == null || uuid.isBlank()) {
-            return language;
+        if (uuid != null && !uuid.isBlank()) {
+            Language loaded = languageService.findByUuid(uuid);
+            if (loaded != null && hasLanguageName(loaded)) {
+                return loaded;
+            }
         }
-        Language loaded = ServiceManager.getLanguageService().findByUuid(uuid);
-        return loaded != null ? loaded : language;
+        Long id = language.getId();
+        if (id != null) {
+            Language loaded = languageService.findById(id);
+            if (loaded != null && hasLanguageName(loaded)) {
+                return loaded;
+            }
+        }
+        for (Language candidate : languageService.findAll()) {
+            if (candidate.equivalent(language) && hasLanguageName(candidate)) {
+                return candidate;
+            }
+        }
+        return language;
     }
 
     private static boolean hasLanguageName(Language language) {
