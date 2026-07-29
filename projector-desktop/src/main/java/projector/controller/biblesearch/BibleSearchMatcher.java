@@ -2,11 +2,14 @@ package projector.controller.biblesearch;
 
 import projector.model.BibleVerse;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
-import static projector.utils.StringUtils.stripAccents;
-
 public final class BibleSearchMatcher {
+
+    public record MatchSpan(int start, int endExclusive) {
+    }
 
     private BibleSearchMatcher() {
     }
@@ -28,62 +31,95 @@ public final class BibleSearchMatcher {
         return normalized.replace("]", "").replace("[", "");
     }
 
-    public static String verseTextForSearch(BibleVerse bibleVerse, boolean withAccents, boolean caseSensitive) {
+    public static boolean matchesVerse(BibleVerse bibleVerse, String rawQuery, boolean withAccents,
+                                       boolean caseSensitive, boolean wholeWord) {
         if (bibleVerse == null) {
-            return null;
-        }
-        String text;
-        if (withAccents) {
-            text = bibleVerse.getText();
-        } else if (caseSensitive) {
-            String raw = bibleVerse.getText();
-            text = raw != null ? projector.utils.StringUtils.stripAccentsPreservingStructure(raw) : null;
-        } else {
-            text = bibleVerse.getStrippedText();
-            if (text == null) {
-                String raw = bibleVerse.getText();
-                if (raw != null) {
-                    text = stripAccents(raw.toLowerCase(Locale.US));
-                }
-            }
-        }
-        if (text == null) {
-            return null;
-        }
-        if (!caseSensitive) {
-            text = text.toLowerCase(Locale.US);
-        }
-        if (!withAccents) {
-            text = text.replaceAll("[^a-zA-Z]", "");
-        }
-        return text;
-    }
-
-    public static boolean matches(String haystack, String needle, boolean wholeWord) {
-        if (haystack == null || needle == null || needle.isEmpty()) {
             return false;
         }
-        if (!wholeWord) {
-            return haystack.contains(needle);
+        return !findMatchSpans(bibleVerse.getText(), rawQuery, withAccents, caseSensitive, wholeWord).isEmpty();
+    }
+
+    public static List<MatchSpan> findMatchSpans(String verse, String rawQuery, boolean withAccents,
+                                                 boolean caseSensitive, boolean wholeWord) {
+        if (verse == null || rawQuery == null) {
+            return List.of();
         }
+        String normalizedQuery = normalizeQuery(rawQuery, withAccents, caseSensitive);
+        if (normalizedQuery.isEmpty()) {
+            return List.of();
+        }
+        if (withAccents) {
+            String haystack = caseSensitive ? verse : verse.toLowerCase(Locale.US);
+            String needle = caseSensitive ? normalizedQuery : normalizedQuery.toLowerCase(Locale.US);
+            return findSubstringSpans(verse, haystack, needle, wholeWord);
+        }
+        String preparedVerse = projector.utils.StringUtils.stripAccentsPreservingStructure(verse);
+        if (!caseSensitive) {
+            preparedVerse = preparedVerse.toLowerCase(Locale.US);
+        }
+        return findLetterSubsequenceSpans(verse, preparedVerse, normalizedQuery.toCharArray(), wholeWord);
+    }
+
+    private static List<MatchSpan> findSubstringSpans(String verse, String haystack, String needle, boolean wholeWord) {
+        List<MatchSpan> spans = new ArrayList<>();
         int from = 0;
         while (from <= haystack.length() - needle.length()) {
             int index = haystack.indexOf(needle, from);
             if (index < 0) {
-                return false;
+                break;
             }
-            if (isWholeWordAt(haystack, index, needle.length())) {
-                return true;
+            if (!wholeWord || isWholeWordSpan(verse, index, index + needle.length() - 1)) {
+                spans.add(new MatchSpan(index, index + needle.length()));
             }
             from = index + 1;
         }
-        return false;
+        return spans;
     }
 
-    private static boolean isWholeWordAt(String text, int index, int length) {
-        boolean startOk = index == 0 || !Character.isLetter(text.charAt(index - 1));
-        int end = index + length;
-        boolean endOk = end >= text.length() || !Character.isLetter(text.charAt(end));
+    private static List<MatchSpan> findLetterSubsequenceSpans(String verse, String preparedVerse, char[] queryChars,
+                                                              boolean wholeWord) {
+        List<MatchSpan> spans = new ArrayList<>();
+        int queryIndex = 0;
+        int matchStart = -1;
+        for (int i = 0; i < preparedVerse.length(); ++i) {
+            char verseChar = preparedVerse.charAt(i);
+            if (!Character.isLetter(verseChar)) {
+                if (queryIndex != 0) {
+                    i = matchStart;
+                    queryIndex = 0;
+                    matchStart = -1;
+                }
+                continue;
+            }
+            char queryChar = queryChars[queryIndex];
+            if (verseChar == queryChar) {
+                if (queryIndex == 0) {
+                    matchStart = i;
+                }
+                ++queryIndex;
+                if (queryIndex == queryChars.length) {
+                    if (!wholeWord || isWholeWordSpan(verse, matchStart, i)) {
+                        spans.add(new MatchSpan(matchStart, i + 1));
+                        queryIndex = 0;
+                        matchStart = -1;
+                    } else {
+                        i = matchStart;
+                        queryIndex = 0;
+                        matchStart = -1;
+                    }
+                }
+            } else if (queryIndex != 0) {
+                i = matchStart;
+                queryIndex = 0;
+                matchStart = -1;
+            }
+        }
+        return spans;
+    }
+
+    private static boolean isWholeWordSpan(String text, int start, int endInclusive) {
+        boolean startOk = start == 0 || !Character.isLetter(text.charAt(start - 1));
+        boolean endOk = endInclusive + 1 >= text.length() || !Character.isLetter(text.charAt(endInclusive + 1));
         return startOk && endOk;
     }
 }

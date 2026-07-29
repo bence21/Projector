@@ -305,9 +305,8 @@ public class BibleSearchController {
         boolean withAccents = resolveWithAccents();
         boolean caseSensitive = preferences.isCaseSensitive();
         boolean wholeWord = preferences.isWholeWord();
-        String normalizedQuery = BibleSearchMatcher.normalizeQuery(querySnapshot, withAccents, caseSensitive);
         BibleSearchFilterSnapshot filters = BibleSearchFilterSnapshot.from(preferences);
-        if (normalizedQuery.isEmpty()) {
+        if (querySnapshot.isBlank()) {
             publishResults(generation, List.of(), Map.of(), 0);
             return;
         }
@@ -323,7 +322,8 @@ public class BibleSearchController {
             if (!isCurrentSearch(generation, querySnapshot)) {
                 return;
             }
-            collectSearchHits(normalizedQuery, bible, withAccents, caseSensitive, wholeWord, filters, hits, bookCounts, generation, querySnapshot);
+            collectSearchHits(querySnapshot, bible, withAccents, caseSensitive, wholeWord, filters, hits, bookCounts,
+                    generation, querySnapshot);
         }
         if (!isCurrentSearch(generation, querySnapshot)) {
             return;
@@ -348,9 +348,10 @@ public class BibleSearchController {
             List<Integer> tmpSearchIVerse = new ArrayList<>(hits.size());
             boolean withAccents = resolveWithAccents();
             boolean caseSensitive = preferences.isCaseSensitive();
-            String normalizedQuery = BibleSearchMatcher.normalizeQuery(getNewSearchText(), withAccents, caseSensitive);
+            boolean wholeWord = preferences.isWholeWord();
+            String rawQuery = getNewSearchText();
             for (SearchHit hit : hits) {
-                TextFlow textFlow = buildHighlightedResult(hit.getVerseText(), normalizedQuery, withAccents, caseSensitive);
+                TextFlow textFlow = buildHighlightedResult(hit.getVerseText(), rawQuery, withAccents, caseSensitive, wholeWord);
                 if (addAbbreviation) {
                     addBibleAbbreviationForOther(textFlow, hit.getBible());
                 }
@@ -384,7 +385,7 @@ public class BibleSearchController {
         });
     }
 
-    private void collectSearchHits(String normalizedQuery, Bible bible, boolean withAccents, boolean caseSensitive,
+    private void collectSearchHits(String rawQuery, Bible bible, boolean withAccents, boolean caseSensitive,
                                    boolean wholeWord, BibleSearchFilterSnapshot filters, List<SearchHit> hits,
                                    Map<Integer, Integer> bookCounts, int generation, String querySnapshot) {
         int results = 0;
@@ -407,8 +408,7 @@ public class BibleSearchController {
                         return;
                     }
                     BibleVerse bibleVerse = bibleVerses.get(iVerse);
-                    String searchableText = BibleSearchMatcher.verseTextForSearch(bibleVerse, withAccents, caseSensitive);
-                    if (!BibleSearchMatcher.matches(searchableText, normalizedQuery, wholeWord)) {
+                    if (!BibleSearchMatcher.matchesVerse(bibleVerse, rawQuery, withAccents, caseSensitive, wholeWord)) {
                         continue;
                     }
                     bookCounts.merge(iBook, 1, Integer::sum);
@@ -427,93 +427,37 @@ public class BibleSearchController {
         return orderedIncludedBibles();
     }
 
-    private TextFlow buildHighlightedResult(String verse, String normalizedQuery, boolean withAccents, boolean caseSensitive) {
+    private TextFlow buildHighlightedResult(String verse, String rawQuery, boolean withAccents, boolean caseSensitive,
+                                            boolean wholeWord) {
         TextFlow textFlow = new TextFlow();
-        if (verse == null || normalizedQuery.isEmpty()) {
+        if (verse == null || verse.isEmpty() || rawQuery == null || rawQuery.isBlank()) {
             return textFlow;
         }
-        if (!withAccents) {
-            return buildHighlightedResultLetterScan(verse, normalizedQuery, caseSensitive);
+        List<BibleSearchMatcher.MatchSpan> spans = BibleSearchMatcher.findMatchSpans(
+                verse, rawQuery, withAccents, caseSensitive, wholeWord);
+        if (spans.isEmpty()) {
+            Text text = new Text(verse);
+            setGeneralTextColor(text);
+            textFlow.getChildren().add(text);
+            return textFlow;
         }
-        String compareVerse = verse;
-        String query = normalizedQuery;
-        if (!caseSensitive) {
-            compareVerse = compareVerse.toLowerCase(Locale.US);
-            query = query.toLowerCase(Locale.US);
-        }
-        int from = 0;
-        while (from <= compareVerse.length() - query.length()) {
-            int index = compareVerse.indexOf(query, from);
-            if (index < 0) {
-                break;
+        int lastAdded = 0;
+        for (BibleSearchMatcher.MatchSpan span : spans) {
+            if (lastAdded < span.start()) {
+                Text text = new Text(verse.substring(lastAdded, span.start()));
+                setGeneralTextColor(text);
+                textFlow.getChildren().add(text);
             }
-            if (from < index) {
-                Text text1 = new Text(verse.substring(from, index));
-                setGeneralTextColor(text1);
-                textFlow.getChildren().add(text1);
-            }
-            Text foundText = new Text(verse.substring(index, index + query.length()));
+            Text foundText = new Text(verse.substring(span.start(), span.endExclusive()));
             setFoundTextColor(foundText);
             foundText.setFont(Font.font(foundText.getFont().getFamily(), FontWeight.BOLD, foundText.getFont().getSize() + 1));
             addTextWithBackGround(textFlow, foundText);
-            from = index + query.length();
-        }
-        if (from < verse.length()) {
-            Text text1 = new Text(verse.substring(from));
-            setGeneralTextColor(text1);
-            textFlow.getChildren().add(text1);
-        }
-        return textFlow;
-    }
-
-    private TextFlow buildHighlightedResultLetterScan(String verse, String normalizedQuery, boolean caseSensitive) {
-        TextFlow textFlow = new TextFlow();
-        String preparedVerse = projector.utils.StringUtils.stripAccentsPreservingStructure(verse);
-        char[] queryChars = normalizedQuery.toCharArray();
-        int queryIndex = 0;
-        int matchStart = -1;
-        int lastAdded = 0;
-        for (int i = 0; i < preparedVerse.length(); ++i) {
-            char verseChar = preparedVerse.charAt(i);
-            if (!Character.isLetter(verseChar)) {
-                if (queryIndex != 0) {
-                    i = matchStart;
-                    queryIndex = 0;
-                    matchStart = -1;
-                }
-                continue;
-            }
-            char compareChar = caseSensitive ? verseChar : Character.toLowerCase(verseChar);
-            char queryChar = queryChars[queryIndex];
-            if (compareChar == queryChar) {
-                if (queryIndex == 0) {
-                    matchStart = i;
-                }
-                ++queryIndex;
-                if (queryIndex == queryChars.length) {
-                    if (lastAdded < matchStart) {
-                        Text text1 = new Text(verse.substring(lastAdded, matchStart));
-                        setGeneralTextColor(text1);
-                        textFlow.getChildren().add(text1);
-                    }
-                    Text foundText = new Text(verse.substring(matchStart, i + 1));
-                    setFoundTextColor(foundText);
-                    foundText.setFont(Font.font(foundText.getFont().getFamily(), FontWeight.BOLD, foundText.getFont().getSize() + 1));
-                    addTextWithBackGround(textFlow, foundText);
-                    lastAdded = i + 1;
-                    queryIndex = 0;
-                    matchStart = -1;
-                }
-            } else if (queryIndex != 0) {
-                i = matchStart;
-                queryIndex = 0;
-                matchStart = -1;
-            }
+            lastAdded = span.endExclusive();
         }
         if (lastAdded < verse.length()) {
-            Text text1 = new Text(verse.substring(lastAdded));
-            setGeneralTextColor(text1);
-            textFlow.getChildren().add(text1);
+            Text text = new Text(verse.substring(lastAdded));
+            setGeneralTextColor(text);
+            textFlow.getChildren().add(text);
         }
         return textFlow;
     }
@@ -799,6 +743,9 @@ public class BibleSearchController {
         for (int i = 0; i < books.size(); ++i) {
             BookFilterEntry entry = new BookFilterEntry(i, books.get(i).getShortOrTitle(), !excluded.contains(i));
             entry.selectedProperty().addListener((obs, oldValue, selected) -> {
+                if (updatingTestamentUi) {
+                    return;
+                }
                 persistExcludedBooks();
                 syncTestamentCheckboxes();
                 search();
@@ -840,13 +787,19 @@ public class BibleSearchController {
         if (updatingTestamentUi) {
             return;
         }
-        int from = oldTestament ? 0 : STANDARD_OLD_TESTAMENT_BOOKS;
-        int to = oldTestament ? Math.min(STANDARD_OLD_TESTAMENT_BOOKS, bookFilterEntries.size()) : bookFilterEntries.size();
-        for (int i = from; i < to; ++i) {
-            bookFilterEntries.get(i).selectedProperty().set(selected);
+        updatingTestamentUi = true;
+        try {
+            int from = oldTestament ? 0 : STANDARD_OLD_TESTAMENT_BOOKS;
+            int to = oldTestament ? Math.min(STANDARD_OLD_TESTAMENT_BOOKS, bookFilterEntries.size()) : bookFilterEntries.size();
+            for (int i = from; i < to; ++i) {
+                bookFilterEntries.get(i).selectedProperty().set(selected);
+            }
+            persistExcludedBooks();
+            syncTestamentCheckboxes();
+            search();
+        } finally {
+            updatingTestamentUi = false;
         }
-        persistExcludedBooks();
-        search();
     }
 
     private void rebuildChapterCheckboxes() {
