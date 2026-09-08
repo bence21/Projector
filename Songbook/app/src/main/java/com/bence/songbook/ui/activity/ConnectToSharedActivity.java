@@ -12,37 +12,70 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
+import com.bence.songbook.network.LocalNetwork;
 import com.bence.songbook.ui.utils.Preferences;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ConnectToSharedActivity extends BaseActivity {
 
-    private static int timeout = 3400;
+    private static final String[] FALLBACK_GATEWAYS = {
+            "192.168.43.1",
+            "192.168.137.1",
+            "192.168.42.1",
+            "172.20.10.1",
+            "192.168.1.1",
+            "10.0.0.1"
+    };
+    private static final int SCAN_POOL_SIZE = 32;
+    private static int timeout = 800;
     private Button tryAgainButton;
+    private Button connectByIpButton;
+    private EditText ipAddressEditText;
+    private ProgressBar searchProgressBar;
+    private TextView textView;
+    private ListView listView;
+    private volatile boolean scanning;
+    private volatile boolean destroyed;
+    private ExecutorService scanExecutor;
 
-    private static boolean isOpenAddress(String ip) {
+    private boolean isOpenAddress(String ip) {
+        Socket socket = null;
         try {
-            Socket socket = new Socket();
+            socket = new Socket();
+            LocalNetwork.bindSocket(this, socket);
             socket.connect(new InetSocketAddress(ip, PORT), timeout);
-            socket.close();
             return true;
         } catch (Exception ex) {
             return false;
+        } finally {
+            if (socket != null) {
+                try {
+                    socket.close();
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 
@@ -58,26 +91,71 @@ public class ConnectToSharedActivity extends BaseActivity {
             getSupportActionBar().setDisplayShowHomeEnabled(true);
         }
         tryAgainButton = findViewById(R.id.tryAgainButton);
+        connectByIpButton = findViewById(R.id.connectByIpButton);
+        ipAddressEditText = findViewById(R.id.ipAddressEditText);
+        searchProgressBar = findViewById(R.id.searchProgressBar);
+        textView = findViewById(R.id.textView);
+        listView = findViewById(R.id.listView);
+        connectByIpButton.setOnClickListener(v -> connectFromManualIp());
+        ipAddressEditText.setOnEditorActionListener((v, actionId, event) -> {
+            connectFromManualIp();
+            return true;
+        });
         searchAndLoadIps();
     }
 
-    private void searchAndLoadIps() {
-        final List<String> openIps = new ArrayList<>();
-        findShared(openIps);
+    @Override
+    protected void onDestroy() {
+        destroyed = true;
+        shutdownScanExecutor();
+        super.onDestroy();
+    }
 
-        ListView listView = findViewById(R.id.listView);
+    private void searchAndLoadIps() {
+        if (scanning) {
+            return;
+        }
+        scanning = true;
+        tryAgainButton.setEnabled(false);
+        searchProgressBar.setVisibility(View.VISIBLE);
+        textView.setText(R.string.searching_shared);
+        new Thread(() -> {
+            List<String> openIps = Collections.synchronizedList(new ArrayList<>());
+            findShared(openIps);
+            List<String> result = new ArrayList<>(openIps);
+            runOnUiThread(() -> {
+                scanning = false;
+                if (destroyed || isFinishing()) {
+                    return;
+                }
+                tryAgainButton.setEnabled(true);
+                searchProgressBar.setVisibility(View.GONE);
+                showResults(result);
+            });
+        }).start();
+    }
+
+    private void showResults(List<String> openIps) {
         MyCustomAdapter dataAdapter = new MyCustomAdapter(this, R.layout.content_connect_to_shared, openIps);
         listView.setAdapter(dataAdapter);
-        if (openIps.size() == 1) {
-            connect(openIps.get(0));
-        }
         listView.setOnItemClickListener((parent, view, position, id) -> connect(openIps.get(position)));
-        TextView textView = findViewById(R.id.textView);
-        if (openIps.size() == 0) {
+        if (openIps.isEmpty()) {
             textView.setText(R.string.no_connections);
         } else {
             textView.setText(R.string.select_one_below);
         }
+        if (openIps.size() == 1) {
+            connect(openIps.get(0));
+        }
+    }
+
+    private void connectFromManualIp() {
+        String ip = ipAddressEditText.getText().toString().trim();
+        if (!LocalNetwork.isValidIpv4(ip)) {
+            Toast.makeText(this, R.string.invalid_ip_address, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        connect(ip);
     }
 
     private void connect(String ip) {
@@ -95,44 +173,83 @@ public class ConnectToSharedActivity extends BaseActivity {
     }
 
     private void findShared(final List<String> openIps) {
+        ExecutorService executor = Executors.newFixedThreadPool(SCAN_POOL_SIZE);
+        scanExecutor = executor;
         try {
-            Enumeration<NetworkInterface> enumeration = NetworkInterface.getNetworkInterfaces();
-            List<String> ips = new ArrayList<>();
-            while (enumeration.hasMoreElements()) {
-                NetworkInterface n = (NetworkInterface) enumeration.nextElement();
-                Enumeration<InetAddress> ee = n.getInetAddresses();
-                while (ee.hasMoreElements()) {
-                    InetAddress i = (InetAddress) ee.nextElement();
-                    String hostAddress = i.getHostAddress();
-                    if (hostAddress != null && hostAddress.matches("192.168.[12]?[0-9]{1,2}.[12]?[0-9]{1,2}")) {
-                        ips.add(hostAddress);
-                    }
-                }
-            }
-            List<Thread> threads = new ArrayList<>(ips.size() * 255);
-            for (String ip : ips) {
-                String[] split = ip.split("\\.");
-                String firstThree = split[0] + "." + split[1] + "." + split[2] + ".";
-                for (int i = 1; i <= 255; ++i) {
-                    final String ip1 = firstThree + i;
-                    Thread thread = new Thread(() -> {
-                        try {
-                            if (isOpenAddress(ip1)) {
-                                openIps.add(ip1);
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
+            List<String> hostsToProbe = buildHostsToProbe();
+            List<Callable<Void>> tasks = new ArrayList<>(hostsToProbe.size());
+            for (final String ip : hostsToProbe) {
+                tasks.add(() -> {
+                    try {
+                        if (!destroyed && isOpenAddress(ip)) {
+                            openIps.add(ip);
                         }
-                    });
-                    thread.start();
-                    threads.add(thread);
-                }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                });
             }
-            for (Thread thread : threads) {
-                thread.join(5000);
-            }
+            long waitMs = Math.max(15000L, ((hostsToProbe.size() + SCAN_POOL_SIZE - 1L) / SCAN_POOL_SIZE) * (timeout + 200L) + 2000L);
+            executor.invokeAll(tasks, waitMs, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            executor.shutdownNow();
+            if (scanExecutor == executor) {
+                scanExecutor = null;
+            }
+        }
+    }
+
+    private List<String> buildHostsToProbe() {
+        Set<String> ownIps = new LinkedHashSet<>(LocalNetwork.getRfc1918Addresses());
+        Set<String> prefixes = new LinkedHashSet<>();
+        for (String ip : ownIps) {
+            String prefix = LocalNetwork.subnetPrefix(ip);
+            if (prefix != null) {
+                prefixes.add(prefix);
+            }
+        }
+        String gateway = LocalNetwork.getDhcpGateway(this);
+        if (gateway != null) {
+            String prefix = LocalNetwork.subnetPrefix(gateway);
+            if (prefix != null) {
+                prefixes.add(prefix);
+            }
+        }
+        Set<String> added = new LinkedHashSet<>();
+        List<String> hosts = new ArrayList<>();
+        addHost(hosts, added, ownIps, gateway);
+        if (prefixes.isEmpty()) {
+            for (String fallback : FALLBACK_GATEWAYS) {
+                addHost(hosts, added, ownIps, fallback);
+            }
+            return hosts;
+        }
+        for (String prefix : prefixes) {
+            addHost(hosts, added, ownIps, prefix + "1");
+        }
+        for (String prefix : prefixes) {
+            for (int i = 1; i <= 255; ++i) {
+                addHost(hosts, added, ownIps, prefix + i);
+            }
+        }
+        return hosts;
+    }
+
+    private void addHost(List<String> hosts, Set<String> added, Set<String> ownIps, String ip) {
+        if (ip == null || added.contains(ip) || ownIps.contains(ip)) {
+            return;
+        }
+        added.add(ip);
+        hosts.add(ip);
+    }
+
+    private void shutdownScanExecutor() {
+        ExecutorService executor = scanExecutor;
+        if (executor != null) {
+            executor.shutdownNow();
         }
     }
 
@@ -145,10 +262,8 @@ public class ConnectToSharedActivity extends BaseActivity {
     }
 
     public void onTryAgainClick(View view) {
-        tryAgainButton.setEnabled(false);
         timeout += 1000;
         searchAndLoadIps();
-        tryAgainButton.setEnabled(true);
     }
 
     private class MyCustomAdapter extends ArrayAdapter<String> {

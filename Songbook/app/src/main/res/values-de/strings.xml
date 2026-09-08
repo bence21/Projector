@@ -40,8 +40,14 @@
     <string name="blank_at_end_of_song">Leer nach dem letzten Vers</string>
     <string name="advanced_options">Fortgeschrittene Optionen</string>
     <string name="share_on_network">Im Netzwerk teilen</string>
+    <string name="share_on_network_addresses">Verbindung von einem anderen Gerät mit:\n%1$s</string>
+    <string name="share_on_network_no_lan_ip">Keine LAN-Adresse sichtbar. Im Hotspot kann das andere Gerät 192.168.43.1:%1$d oder 172.20.10.1:%1$d versuchen</string>
     <string name="no_connections">Es gibt keine geteilten Verbindungen</string>
     <string name="select_one_below">Wählen Sie einen der folgenden aus:</string>
+    <string name="searching_shared">Suche nach geteilten Verbindungen…</string>
+    <string name="enter_ip_address">IP-Adresse</string>
+    <string name="connect">Verbinden</string>
+    <string name="invalid_ip_address">Geben Sie eine gültige IPv4-Adresse ein</string>
     <string name="connect_to_shared">Verbinden mit geteilt</string>
     <string name="connection_successfully_wait_">Verbindung erfolgreich! Warten Sie auf eingehende Texte</string>
     <string name="similar">Änlich</string>

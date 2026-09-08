@@ -9,6 +9,34 @@
     tools:context="com.bence.songbook.ui.activity.ConnectToSharedActivity"
     tools:showIn="@layout/activity_connect_to_shared">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="6dp"
+        android:paddingRight="6dp">
+
+        <EditText
+            android:id="@+id/ipAddressEditText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:digits="0123456789."
+            android:hint="@string/enter_ip_address"
+            android:importantForAutofill="no"
+            android:imeOptions="actionGo"
+            android:inputType="textNoSuggestions"
+            android:maxLines="1" />
+
+        <Button
+            android:id="@+id/connectByIpButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/connect"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/tryAgainButton"
         android:layout_width="wrap_content"
@@ -17,6 +45,13 @@
         android:onClick="onTryAgainClick"
         android:text="@string/try_again"
         android:textAllCaps="false" />
+
+    <ProgressBar
+        android:id="@+id/searchProgressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/textView"

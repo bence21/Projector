@@ -40,7 +40,13 @@
     <string name="blank_at_end_of_song">Üres megjelenítése az utolsó vers után</string>
     <string name="advanced_options">Haladó beállítások</string>
     <string name="share_on_network">Megosztás hálózaton</string>
+    <string name="share_on_network_addresses">Csatlakozás másik eszközről:\n%1$s</string>
+    <string name="share_on_network_no_lan_ip">Nincs látható LAN-cím. Hotspoton a másik eszköz próbálhatja: 192.168.43.1:%1$d vagy 172.20.10.1:%1$d</string>
     <string name="no_connections">Nincsenek megosztott kapcsolatok!</string>
+    <string name="searching_shared">Megosztott kapcsolatok keresése…</string>
+    <string name="enter_ip_address">IP-cím</string>
+    <string name="connect">Csatlakozás</string>
+    <string name="invalid_ip_address">Adjon meg egy érvényes IPv4-címet</string>
     <string name="connection_successfully_wait_">Csatlakozás sikeresen! Várjon bejövõ szövegeket.</string>
     <string name="select_one_below">Válasszon az alábbiak közül:</string>
     <string name="connect_to_shared">Csatlakozás a megosztotthoz</string>

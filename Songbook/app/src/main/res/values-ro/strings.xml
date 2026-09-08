@@ -40,7 +40,13 @@
     <string name="blank_at_end_of_song">Gol după ultimul verset</string>
     <string name="advanced_options">Opțiuni avansate</string>
     <string name="share_on_network">Share on network</string>
+    <string name="share_on_network_addresses">Conectați-vă de pe alt dispozitiv folosind:\n%1$s</string>
+    <string name="share_on_network_no_lan_ip">Nicio adresă LAN vizibilă. Pe hotspot, celălalt dispozitiv poate încerca 192.168.43.1:%1$d sau 172.20.10.1:%1$d</string>
     <string name="no_connections">Nu există conexiuni!</string>
+    <string name="searching_shared">Căutare conexiuni partajate…</string>
+    <string name="enter_ip_address">Adresă IP</string>
+    <string name="connect">Conectare</string>
+    <string name="invalid_ip_address">Introduceți o adresă IPv4 validă</string>
     <string name="connection_successfully_wait_">Conectarea cu succes! Așteptați texte trimise.</string>
     <string name="select_one_below">Alegeți una mai jos:</string>
     <string name="connect_to_shared">Connectare</string>

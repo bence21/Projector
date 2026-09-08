@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 public class TCPClient {
@@ -33,7 +34,9 @@ public class TCPClient {
         thread = new Thread(() -> {
             try {
                 if (openIp != null) {
-                    clientSocket = new Socket(openIp, PORT);
+                    clientSocket = new Socket();
+                    LocalNetwork.bindSocket(connectToSharedFullscreenActivity, clientSocket);
+                    clientSocket.connect(new InetSocketAddress(openIp, PORT));
                     //noinspection CharsetObjectCanBeUsed
                     inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), "UTF-8"));
                     outToServer = new DataOutputStream(clientSocket.getOutputStream());

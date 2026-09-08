@@ -43,8 +43,14 @@
     <string name="blank_at_end_of_song">Blank after the last verse</string>
     <string name="advanced_options">Advanced options</string>
     <string name="share_on_network">Share on network</string>
+    <string name="share_on_network_addresses">Connect from another device using:\n%1$s</string>
+    <string name="share_on_network_no_lan_ip">No LAN address visible. On a hotspot, the other device can try 192.168.43.1:%1$d or 172.20.10.1:%1$d</string>
     <string name="no_connections">There is no shared connections!</string>
     <string name="select_one_below">Select one below:</string>
+    <string name="searching_shared">Searching for shared connections…</string>
+    <string name="enter_ip_address">IP address</string>
+    <string name="connect">Connect</string>
+    <string name="invalid_ip_address">Enter a valid IPv4 address</string>
     <string name="connect_to_shared">Connect to shared</string>
     <string name="connection_successfully_wait_">Connection successfully!  Wait for incoming texts.</string>
     <string name="similar">Similar</string>
