@@ -33,8 +33,10 @@ import projector.utils.SceneUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 public class DownloadLanguagesController {
     private static final Logger LOG = LoggerFactory.getLogger(DownloadLanguagesController.class);
@@ -99,8 +101,9 @@ public class DownloadLanguagesController {
                     Platform.runLater(() -> addLanguageToVBox(onlineLanguage));
                 }
             }
-            deleteDeletedLanguages(languageApiBean);
+            Set<String> softDeletedUuids = pruneSoftDeletedLanguages(languageApiBean);
             Platform.runLater(() -> {
+                removeSoftDeletedFromDownloadList(softDeletedUuids);
                 clearLanguageListStatus();
                 updateSelectButtonState();
                 updateMigrationWarningLabel();
@@ -135,20 +138,62 @@ public class DownloadLanguagesController {
         });
     }
 
-    private void deleteDeletedLanguages(LanguageApiBean languageApiBean) {
+    /**
+     * Soft-deleted server languages must leave the download UI. Local rows with no songs are
+     * removed from storage; rows that still have songs stay so local data is not orphaned.
+     */
+    private Set<String> pruneSoftDeletedLanguages(LanguageApiBean languageApiBean) {
+        Set<String> softDeletedUuids = new HashSet<>();
         try {
             List<Language> deletedLanguages = languageApiBean.getDeletedLanguages();
-            if (deletedLanguages != null) {
-                LanguageService languageService = ServiceManager.getLanguageService();
-                for (Language language : deletedLanguages) {
-                    Language byUuid = languageService.findByUuid(language.getUuid());
-                    if (byUuid != null) {
-                        languageService.delete(byUuid);
-                    }
+            if (deletedLanguages == null) {
+                return softDeletedUuids;
+            }
+            LanguageService languageService = ServiceManager.getLanguageService();
+            for (Language language : deletedLanguages) {
+                String uuid = language.getUuid();
+                if (uuid == null) {
+                    continue;
                 }
+                softDeletedUuids.add(uuid);
+                syncLocalSoftDeletedLanguage(languageService, uuid);
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
+        }
+        return softDeletedUuids;
+    }
+
+    private void syncLocalSoftDeletedLanguage(LanguageService languageService, String uuid) {
+        Language byUuid = languageService.findByUuid(uuid);
+        if (byUuid == null) {
+            return;
+        }
+        if (byUuid.getCountedSongsSize() == 0) {
+            languageService.delete(byUuid);
+            return;
+        }
+        if (byUuid.isSelected()) {
+            byUuid.setSelected(false);
+            languageService.update(byUuid);
+        }
+    }
+
+    private void removeSoftDeletedFromDownloadList(Set<String> softDeletedUuids) {
+        if (softDeletedUuids == null || softDeletedUuids.isEmpty()) {
+            return;
+        }
+        for (int i = languages.size() - 1; i >= 0; --i) {
+            Language language = languages.get(i);
+            String uuid = language.getUuid();
+            if (uuid == null || !softDeletedUuids.contains(uuid)) {
+                continue;
+            }
+            languages.remove(i);
+            if (i < checkBoxes.size()) {
+                CheckBox checkBox = checkBoxes.remove(i);
+                listView.getChildren().remove(checkBox);
+            }
         }
     }
 

@@ -25,6 +25,15 @@ public class LanguageApiBean {
 
     public List<Language> getLanguages() {
         Call<List<LanguageDTO>> call = languageApi.getLanguages();
+        return fetchLanguages(call);
+    }
+
+    public List<Language> getDeletedLanguages() {
+        Call<List<LanguageDTO>> call = languageApi.getDeletedLanguages();
+        return fetchLanguages(call);
+    }
+
+    private List<Language> fetchLanguages(Call<List<LanguageDTO>> call) {
         try {
             List<LanguageDTO> languageDTOs = call.execute().body();
             return languageAssembler.createModelList(languageDTOs);
