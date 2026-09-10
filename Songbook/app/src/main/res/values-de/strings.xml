@@ -17,6 +17,8 @@
     <string name="filter">Filter</string>
     <string name="sort">Sortieren</string>
     <string name="select">Wählen</string>
+    <string name="all_collections">ALLE</string>
+    <string name="none_collections">KEINE</string>
     <string name="modified_date">Geändertes Datum</string>
     <string name="ascending_by_title">Aufsteigend nach Titel</string>
     <string name="descending_by_title">Absteigend nach Titel</string>
@@ -28,6 +30,7 @@
     <string name="light_theme">Licht Thema</string>
     <string name="maximum_size_of_text">Maximale Größe des Textes</string>
     <string name="collection">Sammlung</string>
+    <string name="collections">Sammlungen</string>
     <string name="saving_songs">Lieder speichern</string>
     <string name="downloading_collections">Sammlungen herunterladen</string>
     <string name="saving_collections">Sammlungen speichern</string>

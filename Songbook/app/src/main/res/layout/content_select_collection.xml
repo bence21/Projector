@@ -12,11 +12,35 @@
         android:padding="6dp"
         android:text="@string/select"/>
 
+    <LinearLayout
+        android:id="@+id/actionButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/selectButton"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/allButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="6dp"
+            android:text="@string/all_collections"/>
+
+        <Button
+            android:id="@+id/noneButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="6dp"
+            android:text="@string/none_collections"/>
+    </LinearLayout>
+
     <ListView
         android:id="@+id/listView"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_below="@+id/selectButton"/>
+        android:layout_below="@+id/actionButtons"/>
 </RelativeLayout>

@@ -96,6 +96,7 @@ import com.bence.songbook.service.UserService;
 import com.bence.songbook.ui.adapter.LanguageAdapter;
 import com.bence.songbook.ui.queue.QueueViewModel;
 import com.bence.songbook.ui.utils.CheckSongForUpdate;
+import com.bence.songbook.ui.utils.CollectionVisibilityPreferences;
 import com.bence.songbook.ui.utils.GoogleSignInIntent;
 import com.bence.songbook.ui.utils.KeyboardUtils;
 import com.bence.songbook.ui.utils.MainPageAdapter;
@@ -123,7 +124,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @SuppressWarnings({"ConstantConditions", "deprecation"})
@@ -1845,6 +1849,12 @@ public class MainActivity extends BaseActivity
             return false;
         });
 
+        final MenuItem collectionsMenuItem = menu.findItem(R.id.action_collections);
+        collectionsMenuItem.setOnMenuItemClickListener(item -> {
+            onCollectionButtonClick(null);
+            return true;
+        });
+
         final SearchView mSearchView = (SearchView) searchItem.getActionView();
         searchItem.setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS |
                 MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
@@ -2117,6 +2127,7 @@ public class MainActivity extends BaseActivity
     }
 
     private void sortCollectionBySelectedLanguages() {
+        prepareSongCollectionSelectionForPopup();
         boolean oneLanguageSelected = isOneLanguageSelected();
         LongSparseArray<Object> languageHashMap = new LongSparseArray<>(languages.size());
         for (Language language : languages) {
@@ -2155,12 +2166,28 @@ public class MainActivity extends BaseActivity
         collectionPopupWindow.setElevation(5.0f);
         Button selectButton = customView.findViewById(R.id.selectButton);
         selectButton.setOnClickListener(view -> {
+            saveCollectionVisibilityPreferencesFromCurrentSelection();
             filter();
             loadAll();
-            filterPopupWindow.dismiss();
+            if (filterPopupWindow != null) {
+                filterPopupWindow.dismiss();
+            }
             collectionPopupWindow.dismiss();
         });
+        Button allButton = customView.findViewById(R.id.allButton);
+        allButton.setOnClickListener(view -> {
+            if (collectionListView != null && collectionListView.getAdapter() instanceof SongCollectionAdapter) {
+                ((SongCollectionAdapter) collectionListView.getAdapter()).setAllChecked(true);
+            }
+        });
+        Button noneButton = customView.findViewById(R.id.noneButton);
+        noneButton.setOnClickListener(view -> {
+            if (collectionListView != null && collectionListView.getAdapter() instanceof SongCollectionAdapter) {
+                ((SongCollectionAdapter) collectionListView.getAdapter()).setAllChecked(false);
+            }
+        });
         Collections.sort(songCollections, (o1, o2) -> Utility.compare(o2.getSongCollectionElements().size(), o1.getSongCollectionElements().size()));
+        prepareSongCollectionSelectionForPopup();
         collectionListView = customView.findViewById(R.id.listView);
         collectionPopupWindow.setBackgroundDrawable(new BitmapDrawable());
         collectionPopupWindow.setOutsideTouchable(true);
@@ -2234,18 +2261,29 @@ public class MainActivity extends BaseActivity
         HashMap<String, Boolean> addedSongsHashMap = new HashMap<>(hashMap.size());
         songs.clear();
         clearSongCollectionForSongs(hashMap.values());
-        if (ifAtLeastOneSongCollectionIsSelected()) {
-            for (SongCollection songCollection : songCollections) {
-                if (songCollection.isSelected()) {
-                    addSongCollectionElementsByHashMap(songCollection, hashMap, addedSongsHashMap, true);
-                }
+        Set<Long> restrictedLanguageIds = getRestrictedLanguageIds();
+        for (SongCollection songCollection : songCollections) {
+            boolean visibleByPreference = isCollectionVisibleByPreference(songCollection);
+            songCollection.setSelected(visibleByPreference);
+            if (visibleByPreference) {
+                addSongCollectionElementsByHashMap(songCollection, hashMap, addedSongsHashMap, true);
             }
-        } else {
-            for (SongCollection songCollection : songCollections) {
-                addSongCollectionElementsByHashMap(songCollection, hashMap, addedSongsHashMap, false);
-            }
-            addRestOfSongs(hashMap);
         }
+        addRestOfSongs(hashMap, restrictedLanguageIds);
+    }
+
+    private Set<Long> getRestrictedLanguageIds() {
+        Set<Long> restrictedLanguageIds = new HashSet<>();
+        for (SongCollection songCollection : songCollections) {
+            Language language = songCollection.getLanguage();
+            if (language == null || language.getId() == null) {
+                continue;
+            }
+            if (CollectionVisibilityPreferences.hasSelection(this, language.getId())) {
+                restrictedLanguageIds.add(language.getId());
+            }
+        }
+        return restrictedLanguageIds;
     }
 
     private void addSongCollectionElementsByHashMap(SongCollection songCollection, HashMap<String, Song> hashMap, HashMap<String, Boolean> addedSongsHashMap, boolean filteringByCollection) {
@@ -2261,9 +2299,13 @@ public class MainActivity extends BaseActivity
         }
     }
 
-    private void addRestOfSongs(HashMap<String, Song> hashMap) {
+    private void addRestOfSongs(HashMap<String, Song> hashMap, Set<Long> restrictedLanguageIds) {
         for (Song song : hashMap.values()) {
-            if (song.getSongCollectionElements().isEmpty()) {
+            Language language = song.getLanguage();
+            boolean languageIsRestricted = language != null
+                    && language.getId() != null
+                    && restrictedLanguageIds.contains(language.getId());
+            if (!languageIsRestricted && song.getSongCollectionElements().isEmpty()) {
                 songs.add(song);
             }
         }
@@ -2292,13 +2334,73 @@ public class MainActivity extends BaseActivity
         }
     }
 
-    private boolean ifAtLeastOneSongCollectionIsSelected() {
+    private void prepareSongCollectionSelectionForPopup() {
+        if (songCollections == null) {
+            return;
+        }
         for (SongCollection songCollection : songCollections) {
-            if (songCollection.isSelected()) {
-                return true;
+            songCollection.setSelected(isCollectionVisibleByPreference(songCollection));
+        }
+    }
+
+    private boolean isCollectionVisibleByPreference(SongCollection songCollection) {
+        if (songCollection == null) {
+            return false;
+        }
+        Language language = songCollection.getLanguage();
+        if (language == null || language.getId() == null) {
+            return true;
+        }
+        if (!CollectionVisibilityPreferences.hasSelection(this, language.getId())) {
+            return true;
+        }
+        Long collectionId = songCollection.getId();
+        if (collectionId == null) {
+            return true;
+        }
+        Set<Long> selectedCollectionIds = CollectionVisibilityPreferences.getSelectedCollectionIds(this, language.getId());
+        return selectedCollectionIds.contains(collectionId);
+    }
+
+    private void saveCollectionVisibilityPreferencesFromCurrentSelection() {
+        if (songCollections == null) {
+            return;
+        }
+        Map<Long, List<SongCollection>> collectionsByLanguage = new HashMap<>();
+        for (SongCollection songCollection : songCollections) {
+            Language language = songCollection.getLanguage();
+            if (language == null || language.getId() == null) {
+                continue;
+            }
+            Long languageId = language.getId();
+            List<SongCollection> collections = collectionsByLanguage.get(languageId);
+            if (collections == null) {
+                collections = new ArrayList<>();
+                collectionsByLanguage.put(languageId, collections);
+            }
+            collections.add(songCollection);
+        }
+        for (Map.Entry<Long, List<SongCollection>> entry : collectionsByLanguage.entrySet()) {
+            long languageId = entry.getKey();
+            List<SongCollection> collections = entry.getValue();
+            Set<Long> selectedCollectionIds = new HashSet<>();
+            int collectionCount = 0;
+            for (SongCollection songCollection : collections) {
+                Long collectionId = songCollection.getId();
+                if (collectionId == null) {
+                    continue;
+                }
+                collectionCount++;
+                if (songCollection.isSelected()) {
+                    selectedCollectionIds.add(collectionId);
+                }
+            }
+            if (selectedCollectionIds.size() == collectionCount) {
+                CollectionVisibilityPreferences.clearSelectedCollectionIds(this, languageId);
+            } else {
+                CollectionVisibilityPreferences.saveSelectedCollectionIds(this, languageId, selectedCollectionIds);
             }
         }
-        return false;
     }
 
     private void createSelectLanguagePopup() {
@@ -2751,6 +2853,13 @@ public class MainActivity extends BaseActivity
             songCollectionList.clear();
             songCollectionList.addAll(filteredSongCollections);
             this.notifyDataSetChanged();
+        }
+
+        void setAllChecked(boolean checked) {
+            for (SongCollection songCollection : songCollectionList) {
+                songCollection.setSelected(checked);
+            }
+            notifyDataSetChanged();
         }
 
         private class ViewHolder {

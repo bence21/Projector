@@ -17,6 +17,8 @@
     <string name="filter">Filtrează</string>
     <string name="sort">Sortează</string>
     <string name="select">Selectați</string>
+    <string name="all_collections">TOATE</string>
+    <string name="none_collections">NICIUNA</string>
     <string name="modified_date">Data modificata</string>
     <string name="ascending_by_title">Crescător după titlu</string>
     <string name="descending_by_title">Descrescător după titlu</string>
@@ -28,6 +30,7 @@
     <string name="light_theme">Temă luminoasă</string>
     <string name="maximum_size_of_text">Dimensiunea maximă a textului</string>
     <string name="collection">Colecţie</string>
+    <string name="collections">Colecții</string>
     <string name="saving_songs">Salvarea cântecelor</string>
     <string name="downloading_collections">Descărcarea colecțiilor</string>
     <string name="saving_collections">Salvarea colecțiilor</string>

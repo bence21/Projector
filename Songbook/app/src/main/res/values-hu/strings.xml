@@ -18,6 +18,8 @@
     <string name="sort">Rendez</string>
     <string name="close">Bezárás</string>
     <string name="select">Kiválaszt</string>
+    <string name="all_collections">ÖSSZES</string>
+    <string name="none_collections">EGYIK SEM</string>
     <string name="modified_date">Modosítás dátum</string>
     <string name="ascending_by_title">Növekvő cím szerint</string>
     <string name="descending_by_title">Csökkenő cím szerint</string>
@@ -28,6 +30,7 @@
     <string name="light_theme">Világos téma</string>
     <string name="maximum_size_of_text">A szöveg maximális mérete</string>
     <string name="collection">Gyűjtemény</string>
+    <string name="collections">Gyűjtemények</string>
     <string name="saving_songs">Énekek lementése</string>
     <string name="downloading_collections">Gyűjtemények letöltése</string>
     <string name="saving_collections">Gyűjtemények lemetése</string>

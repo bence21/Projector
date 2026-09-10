@@ -14,4 +14,10 @@
         android:title="@string/search_in_verses"
         app:showAsAction="always"
         tools:ignore="AlwaysShowAction" />
+    <item
+        android:id="@+id/action_collections"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="@string/collections"
+        app:showAsAction="always"
+        tools:ignore="AlwaysShowAction" />
 </menu>
