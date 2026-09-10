@@ -7,19 +7,30 @@ import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import projector.utils.AppProperties;
+
 public class ProcessUtil {
     private static final Logger LOG = LoggerFactory.getLogger(ProcessUtil.class);
 
     public static boolean killOtherProcesses(boolean confirmBeforeKill) {
         try {
-            String processName = "Projector.exe";
+            String processName = "";
+            String query = "";
+
+            if (AppProperties.getInstance().isLinuxOs()){
+                processName = "projector";
+                query = "ps -c " + processName + " -o cmd=,pid=";
+            } else {
+                processName = "Projector.exe";
+                query = "wmic process where \"name='" + processName + "'\" get ProcessId,ExecutablePath";
+            }
+
             String targetFolder = System.getProperty("user.dir");
 
             // Get the current process ID
             String currentPid = String.valueOf(ProcessHandle.current().pid());
 
             // Step 1: Run the WMIC query
-            String query = "wmic process where \"name='" + processName + "'\" get ProcessId,ExecutablePath";
             Process process = Runtime.getRuntime().exec(query);
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 

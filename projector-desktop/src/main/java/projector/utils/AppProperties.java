@@ -32,6 +32,16 @@ public class AppProperties {
         return osName.startsWith("Mac OS X") || osName.startsWith("Mac OS");
     }
 
+    public boolean isLinuxOs(){
+        String osName = System.getProperty("os.name");
+        return osName.startsWith("Linux");
+    }
+
+    public boolean isWindowsOs(){
+        String osName = System.getProperty("os.name");
+        return osName.startsWith("Windows");
+    }
+
     private String getDatabaseFolder_() {
         Object database = properties.get("database");
         if (database == null || ((String) database).isEmpty()) {
@@ -51,6 +61,10 @@ public class AppProperties {
                 String workDirectoryPath = System.getProperty("user.home") + "/Library/Application Support/";
                 return workDirectoryPath + macWorkDirectoryName + "/";
             }
+        }
+        if (isLinuxOs()) {
+         String linuxWorkDirectoryName = System.getProperty("user.home") + "/.local/share/projector/";
+         return linuxWorkDirectoryName;
         }
         return "./";
     }
