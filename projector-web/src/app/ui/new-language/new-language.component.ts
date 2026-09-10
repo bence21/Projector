@@ -2,7 +2,11 @@ import {Component, Inject, OnInit} from '@angular/core';
 import {Language} from "../../models/language";
 import {LanguageDataService} from "../../services/language-data.service";
 import {FormBuilder, FormGroup, Validators} from "@angular/forms";
-import {MAT_DIALOG_DATA, MatDialogRef} from "@angular/material";
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from "@angular/material";
+import {checkAuthenticationError} from "../../util/error-util";
+import {NewLanguageDialogResult} from "../../util/language-dialog.util";
+
+export {NewLanguageDialogResult} from "../../util/language-dialog.util";
 
 @Component({
   selector: 'app-new-language',
@@ -28,7 +32,8 @@ export class NewLanguageComponent implements OnInit {
   constructor(private dialogRef: MatDialogRef<NewLanguageComponent>,
               @Inject(MAT_DIALOG_DATA) private data: any,
               private fb: FormBuilder,
-              private languageDataService: LanguageDataService) {
+              private languageDataService: LanguageDataService,
+              private dialog: MatDialog) {
   }
 
   ngOnInit() {
@@ -82,7 +87,16 @@ export class NewLanguageComponent implements OnInit {
         this.dialogRef.close('ok');
       },
       (err) => {
-        console.log(err);
+        if (err && err.status === 409) {
+          try {
+            const existing = new Language(err.json());
+            this.dialogRef.close({ existing } as NewLanguageDialogResult);
+          } catch (parseError) {
+            this.formErrors.englishName = 'Language already exists';
+          }
+        } else {
+          checkAuthenticationError(this.onSubmit, this, err, this.dialog);
+        }
       }
     );
   }

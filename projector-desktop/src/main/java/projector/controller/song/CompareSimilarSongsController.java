@@ -6,8 +6,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +17,7 @@ import projector.model.SongVerse;
 import projector.service.ServiceManager;
 import projector.service.SongService;
 import projector.utils.StringUtils;
+import projector.utils.compare.CompareDiffHighlighter;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -51,28 +50,6 @@ public class CompareSimilarSongsController {
     private int conflictIndex = 0;
     private boolean showingConflict = false;
     private SongService songService;
-
-    private static void addTexts(String a, List<String> subStrings, TextFlow textFlow) {
-        textFlow.getChildren().clear();
-        for (int i = subStrings.size() - 1; i >= 0; --i) {
-            final String x = subStrings.get(i);
-            final int endIndex = a.indexOf(x);
-            final Text text = new Text(a.substring(0, endIndex));
-            text.setUnderline(true);
-            text.setFill(Color.rgb(255, 0, 0));
-            textFlow.getChildren().add(text);
-            final Text text2 = new Text(x);
-            text2.setFill(Color.rgb(36, 52, 40));
-            textFlow.getChildren().add(text2);
-            a = a.substring(endIndex + x.length());
-        }
-        if (a.length() > 0) {
-            final Text text = new Text(a);
-            text.setUnderline(true);
-            text.setFill(Color.rgb(255, 0, 0));
-            textFlow.getChildren().add(text);
-        }
-    }
 
     public void initialize() {
         conflictGridPane.setVisible(false);
@@ -171,8 +148,8 @@ public class CompareSimilarSongsController {
                 String a = localSong.getVersesText();
                 String b = song.getVersesText();
                 final List<String> subStrings = StringUtils.highestCommonStrings(a, b);
-                addTexts(a, subStrings, conflictLocalSongTextFlow);
-                addTexts(b, subStrings, conflictSongTextFlow);
+                CompareDiffHighlighter.render(conflictLocalSongTextFlow, a, subStrings);
+                CompareDiffHighlighter.render(conflictSongTextFlow, b, subStrings);
                 ++conflictIndex;
             } else {
                 showingConflict = false;

@@ -13,7 +13,16 @@ public class BaseTest extends ApplicationTest {
     @Before
     public void setUpClass() throws Exception {
         ApplicationVersion.getInstance().setTesting(true);
+        ApplicationVersion.getInstance().setAllowUncappedTestWindowSize(allowUncappedTestWindowSize());
         ApplicationTest.launch(MainDesktop.class);
+    }
+
+    /**
+     * Override and return {@code true} when a test needs the saved window size from settings
+     * instead of the default cap to the primary screen's visual bounds.
+     */
+    protected boolean allowUncappedTestWindowSize() {
+        return false;
     }
 
     @Override

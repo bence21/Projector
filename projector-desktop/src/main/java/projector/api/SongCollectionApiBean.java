@@ -16,27 +16,23 @@ import java.util.List;
 
 public class SongCollectionApiBean {
     private static final Logger LOG = LoggerFactory.getLogger(SongCollectionApiBean.class);
-    private SongCollectionApi songCollectionApi;
-    private SongCollectionAssembler songCollectionAssembler;
+    private final SongCollectionApi songCollectionApi;
+    private final SongCollectionAssembler songCollectionAssembler;
 
     public SongCollectionApiBean() {
         songCollectionApi = ApiManager.getClient().create(SongCollectionApi.class);
         songCollectionAssembler = SongCollectionAssembler.getInstance();
     }
 
-    public List<SongCollection> getSongCollections(Language language, Date lastModifiedDate) {
+    public RemoteFetchResult<List<SongCollection>> getSongCollectionsResult(Language language, Date lastModifiedDate) {
         Call<List<SongCollectionDTO>> call = songCollectionApi.getSongCollections(language.getUuid(), lastModifiedDate.getTime());
-        try {
-            List<SongCollectionDTO> songCollectionDTOs = call.execute().body();
+        return RemoteFetchSupport.execute(call, songCollectionDTOs -> {
             List<SongCollection> songCollections = songCollectionAssembler.createModelList(songCollectionDTOs);
             for (SongCollection songCollection : songCollections) {
                 songCollection.setLanguage(language);
             }
             return songCollections;
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
-        }
-        return null;
+        });
     }
 
     public SongCollection uploadSongCollection(SongCollection songCollection) {

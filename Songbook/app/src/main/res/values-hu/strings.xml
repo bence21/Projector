@@ -18,6 +18,8 @@
     <string name="sort">Rendez</string>
     <string name="close">Bezárás</string>
     <string name="select">Kiválaszt</string>
+    <string name="all_collections">ÖSSZES</string>
+    <string name="none_collections">EGYIK SEM</string>
     <string name="modified_date">Modosítás dátum</string>
     <string name="ascending_by_title">Növekvő cím szerint</string>
     <string name="descending_by_title">Csökkenő cím szerint</string>
@@ -28,6 +30,7 @@
     <string name="light_theme">Világos téma</string>
     <string name="maximum_size_of_text">A szöveg maximális mérete</string>
     <string name="collection">Gyűjtemény</string>
+    <string name="collections">Gyűjtemények</string>
     <string name="saving_songs">Énekek lementése</string>
     <string name="downloading_collections">Gyűjtemények letöltése</string>
     <string name="saving_collections">Gyűjtemények lemetése</string>
@@ -40,7 +43,13 @@
     <string name="blank_at_end_of_song">Üres megjelenítése az utolsó vers után</string>
     <string name="advanced_options">Haladó beállítások</string>
     <string name="share_on_network">Megosztás hálózaton</string>
+    <string name="share_on_network_addresses">Csatlakozás másik eszközről:\n%1$s</string>
+    <string name="share_on_network_no_lan_ip">Nincs látható LAN-cím. Hotspoton a másik eszköz próbálhatja: 192.168.43.1:%1$d vagy 172.20.10.1:%1$d</string>
     <string name="no_connections">Nincsenek megosztott kapcsolatok!</string>
+    <string name="searching_shared">Megosztott kapcsolatok keresése…</string>
+    <string name="enter_ip_address">IP-cím</string>
+    <string name="connect">Csatlakozás</string>
+    <string name="invalid_ip_address">Adjon meg egy érvényes IPv4-címet</string>
     <string name="connection_successfully_wait_">Csatlakozás sikeresen! Várjon bejövõ szövegeket.</string>
     <string name="select_one_below">Válasszon az alábbiak közül:</string>
     <string name="connect_to_shared">Csatlakozás a megosztotthoz</string>
@@ -57,6 +66,10 @@
     <string name="language_of_the_song">Az ének nyelve</string>
     <string name="successfully_uploaded">Sikeresen feltöltve!</string>
     <string name="upload_failed">Feltöltés sikertelen</string>
+    <string name="upload_needs_sign_in_message">A szerverre való feltöltéshez jelentkezzen be.</string>
+    <string name="upload_session_expired_message">A munkamenet lejárt. Jelentkezzen be újra, majd próbálja meg újra a feltöltést.</string>
+    <string name="upload_open_login">Bejelentkezés</string>
+    <string name="upload_network_or_server_message">Nem sikerült feltölteni. Ellenőrizze a kapcsolatot, és próbálja újra.</string>
     <string name="suggest_edits">Javasoljon módosításokat</string>
     <string name="short_description_of_the_suggestion">A javaslat rövid leírása:</string>
     <string name="submit">Beküldés</string>

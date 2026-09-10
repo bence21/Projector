@@ -23,6 +23,10 @@ public class AppProperties {
         return instance;
     }
 
+    public boolean isDevelopmentMode() {
+        return Boolean.parseBoolean(properties.getProperty("development", "false"));
+    }
+
     public boolean isMacOs() {
         String osName = System.getProperty("os.name");
         return osName.startsWith("Mac OS X") || osName.startsWith("Mac OS");

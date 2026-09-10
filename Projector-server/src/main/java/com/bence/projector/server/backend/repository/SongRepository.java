@@ -3,11 +3,13 @@ package com.bence.projector.server.backend.repository;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Song;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 import javax.transaction.Transactional;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -34,6 +36,31 @@ public interface SongRepository extends CrudRepository<Song, Long> {
     List<Song> findAllByCreatedByEmail(String createdByEmail);
 
     List<Song> findAllByLanguageAndCreatedByEmail(Language language, String createdByEmail);
+
+    /**
+     * Version-group merge only: avoids loading/saving {@link Song#getSongVerseOrderListItems()} etc., which can fail
+     * merge when DB rows were removed but stale associations remain.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("update Song s set s.versionGroup = :vg, s.modifiedDate = :modified where s.id in :ids")
+    void updateVersionGroupAndModifiedDate(
+            @Param("vg") Song versionGroup,
+            @Param("modified") Date modified,
+            @Param("ids") Collection<Long> ids);
+
+    @Modifying(clearAutomatically = true)
+    @Query("update Song s set s.views = :views, s.lastIncrementViewDate = :lastIncrementViewDate where s.uuid = :uuid")
+    void updateViews(
+            @Param("uuid") String uuid,
+            @Param("views") long views,
+            @Param("lastIncrementViewDate") Date lastIncrementViewDate);
+
+    @Modifying(clearAutomatically = true)
+    @Query("update Song s set s.favourites = :favourites, s.lastIncrementFavouritesDate = :lastIncrementFavouritesDate where s.uuid = :uuid")
+    void updateFavourites(
+            @Param("uuid") String uuid,
+            @Param("favourites") long favourites,
+            @Param("lastIncrementFavouritesDate") Date lastIncrementFavouritesDate);
 
     @Query(value = "SELECT DISTINCT s.* FROM song s " +
             "JOIN song_verse v ON s.id = v.song_id " +

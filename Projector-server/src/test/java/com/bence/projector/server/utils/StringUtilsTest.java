@@ -4,6 +4,8 @@ import org.junit.Test;
 
 import static com.bence.projector.server.utils.StringUtils.fixQuotationMarks;
 import static com.bence.projector.server.utils.StringUtils.format;
+import static com.bence.projector.server.utils.StringUtils.highestCommonStringInt;
+import static com.bence.projector.server.utils.StringUtils.highestCommonStringIntUncapped;
 import static org.junit.Assert.assertEquals;
 
 public class StringUtilsTest {
@@ -208,5 +210,22 @@ public class StringUtilsTest {
     public void test_fixQuotationMarks3() {
         String s = fixQuotationMarks("This ”is a string with „quotes”. Another” ”example”.");
         assertEquals("This „is a string with ”quotes„. Another” „example”.", s);
+    }
+
+    @Test
+    public void highestCommonStringInt_identical_returnsFullLength() {
+        String longIdentical = "x".repeat(3000);
+        assertEquals(longIdentical.length(), highestCommonStringInt(longIdentical, longIdentical));
+    }
+
+    @Test
+    public void highestCommonStringIntUncapped_exampleSubsequenceLength() {
+        assertEquals(3, highestCommonStringIntUncapped("12345", "135"));
+    }
+
+    @Test
+    public void highestCommonStringIntUncapped_identical_returnsFullLength() {
+        String s = "\nór isten\r\n".repeat(150);
+        assertEquals(s.length(), highestCommonStringIntUncapped(s, s));
     }
 }

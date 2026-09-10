@@ -10,6 +10,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static projector.utils.StringUtils.parseToShortName;
+
 public class Bible extends BaseEntity {
 
     @DatabaseField
@@ -17,6 +19,7 @@ public class Bible extends BaseEntity {
     @DatabaseField
     private String shortName;
     @ForeignCollectionField
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private ForeignCollection<Book> bookForeignCollection;
     private List<Book> books;
     @DatabaseField(foreign = true, index = true)
@@ -89,6 +92,9 @@ public class Bible extends BaseEntity {
     }
 
     public String getShortName() {
+        if (shortName == null) {
+            return parseToShortName(name);
+        }
         return shortName;
     }
 

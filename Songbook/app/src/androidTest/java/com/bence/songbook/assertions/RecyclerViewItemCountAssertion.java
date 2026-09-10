@@ -11,8 +11,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.espresso.NoMatchingViewException;
 import androidx.test.espresso.ViewAssertion;
 
-import com.bence.songbook.ui.activity.MainActivity;
-
 public class RecyclerViewItemCountAssertion implements ViewAssertion {
 
     private final int expectedCount;
@@ -30,7 +28,7 @@ public class RecyclerViewItemCountAssertion implements ViewAssertion {
         }
 
         RecyclerView recyclerView = (RecyclerView) view;
-        MainActivity.SongAdapter adapter = (MainActivity.SongAdapter) recyclerView.getAdapter();
+        RecyclerView.Adapter<?> adapter = recyclerView.getAdapter();
         assertNotNull(adapter);
         int itemCount = adapter.getItemCount();
         if (type == RecyclerViewItemCountType.EXACT) {

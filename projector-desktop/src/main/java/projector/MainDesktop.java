@@ -29,11 +29,13 @@ import org.slf4j.LoggerFactory;
 import projector.application.ApplicationUtil;
 import projector.application.ApplicationVersion;
 import projector.application.ProjectionScreenSettings;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.application.Updater;
 import projector.config.Log4j2Config;
 import projector.controller.BibleController;
 import projector.controller.FirstSetupController;
+import projector.controller.MessageDialogController;
 import projector.controller.MyController;
 import projector.controller.ProjectionScreenController;
 import projector.controller.song.SongController;
@@ -44,6 +46,8 @@ import projector.repository.ormLite.DatabaseHelper;
 import projector.service.CustomCanvasService;
 import projector.utils.AppProperties;
 import projector.utils.AppState;
+import projector.utils.CompareWindowTracker;
+import projector.utils.SongSaveDiagnostics;
 import projector.utils.monitors.MonitorUtil;
 
 import java.io.FileWriter;
@@ -61,6 +65,9 @@ import static projector.utils.SceneUtils.addStylesheetToSceneBySettings;
 import static projector.utils.SceneUtils.createWindowController;
 import static projector.utils.SceneUtils.getTransparentStage;
 import static projector.utils.SceneUtils.getWindowController;
+import static projector.utils.TestStageBounds.cappedHeight;
+import static projector.utils.TestStageBounds.cappedWidth;
+import static projector.utils.TestStageBounds.positionStage;
 
 public class MainDesktop extends Application {
 
@@ -82,7 +89,9 @@ public class MainDesktop extends Application {
     public static void main(String[] args) {
         Log4j2Config.getInstance().initializeLog4j2OnMac();
         accessibilityAssistiveTechnologiesProblem();
-        if (!killOtherProcesses(!AppState.getInstance().isClosed())) {
+        boolean uncleanShutdown = !AppState.getInstance().isClosed();
+        SessionAutosave.getInstance().setRestorePending(uncleanShutdown);
+        if (!killOtherProcesses(uncleanShutdown)) {
             return;
         }
         openState();
@@ -202,15 +211,17 @@ public class MainDesktop extends Application {
 
     public void start2(Stage primaryStage) {
         Settings.shouldBeNull();
+        registerSongSaveDiagnostics();
         loadInBackGround();
         addIconToStage(primaryStage, getClass());
-        primaryStage.setMinHeight(600);
-        primaryStage.setWidth(settings.getMainWidth());
-        primaryStage.setHeight(settings.getMainHeight());
+        double mainWidth = cappedWidth(settings.getMainWidth());
+        double mainHeight = cappedHeight(settings.getMainHeight());
+        primaryStage.setMinHeight(Math.min(600, mainHeight));
+        primaryStage.setWidth(mainWidth);
+        primaryStage.setHeight(mainHeight);
         primaryStage.show();
         primaryStage.setTitle("Projector");
-        primaryStage.setX(0);
-        primaryStage.setY(0);
+        positionStage(primaryStage);
         myController.setPrimaryStage(primaryStage);
         setProjectionScreen();
         if (canvasStage != null) {
@@ -220,6 +231,26 @@ public class MainDesktop extends Application {
         myController.initialTabSelect();
         primaryStage.requestFocus();
         ApplicationUtil.getInstance().checkForProjectorState();
+        registerSessionShutdownHook();
+    }
+
+    private void registerSessionShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(
+                SessionAutosave.getInstance()::shutdown,
+                "projector-session-shutdown"));
+    }
+
+    private void registerSongSaveDiagnostics() {
+        SongSaveDiagnostics.setDevWarningHandler(count -> Platform.runLater(() -> {
+            MessageDialogController messageDialog = MessageDialogController.getMessageDialog(
+                    getClass(), "Development warning");
+            if (messageDialog == null) {
+                return;
+            }
+            messageDialog.setHeaderText(count + " song(s) saved without a language. Check logs for details.");
+            messageDialog.addOkButton();
+            messageDialog.showAndWait();
+        }));
     }
 
     @SuppressWarnings("unused")
@@ -267,7 +298,7 @@ public class MainDesktop extends Application {
             myController = loader.getController();
             BibleController bibleController = myController.getBibleController();
             SongController songController = myController.getSongController();
-            primaryScene = new Scene(root, settings.getMainWidth(), settings.getMainHeight());
+            primaryScene = new Scene(root, cappedWidth(settings.getMainWidth()), cappedHeight(settings.getMainHeight()));
             windowController = createWindowController(getClass(), primaryScene, primaryStage);
             addSettingsMenu(windowController);
             windowController.showSignInButton();
@@ -407,6 +438,7 @@ public class MainDesktop extends Application {
     }
 
     private void closeApplication() {
+        ApplicationUtil.getInstance().consumeSessionOnCleanClose();
         saveStateOnClose();
         System.out.println("Stage is closing");
         Settings settings = Settings.getInstance();
@@ -420,6 +452,7 @@ public class MainDesktop extends Application {
         }
         // Close all settings windows
         closeAllSettingsWindows();
+        CompareWindowTracker.closeAll();
         myController.closeAllPdfFiles();
         myController.closeAllVideoFiles();
         myController.close();

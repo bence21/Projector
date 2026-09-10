@@ -1,11 +1,10 @@
 package com.bence.songbook.ui.utils;
 
 import static com.bence.songbook.ui.activity.MainActivity.getOrdinalNumberText;
-import static com.bence.songbook.ui.utils.QueueSongAdapter.getLongFromInteger;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.os.Build;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -28,6 +27,7 @@ import java.util.Map;
 
 public class SongListElementAdapter extends ArrayAdapter<SongListElement> {
 
+    private static final String TAG = SongListElementAdapter.class.getSimpleName();
     private final MainActivity.Listener listener;
     private final Map<SongListElement, Integer> mIdMap = new HashMap<>();
     private final boolean shortCollectionName;
@@ -106,14 +106,16 @@ public class SongListElementAdapter extends ArrayAdapter<SongListElement> {
             }
         } catch (IndexOutOfBoundsException ignored) {
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, e.getMessage(), e);
         }
         return 0L;
     }
 
-    @Override
-    public boolean hasStableIds() {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP;
+    private static long getLongFromInteger(Integer integer) {
+        if (integer == null) {
+            return 0L;
+        }
+        return integer;
     }
 
 }

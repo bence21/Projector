@@ -14,6 +14,6 @@ export class LanguageDataService {
   }
 
   create(language: Language) {
-    return this.api.create(Language, 'api/language', language);
+    return this.api.create(Language, 'user/api/language', language);
   }
 }

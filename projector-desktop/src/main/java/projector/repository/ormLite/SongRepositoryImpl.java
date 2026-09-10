@@ -6,8 +6,10 @@ import com.j256.ormlite.misc.TransactionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.model.Song;
+import projector.model.SongVerse;
 import projector.repository.RepositoryException;
 import projector.repository.SongDAO;
+import projector.utils.SongSaveDiagnostics;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -17,7 +19,7 @@ public class SongRepositoryImpl extends AbstractBaseRepository<Song> implements 
     private static final Logger LOG = LoggerFactory.getLogger(SongRepositoryImpl.class);
     private final DatabaseHelper databaseHelper;
 
-    private SongVerseRepositoryImpl songVerseRepository;
+    private final SongVerseRepositoryImpl songVerseRepository;
 
     SongRepositoryImpl() throws SQLException {
         super(Song.class, DatabaseHelper.getInstance().getSongDao());
@@ -27,20 +29,32 @@ public class SongRepositoryImpl extends AbstractBaseRepository<Song> implements 
 
     @Override
     public Song create(Song song) throws RepositoryException {
+        SongSaveDiagnostics.warnIfMissingLanguage(song);
         Long id = song.getId();
+        // Load verses before any delete: lazy FK collections are empty after DB rows are removed.
+        List<SongVerse> versesToPersist = song.getVerses();
         if (id != null) {
             Song byId = findById(id);
             if (byId != null) {
                 songVerseRepository.deleteAll(byId.getVerses());
             }
+            for (SongVerse verse : versesToPersist) {
+                verse.setId(null);
+            }
         }
-        final Song song1 = super.create(song);
-        songVerseRepository.create(song.getVerses());
-        return song1;
+        final Song savedSong = super.create(song);
+        for (SongVerse verse : versesToPersist) {
+            verse.setMainSong(savedSong);
+        }
+        songVerseRepository.create(versesToPersist);
+        return savedSong;
     }
 
     @Override
     public List<Song> create(List<Song> songs) throws RepositoryException {
+        for (Song song : songs) {
+            SongSaveDiagnostics.warnIfMissingLanguage(song);
+        }
         List<Song> songList = super.create(songs);
         for (Song song : songList) {
             songVerseRepository.create(song.getVerses());
@@ -130,6 +144,24 @@ public class SongRepositoryImpl extends AbstractBaseRepository<Song> implements 
                     });
         } catch (SQLException e) {
             String msg = "Could not save favouriteCount";
+            LOG.error(msg);
+            throw new RepositoryException(msg, e);
+        }
+    }
+
+    @Override
+    public Song findByOriginalSongUuid(String originalSongUuid) {
+        if (originalSongUuid == null || originalSongUuid.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            List<Song> songs = dao.queryForEq("originalSongUuid", originalSongUuid);
+            if (songs != null && !songs.isEmpty()) {
+                return songs.get(0);
+            }
+            return null;
+        } catch (Exception e) {
+            String msg = "Could not find fork song";
             LOG.error(msg);
             throw new RepositoryException(msg, e);
         }

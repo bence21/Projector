@@ -115,7 +115,10 @@ public class SetLanguages {
     }
 
     private static List<NormalizedWordBunch> getSortedNormalizedWordBunches(Language language, Map<Language, Map<String, WordBunch>> languageMap) {
-        Map<String, WordBunch> wordsBunch = languageMap.get(language);
+        Map<String, WordBunch> wordsBunch = getOrCreateWordBunchMap(languageMap, language);
+        if (wordsBunch == null) {
+            return Collections.emptyList();
+        }
         List<WordBunch> wordBunches = getList(wordsBunch.values());
         Map<String, NormalizedWordBunch> normalizedMap = calculateNormalizedWordBunchMap(wordBunches);
         List<NormalizedWordBunch> normalizedWordBunches = getList(normalizedMap.values());
@@ -513,7 +516,10 @@ public class SetLanguages {
 
     private static void addWordByAlreadySetLanguage(Map<Language, Collection<String>> languageMap, Song song1) {
         Language language = song1.getLanguage();
-        Collection<String> words = languageMap.get(language);
+        Collection<String> words = getOrCreateWordCollection(languageMap, language);
+        if (words == null) {
+            return;
+        }
         addSongWordStringsTo(song1, words);
     }
 
@@ -525,11 +531,62 @@ public class SetLanguages {
 
     private static void addWordByAlreadySetLanguage_wordBunch(Map<Language, Map<String, WordBunch>> languageMap, Song song) {
         Language language = song.getLanguage();
-        Map<String, WordBunch> words = languageMap.get(language);
+        Map<String, WordBunch> words = getOrCreateWordBunchMap(languageMap, language);
         addWordsInCollection_wordBunch(song, words);
     }
 
+    /**
+     * Songs may reference a different {@link Language} instance than the keys in {@code languageMap}
+     * (e.g. Hibernate proxy vs cached entity). Resolve by uuid before creating a new entry.
+     */
+    private static Map<String, WordBunch> getOrCreateWordBunchMap(Map<Language, Map<String, WordBunch>> languageMap, Language language) {
+        if (language == null) {
+            return null;
+        }
+        Map<String, WordBunch> words = languageMap.get(language);
+        if (words != null) {
+            return words;
+        }
+        String uuid = language.getUuid();
+        if (uuid != null) {
+            for (Map.Entry<Language, Map<String, WordBunch>> entry : languageMap.entrySet()) {
+                Language key = entry.getKey();
+                if (key.getUuid() != null && key.getUuid().equals(uuid)) {
+                    return entry.getValue();
+                }
+            }
+        }
+        words = new HashMap<>();
+        languageMap.put(language, words);
+        return words;
+    }
+
+    private static Collection<String> getOrCreateWordCollection(Map<Language, Collection<String>> languageMap, Language language) {
+        if (language == null) {
+            return null;
+        }
+        Collection<String> words = languageMap.get(language);
+        if (words != null) {
+            return words;
+        }
+        String uuid = language.getUuid();
+        if (uuid != null) {
+            for (Map.Entry<Language, Collection<String>> entry : languageMap.entrySet()) {
+                Language key = entry.getKey();
+                if (key.getUuid() != null && key.getUuid().equals(uuid)) {
+                    return entry.getValue();
+                }
+            }
+        }
+        words = new TreeSet<>();
+        languageMap.put(language, words);
+        return words;
+    }
+
     private static void addWordsInCollection_wordBunch(Song song, Map<String, WordBunch> wordsBunch) {
+        if (wordsBunch == null) {
+            return;
+        }
         Collection<SongWord> wordsCollection = getSongWords(song);
         for (SongWord songWord : wordsCollection) {
             String word = songWord.getWord();
@@ -594,8 +651,13 @@ public class SetLanguages {
 
     public static void addWordsInCollection(Song song, Collection<SongWord> words) {
         List<SongVerse> songVerses = song.getVerses();
+        if (songVerses == null) {
+            return;
+        }
         for (SongVerse songVerse : songVerses) {
-            addWordsFromSongVerse(words, songVerse);
+            if (songVerse != null) {
+                addWordsFromSongVerse(words, songVerse);
+            }
         }
     }
 

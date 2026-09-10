@@ -17,6 +17,8 @@
     <string name="filter">Filter</string>
     <string name="sort">Sortieren</string>
     <string name="select">Wählen</string>
+    <string name="all_collections">ALLE</string>
+    <string name="none_collections">KEINE</string>
     <string name="modified_date">Geändertes Datum</string>
     <string name="ascending_by_title">Aufsteigend nach Titel</string>
     <string name="descending_by_title">Absteigend nach Titel</string>
@@ -28,6 +30,7 @@
     <string name="light_theme">Licht Thema</string>
     <string name="maximum_size_of_text">Maximale Größe des Textes</string>
     <string name="collection">Sammlung</string>
+    <string name="collections">Sammlungen</string>
     <string name="saving_songs">Lieder speichern</string>
     <string name="downloading_collections">Sammlungen herunterladen</string>
     <string name="saving_collections">Sammlungen speichern</string>
@@ -40,8 +43,14 @@
     <string name="blank_at_end_of_song">Leer nach dem letzten Vers</string>
     <string name="advanced_options">Fortgeschrittene Optionen</string>
     <string name="share_on_network">Im Netzwerk teilen</string>
+    <string name="share_on_network_addresses">Verbindung von einem anderen Gerät mit:\n%1$s</string>
+    <string name="share_on_network_no_lan_ip">Keine LAN-Adresse sichtbar. Im Hotspot kann das andere Gerät 192.168.43.1:%1$d oder 172.20.10.1:%1$d versuchen</string>
     <string name="no_connections">Es gibt keine geteilten Verbindungen</string>
     <string name="select_one_below">Wählen Sie einen der folgenden aus:</string>
+    <string name="searching_shared">Suche nach geteilten Verbindungen…</string>
+    <string name="enter_ip_address">IP-Adresse</string>
+    <string name="connect">Verbinden</string>
+    <string name="invalid_ip_address">Geben Sie eine gültige IPv4-Adresse ein</string>
     <string name="connect_to_shared">Verbinden mit geteilt</string>
     <string name="connection_successfully_wait_">Verbindung erfolgreich! Warten Sie auf eingehende Texte</string>
     <string name="similar">Änlich</string>
@@ -57,6 +66,10 @@
     <string name="language_of_the_song">Sprache des Liedes</string>
     <string name="successfully_uploaded">Erfolgreich hochgeladen!</string>
     <string name="upload_failed">Hochladen fehlgeschlagen</string>
+    <string name="upload_needs_sign_in_message">Melden Sie sich an, um Lieder auf den Server hochzuladen.</string>
+    <string name="upload_session_expired_message">Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an und versuchen Sie den Upload erneut.</string>
+    <string name="upload_open_login">Anmelden</string>
+    <string name="upload_network_or_server_message">Upload nicht möglich. Prüfen Sie die Verbindung und versuchen Sie es erneut.</string>
     <string name="suggest_edits">Änderungen vorschlagen</string>
     <string name="short_description_of_the_suggestion">Kurze Beschreibung des Vorschlags</string>
     <string name="submit">Absenden</string>

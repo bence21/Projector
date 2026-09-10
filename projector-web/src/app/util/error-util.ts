@@ -1,8 +1,7 @@
-import { AuthenticateComponent } from '../ui/authenticate/authenticate.component';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialogRef } from '@angular/material/dialog';
-import { currentUser } from './local-storage';
+import {AuthenticateComponent} from '../ui/authenticate/authenticate.component';
+import {MatDialog, MatDialogRef} from '@angular/material/dialog';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {currentUser} from './local-storage';
 
 export class ErrorUtil {
 
@@ -67,7 +66,9 @@ export function generalError<T>(callbackFn: (this: T) => any, thisArg: T, err, d
 export function generalError<T, TResult>(callbackFn: (this: T) => TResult, thisArg: T, err, dialog: MatDialog, snackBar: MatSnackBar) {
   if (ErrorUtil.errorIsNeededLogin(err)) {
     openAuthenticateDialog(callbackFn, thisArg, dialog);
-  } else {
+  } else if (snackBar) {
     ErrorUtil.showError(err, snackBar);
+  } else {
+    console.log(err);
   }
 }

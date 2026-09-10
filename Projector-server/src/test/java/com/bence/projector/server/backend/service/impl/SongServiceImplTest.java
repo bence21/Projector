@@ -4,6 +4,7 @@ import com.bence.projector.common.model.SectionType;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
+import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.SongService;
 import org.junit.Assert;
@@ -13,11 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 public class SongServiceImplTest extends BaseServiceTest {
 
     @Autowired
     private SongService songService;
+    @Autowired
+    private SongRepository songRepository;
     @Autowired
     private LanguageService languageService;
 
@@ -35,10 +39,10 @@ public class SongServiceImplTest extends BaseServiceTest {
 
     private static Language getLanguage(LanguageService languageService) {
         Language language = new Language();
-        language.setEnglishName("Test language");
-        language.setNativeName("Teszt");
-        languageService.save(language);
-        return languageService.findAll().get(0);
+        String suffix = UUID.randomUUID().toString();
+        language.setEnglishName("Test language " + suffix);
+        language.setNativeName("Teszt " + suffix.substring(0, 8));
+        return languageService.save(language);
     }
 
     public static List<SongVerse> getSongVerses() {
@@ -53,7 +57,7 @@ public class SongServiceImplTest extends BaseServiceTest {
     @Test
     public void testFindAll() {
         List<Song> songs = songService.findAll();
-        if (songs.size() > 0) {
+        if (!songs.isEmpty()) {
             for (Song song : songs) {
                 songService.delete(song.getId());
             }
@@ -62,16 +66,47 @@ public class SongServiceImplTest extends BaseServiceTest {
         Assert.assertEquals(0, songs.size());
     }
 
+    @Test
     public void testDeleteByUuid() {
+        Song song = getASong(languageService);
+        songService.save(song);
+        String uuid = song.getUuid();
+        Assert.assertNotNull(uuid);
+        songService.deleteByUuid(uuid);
+        Assert.assertNull(songService.findOneByUuid(uuid));
     }
 
+    @Test
     public void testDelete() {
+        Song song = getASong(languageService);
+        Song saved = songService.save(song);
+        Long id = saved.getId();
+        Assert.assertNotNull(id);
+        songService.delete(id);
+        Assert.assertNull(songService.findOne(id));
     }
 
+    @Test
     public void testFindOne() {
+        Song song = getASong(languageService);
+        Song saved = songService.save(song);
+        Song found = songService.findOne(saved.getId());
+        Assert.assertNotNull(found);
+        Assert.assertEquals(saved.getUuid(), found.getUuid());
+        Assert.assertEquals(song.getTitle(), found.getTitle());
+        songService.deleteByUuid(saved.getUuid());
     }
 
+    @Test
     public void testFindOneByUuid() {
+        Song song = getASong(languageService);
+        Song saved = songService.save(song);
+        String uuid = saved.getUuid();
+        Song found = songService.findOneByUuid(uuid);
+        Assert.assertNotNull(found);
+        Assert.assertEquals(saved.getId(), found.getId());
+        Assert.assertEquals(song.getTitle(), found.getTitle());
+        songService.deleteByUuid(uuid);
     }
 
     @Test
@@ -80,5 +115,143 @@ public class SongServiceImplTest extends BaseServiceTest {
         songService.save(song);
         Song song1 = songService.findAll().get(0);
         Assert.assertEquals(song.getTitle(), song1.getTitle());
+        Assert.assertNotNull(song1.getWordQualityScore());
+        Assert.assertTrue(song1.getWordQualityScore() >= 0 && song1.getWordQualityScore() <= 100);
+    }
+
+    @Test
+    public void save_recreatesVerses_repeatedUpdateDoesNotThrowStaleState() {
+        Song song = getASong(languageService);
+        song.setVerseOrderList(List.of((short) 0));
+        songService.save(song);
+
+        // Match admin update path: load via repository, replace verses with new transient entities.
+        Song loaded = songRepository.findOneByUuid(song.getUuid());
+        Assert.assertNotNull(loaded);
+        List<SongVerse> updatedVerses = getSongVerses();
+        updatedVerses.get(0).setText("Updated verse text");
+        SongVerse second = new SongVerse();
+        second.setSectionType(SectionType.VERSE);
+        second.setText("Second verse");
+        updatedVerses.add(second);
+        loaded.setVerses(updatedVerses);
+        loaded.setVerseOrderList(List.of((short) 0, (short) 1));
+        loaded.setModifiedDate(new Date());
+        songService.save(loaded);
+
+        Song loadedAgain = songRepository.findOneByUuid(song.getUuid());
+        Assert.assertNotNull(loadedAgain);
+        Assert.assertEquals(2, loadedAgain.getVerses().size());
+        List<SongVerse> again = getSongVerses();
+        again.get(0).setText("Updated again");
+        SongVerse secondAgain = new SongVerse();
+        secondAgain.setSectionType(SectionType.VERSE);
+        secondAgain.setText("Second verse");
+        again.add(secondAgain);
+        loadedAgain.setVerses(again);
+        loadedAgain.setVerseOrderList(List.of((short) 0, (short) 1));
+        loadedAgain.setModifiedDate(new Date());
+        songService.save(loadedAgain);
+
+        Song finalSong = songRepository.findOneByUuid(song.getUuid());
+        Assert.assertNotNull(finalSong);
+        Assert.assertEquals("Updated again", finalSong.getVerses().get(0).getText());
+        Assert.assertEquals(2, finalSong.getVerses().size());
+        songService.deleteByUuid(song.getUuid());
+    }
+
+    @Test
+    public void evaluateLcsForSimilarTexts_preciseMode_recomputesUncappedForLongIdenticalPair() {
+        String body = "\nór isten, kérlek, kegyelmezz nékem\n";
+        String s = body.repeat(120);
+        SongServiceImpl.LcsSongPairResult r = SongServiceImpl.evaluateLcsForSimilarTexts(s, s, true);
+        Assert.assertTrue(r.usedUncappedLcs());
+        Assert.assertTrue(r.combinedPassesLcsThreshold());
+        Assert.assertEquals(1.0, (r.ratioAlongA() + r.ratioAlongB()) / 2, 1e-12);
+    }
+
+    @Test
+    public void evaluateLcsForSimilarTexts_fastMode_returnsExactScoreForLongIdenticalPair() {
+        String body = "\nór isten, kérlek, kegyelmezz nékem\n";
+        String s = body.repeat(120);
+        SongServiceImpl.LcsSongPairResult r = SongServiceImpl.evaluateLcsForSimilarTexts(s, s, false);
+        Assert.assertFalse(r.usedUncappedLcs());
+        Assert.assertEquals(1.0, r.ratioAlongA(), 1e-15);
+        Assert.assertEquals(1.0, r.ratioAlongB(), 1e-15);
+    }
+
+    @Test
+    public void delete_head_twoSongGroup_clearsSurvivorVersionGroup() {
+        Song head = getASong(languageService);
+        head.setTitle("Head " + UUID.randomUUID());
+        songService.save(head);
+        Song member = getASong(languageService);
+        member.setTitle("Member " + UUID.randomUUID());
+        songService.save(member);
+        member.setVersionGroup(head);
+        songRepository.save(member);
+
+        songService.delete(head.getId());
+
+        Song reloaded = songRepository.findOneByUuid(member.getUuid());
+        Assert.assertNotNull(reloaded);
+        Assert.assertNull(reloaded.getVersionGroupUuid());
+        songService.delete(member.getId());
+    }
+
+    @Test
+    public void delete_head_threeSongGroup_promotesMostRecentlyModified() {
+        long t = System.currentTimeMillis();
+        Song head = getASong(languageService);
+        head.setTitle("Head " + UUID.randomUUID());
+        head.setModifiedDate(new Date(t - 30_000));
+        songService.save(head);
+
+        Song mSlow = getASong(languageService);
+        mSlow.setTitle("MSlow " + UUID.randomUUID());
+        mSlow.setModifiedDate(new Date(t - 20_000));
+        songService.save(mSlow);
+
+        Song mNew = getASong(languageService);
+        mNew.setTitle("MNew " + UUID.randomUUID());
+        mNew.setModifiedDate(new Date(t));
+        songService.save(mNew);
+
+        mSlow.setVersionGroup(head);
+        songRepository.save(mSlow);
+        mNew.setVersionGroup(head);
+        songRepository.save(mNew);
+
+        songService.delete(head.getId());
+
+        Song reSlow = songRepository.findOneByUuid(mSlow.getUuid());
+        Song reNew = songRepository.findOneByUuid(mNew.getUuid());
+        Assert.assertNotNull(reSlow);
+        Assert.assertNotNull(reNew);
+        Assert.assertNull(reNew.getVersionGroupUuid());
+        Assert.assertEquals(reNew.getUuid(), reSlow.getVersionGroupUuid());
+
+        songService.delete(mSlow.getId());
+        songService.delete(mNew.getId());
+    }
+
+    @Test
+    public void delete_nonHeadMember_doesNotBreakHead() {
+        Song head = getASong(languageService);
+        head.setTitle("Head " + UUID.randomUUID());
+        songService.save(head);
+        Song member = getASong(languageService);
+        member.setTitle("Member " + UUID.randomUUID());
+        songService.save(member);
+        member.setVersionGroup(head);
+        songRepository.save(member);
+
+        songService.delete(member.getId());
+
+        Song reHead = songRepository.findOneByUuid(head.getUuid());
+        Assert.assertNotNull(reHead);
+        Assert.assertTrue(songRepository.findAllByVersionGroup(reHead).isEmpty());
+
+        songService.delete(head.getId());
     }
 }

@@ -6,14 +6,17 @@ import com.bence.projector.server.backend.model.NotificationByLanguage;
 import com.bence.projector.server.backend.model.NotificationStatus;
 import com.bence.projector.server.backend.model.NotificationType;
 import com.bence.projector.server.backend.model.Role;
+import com.bence.projector.server.backend.model.SongLink;
 import com.bence.projector.server.backend.model.Song;
 import com.bence.projector.server.backend.model.SongVerse;
 import com.bence.projector.server.backend.model.Suggestion;
 import com.bence.projector.server.backend.model.User;
 import com.bence.projector.server.backend.model.UserProperties;
 import com.bence.projector.server.backend.repository.NotificationStatusRepository;
+import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.NotificationByLanguageService;
+import com.bence.projector.server.backend.service.SongLinkService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.UserPropertiesService;
@@ -47,6 +50,9 @@ import static com.bence.projector.server.api.resources.PasswordController.TOKEN_
 
 @Component
 public class MailSenderService {
+
+    private static final int VERSION_GROUP_LINK_DELAY_MS = 24 * 60 * 60 * 1000;
+
     @Qualifier("javaMailSender")
     @Autowired
     private JavaMailSender sender;
@@ -64,6 +70,14 @@ public class MailSenderService {
     private UserPropertiesService userPropertiesService;
     @Autowired
     private NotificationStatusRepository notificationStatusRepository;
+    @Autowired
+    private SongLinkService songLinkService;
+    @Autowired
+    private SongRepository songRepository;
+
+    private final Object versionGroupLinkQueueLock = new Object();
+    private final List<String> pendingVersionGroupLinkUuids = new ArrayList<>();
+    private volatile Date versionGroupLinksLastSentDate = new Date(0);
 
     public void sendEmailSuggestionToUser(Suggestion suggestion, User user) {
         try {
@@ -112,6 +126,127 @@ public class MailSenderService {
                 tryToSend(language, reviewer);
             }
         }
+        tryToSendPendingVersionGroupLinks();
+    }
+
+    /**
+     * Queues a version-group link notification for admins; email is sent in batches from
+     * {@link #tryToSendAllPrevious()} when the delay has elapsed since the last send.
+     */
+    public void enqueueEmailVersionGroupLinkForAdmins(SongLink songLink) {
+        if (songLink == null || songLink.getUuid() == null) {
+            return;
+        }
+        synchronized (versionGroupLinkQueueLock) {
+            if (!pendingVersionGroupLinkUuids.contains(songLink.getUuid())) {
+                pendingVersionGroupLinkUuids.add(songLink.getUuid());
+            }
+        }
+    }
+
+    private void tryToSendPendingVersionGroupLinks() {
+        Date now = new Date();
+        List<String> snapshot;
+        synchronized (versionGroupLinkQueueLock) {
+            if (pendingVersionGroupLinkUuids.isEmpty()) {
+                return;
+            }
+            if (now.getTime() - VERSION_GROUP_LINK_DELAY_MS <= versionGroupLinksLastSentDate.getTime()) {
+                return;
+            }
+            snapshot = new ArrayList<>(pendingVersionGroupLinkUuids);
+            pendingVersionGroupLinkUuids.clear();
+            versionGroupLinksLastSentDate = now;
+        }
+        List<SongLink> links = new ArrayList<>(snapshot.size());
+        for (String uuid : snapshot) {
+            SongLink link = songLinkService.findOneByUuid(uuid);
+            if (link != null) {
+                links.add(link);
+            }
+        }
+        if (links.isEmpty()) {
+            return;
+        }
+        sendVersionGroupLinksToAdminsInThread(links);
+        saveVersionGroupLinkBatchNotification();
+    }
+
+    private void saveVersionGroupLinkBatchNotification() {
+        NotificationStatus notificationStatus = new NotificationStatus();
+        notificationStatus.setNotificationType(NotificationType.VERSION_GROUP_LINK);
+        notificationStatus.setDate(new Date());
+        notificationStatusRepository.save(notificationStatus);
+    }
+
+    private void sendVersionGroupLinksToAdminsInThread(List<SongLink> links) {
+        List<SongLink> linkList = new ArrayList<>(links.size());
+        linkList.addAll(links);
+        List<User> admins = userService.findAllAdmins();
+        Thread thread = new Thread(() -> {
+            for (User admin : admins) {
+                sendVersionGroupLinksEmail(linkList, admin);
+            }
+        });
+        thread.start();
+    }
+
+    private void sendVersionGroupLinksEmail(List<SongLink> links, User admin) {
+        try {
+            if (!AppProperties.getInstance().isProduction()) {
+                return;
+            }
+            final String freemarkerName = FreemarkerConfiguration.NEW_SONG_LINK + ".ftl";
+            freemarker.template.Configuration config = ConfigurationUtil.getConfiguration();
+            config.setDefaultEncoding("UTF-8");
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(new InternetAddress(admin.getEmail()));
+            helper.setFrom(getNoReplyInternetAddress());
+            String subject;
+            if (links.size() > 1) {
+                subject = "Új verzió összekötések (" + links.size() + ")";
+            } else {
+                subject = "Új verzió összekötés";
+            }
+            helper.setSubject(subject);
+
+            Template template = config.getTemplate(freemarkerName);
+
+            StringWriter writer = new StringWriter();
+            Map<String, Object> model = createPatternForSongLinks(links);
+            template.process(model, writer);
+
+            helper.getMimeMessage().setContent(writer.toString(), "text/html;charset=utf-8");
+            sender.send(message);
+        } catch (MessagingException | IOException | TemplateException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Map<String, Object> createPatternForSongLinks(List<SongLink> links) {
+        Map<String, Object> data = new HashMap<>();
+        List<SongLinkRow> rows = new ArrayList<>(links.size());
+        for (SongLink songLink : links) {
+            rows.add(createSongLinkRow(songLink));
+        }
+        data.put("songLinkRows", rows);
+        data.put("baseUrl", AppProperties.getInstance().baseUrl());
+        return data;
+    }
+
+    private SongLinkRow createSongLinkRow(SongLink songLink) {
+        SongLinkRow row = new SongLinkRow();
+        row.setId(songLink.getUuid());
+        String createdByEmail = songLink.getCreatedByEmail();
+        row.setEmail(createdByEmail != null ? createdByEmail : "");
+        Song song1 = songLink.getSong1(songRepository);
+        Song song2 = songLink.getSong2(songRepository);
+        row.setSong1Title(song1 != null ? song1.getTitle() : "");
+        row.setSong2Title(song2 != null ? song2.getTitle() : "");
+        row.setSong1Uuid(song1 != null ? song1.getUuid() : "");
+        row.setSong2Uuid(song2 != null ? song2.getUuid() : "");
+        return row;
     }
 
     private void tryToSend(Language language, User user) {

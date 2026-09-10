@@ -1,12 +1,15 @@
 package projector.utils;
 
 import javafx.application.Platform;
+import javafx.event.EventHandler;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
@@ -17,6 +20,22 @@ import java.net.URL;
 
 public class SceneUtils {
     private static final Logger LOG = LoggerFactory.getLogger(SceneUtils.class);
+
+    public static void setVisibleAndManaged(Node node, boolean value) {
+        node.setVisible(value);
+        node.setManaged(value);
+    }
+
+    public static void closeStage(Stage stage) {
+        if (stage == null) {
+            return;
+        }
+        EventHandler<WindowEvent> onCloseRequest = stage.getOnCloseRequest();
+        if (onCloseRequest != null) {
+            onCloseRequest.handle(null);
+        }
+        stage.close();
+    }
 
     public static void addIconToStage(Stage stage, Class<?> aClass) {
         addOneIcon(stage, aClass, "/icons/icon32.png");

@@ -15,6 +15,7 @@ import android.view.animation.AnimationUtils;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
@@ -23,6 +24,7 @@ import com.bence.songbook.models.Song;
 import com.bence.songbook.models.SongCollectionElement;
 import com.bence.songbook.models.SongVerse;
 import com.bence.songbook.repository.impl.ormLite.SongRepositoryImpl;
+import com.bence.songbook.ui.queue.QueueViewModel;
 import com.bence.songbook.ui.utils.OnSwipeTouchListener;
 
 import java.util.ArrayList;
@@ -36,6 +38,7 @@ import java.util.List;
 public class FullscreenActivity extends AbstractFullscreenActivity {
 
     private final Memory memory = Memory.getInstance();
+    private QueueViewModel queueViewModel;
     private int verseIndex;
     private List<SongVerse> verseList = new ArrayList<>();
     private Song song;
@@ -70,6 +73,7 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         try {
+            queueViewModel = new ViewModelProvider(this).get(QueueViewModel.class);
             if (memory.isShareOnNetwork()) {
                 sharedOnNetwork = true;
             }
@@ -82,7 +86,7 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
             mContentView.setOnTouchListener(new OnSwipeTouchListener(this) {
 
                 public void onSwipeTop() {
-                    if (memory.getQueue().size() > 0) {
+                    if (!queueViewModel.getQueueSnapshot().isEmpty()) {
                         setNextInQueue(AnimationUtils.loadAnimation(FullscreenActivity.this, R.anim.slide_from_bottom));
                     }
                 }
@@ -96,7 +100,7 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
                 }
 
                 public void onSwipeBottom() {
-                    if (memory.getQueue().size() > 0) {
+                    if (!queueViewModel.getQueueSnapshot().isEmpty()) {
                         setPrevInQueue();
                     }
                 }
@@ -117,7 +121,7 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
             if (blank_switch) {
                 addBlankSlide();
             } else {
-                List<QueueSong> queue = memory.getQueue();
+                List<QueueSong> queue = queueViewModel.getQueueSnapshot();
                 if (queue.size() > 1) {
                     addBlankSlide();
                 }
@@ -297,8 +301,8 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
             textView.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_from_right));
             return;
         }
-        int queueIndex = memory.getQueueIndex();
-        if (queueIndex >= 0 && memory.getQueue().size() > 1) {
+        int queueIndex = queueViewModel.getCurrentQueueIndex();
+        if (queueIndex >= 0 && queueViewModel.getQueueSnapshot().size() > 1) {
             setNextInQueue(AnimationUtils.loadAnimation(this, R.anim.slide_from_bottom));
             return;
         }
@@ -306,11 +310,11 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
     }
 
     private void setNextInQueue(Animation animation) {
-        int queueIndex = memory.getQueueIndex();
+        int queueIndex = queueViewModel.getCurrentQueueIndex();
         updateSongAccessedTime();
         startTime = new Date().getTime();
         duration = 0;
-        List<QueueSong> queue = memory.getQueue();
+        List<QueueSong> queue = queueViewModel.getQueueSnapshot();
         if (queue.size() <= queueIndex) {
             return;
         }
@@ -318,10 +322,10 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
         setVerseSlides();
         settingTitleSlide();
         if (queueIndex + 1 < queue.size()) {
-            memory.setQueueIndex(queueIndex + 1, this);
+            queueViewModel.setQueueIndex(queueIndex + 1);
             addBlankSlide();
         } else if (queueIndex > 0) {
-            memory.setQueueIndex(0, this);
+            queueViewModel.setQueueIndex(0);
             addBlankSlide();
         } else {
             if (blank_switch) {
@@ -342,15 +346,15 @@ public class FullscreenActivity extends AbstractFullscreenActivity {
     }
 
     private void setPrevInQueue() {
-        int queueIndex = memory.getQueueIndex();
+        int queueIndex = queueViewModel.getCurrentQueueIndex();
         if (queueIndex - 2 >= 0) {
-            memory.setQueueIndex(queueIndex - 2, this);
+            queueViewModel.setQueueIndex(queueIndex - 2);
         } else {
-            int size = memory.getQueue().size();
+            int size = queueViewModel.getQueueSnapshot().size();
             if (queueIndex == 0 && size > 1) {
-                memory.setQueueIndex(size - 2, this);
+                queueViewModel.setQueueIndex(size - 2);
             } else {
-                memory.setQueueIndex(size - 1, this);
+                queueViewModel.setQueueIndex(size - 1);
             }
         }
         setNextInQueue(AnimationUtils.loadAnimation(this, R.anim.slide_from_top));

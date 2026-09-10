@@ -3,7 +3,7 @@
     <mat-select 
       id="languageSelect" 
       placeholder="Language" 
-      [value]="selectedLanguage"
+      [value]="allLanguagesSelected ? 'All' : selectedLanguage"
       (selectionChange)="onLanguageChange($event)">
       <mat-option 
         *ngIf="auth.isLoggedIn && auth.getUser().isAdmin()" 

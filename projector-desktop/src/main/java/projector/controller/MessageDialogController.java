@@ -1,24 +1,21 @@
 package projector.controller;
 
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.Settings;
+import projector.controller.util.ControllerUtil;
 import projector.controller.util.OnResultListener;
 
 import java.util.ResourceBundle;
 
-import static projector.controller.BibleController.setSceneStyleFile;
 import static projector.utils.SceneUtils.addIconToStage;
-import static projector.utils.SceneUtils.getAStage;
 
 public class MessageDialogController {
     private static final Logger LOG = LoggerFactory.getLogger(MessageDialogController.class);
@@ -28,16 +25,13 @@ public class MessageDialogController {
 
     public static MessageDialogController getMessageDialog(Class<?> aClass, String title) {
         try {
-            Stage stage = getAStage(aClass);
-            stage.initStyle(StageStyle.DECORATED);
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(aClass.getResource("/view/MessageDialogView.fxml"));
+            loader.setResources(Settings.getInstance().getResourceBundle());
             BorderPane borderPane = loader.load();
             MessageDialogController controller = loader.getController();
+            Stage stage = ControllerUtil.getStageWithRoot(aClass, borderPane);
             controller.setStage(stage);
-            Scene scene = new Scene(borderPane, borderPane.getPrefWidth(), borderPane.getPrefHeight());
-            setSceneStyleFile(scene);
-            stage.setScene(scene);
             addIconToStage(stage, aClass);
             stage.setTitle(title);
             return controller;

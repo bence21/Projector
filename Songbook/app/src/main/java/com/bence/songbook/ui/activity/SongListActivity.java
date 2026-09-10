@@ -11,18 +11,18 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.bence.projector.common.dto.SongListDTO;
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
 import com.bence.songbook.api.SongListApiBean;
-import com.bence.songbook.models.QueueSong;
 import com.bence.songbook.models.Song;
 import com.bence.songbook.models.SongList;
 import com.bence.songbook.models.SongListElement;
-import com.bence.songbook.repository.impl.ormLite.QueueSongRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListElementRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListRepositoryImpl;
+import com.bence.songbook.ui.queue.QueueViewModel;
 import com.bence.songbook.ui.utils.DynamicListView;
 import com.bence.songbook.ui.utils.Preferences;
 import com.bence.songbook.ui.utils.SongListElementAdapter;
@@ -37,6 +37,7 @@ public class SongListActivity extends BaseActivity {
     public static final String TAG = SongListActivity.class.getSimpleName();
     private static final int NEW_SONG_LIST_REQUEST_CODE = 1;
     private final Memory memory = Memory.getInstance();
+    private QueueViewModel queueViewModel;
     private List<SongListElement> songListElements;
     private SongList songList;
     private SongListRepositoryImpl songListRepository;
@@ -46,6 +47,7 @@ public class SongListActivity extends BaseActivity {
         setTheme(Preferences.getTheme(this));
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_song_list);
+        queueViewModel = new ViewModelProvider(this).get(QueueViewModel.class);
         Toolbar toolbar = findViewById(R.id.toolbar);
         songList = memory.getPassingSongList();
         if (songList == null) {
@@ -147,15 +149,11 @@ public class SongListActivity extends BaseActivity {
         if (itemId == android.R.id.home) {
             finish();
         } else if (itemId == R.id.action_add_to_queue) {
-            QueueSongRepositoryImpl queueSongRepository = new QueueSongRepositoryImpl(this);
-            List<QueueSong> newQueueSongs = new ArrayList<>(songListElements.size());
+            List<Song> songsToAdd = new ArrayList<>(songListElements.size());
             for (SongListElement element : songListElements) {
-                QueueSong queueSong = new QueueSong();
-                queueSong.setSong(element.getSong());
-                memory.addSongToQueue(queueSong);
-                newQueueSongs.add(queueSong);
+                songsToAdd.add(element.getSong());
             }
-            queueSongRepository.save(newQueueSongs);
+            queueViewModel.addSongs(songsToAdd);
             showToaster(getString(R.string.added_to_queue));
         } else if (itemId == R.id.action_share) {
             songList.setPublish(true);

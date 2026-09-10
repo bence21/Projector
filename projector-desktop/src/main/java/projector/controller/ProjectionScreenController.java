@@ -54,6 +54,7 @@ import projector.application.ProjectionScreenSettings;
 import projector.application.ProjectionType;
 import projector.application.ProjectorState;
 import projector.application.ScreenProjectionAction;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 import projector.controller.listener.OnBlankListener;
 import projector.controller.listener.ViewChangedListener;
@@ -695,6 +696,7 @@ public class ProjectionScreenController {
             this.projectionType = projectionType;
             activeText = newText;
             this.projectionData = projectionData;
+            SessionAutosave.getInstance().notifySessionChanged();
             if (isLock && projectionType != ProjectionType.COUNTDOWN_TIMER_PROCESS) {
                 return;
             }
@@ -1861,16 +1863,35 @@ public class ProjectionScreenController {
     }
 
     public void updateProjectorState(ProjectorState projectorState) {
-        projectorState.setProjectionType(projectionType);
-        projectorState.setProjectionData(projectionData);
-        projectorState.setActiveText(activeText);
+        ProjectionScreensUtil util = ProjectionScreensUtil.getInstance();
+        ProjectionType savedType = util.getProjectionType() != null ? util.getProjectionType() : projectionType;
+        String savedText = util.getText() != null ? util.getText() : activeText;
+        ProjectionData savedData = util.getProjectionData() != null ? util.getProjectionData() : projectionData;
+        projectorState.setProjectionType(savedType);
+        projectorState.setProjectionData(savedData);
+        projectorState.setActiveText(savedText);
+        String projectionImagePath = null;
+        if (savedType == ProjectionType.IMAGE) {
+            projectionImagePath = util.getFileImagePath() != null ? util.getFileImagePath() : fileImagePath;
+        }
+        projectorState.setProjectionFileImagePath(projectionImagePath);
     }
 
     public void setByProjectorState(ProjectorState projectorState) {
-        String s = projectorState.getActiveText();
         ProjectionType stateProjectionType = projectorState.getProjectionType();
-        if (s != null && stateProjectionType != null) {
-            setText(s, stateProjectionType, projectorState.getProjectionData());
+        if (stateProjectionType == null) {
+            return;
+        }
+        if (stateProjectionType == ProjectionType.IMAGE) {
+            String path = projectorState.getProjectionFileImagePath();
+            if (path != null && new File(path).exists()) {
+                setImage(path, ProjectionType.IMAGE, null);
+                return;
+            }
+        }
+        String text = projectorState.getActiveText();
+        if (text != null) {
+            setText(text, stateProjectionType, projectorState.getProjectionData());
         }
     }
 
@@ -1884,6 +1905,16 @@ public class ProjectionScreenController {
         double width = contentPane.getWidth() * scale;
         double height = contentPane.getHeight() * scale;
         return new ScaledSizes(width, height);
+    }
+
+    /** Scaled content width in pixels (same basis as image cache / PDF DPI). Returns 0 if not laid out. */
+    public double getScaledContentWidth() {
+        return getGetScaledSizes().width();
+    }
+
+    /** Scaled content height in pixels (same basis as image cache / PDF DPI). Returns 0 if not laid out. */
+    public double getScaledContentHeight() {
+        return getGetScaledSizes().height();
     }
 
     public void stopCountDownTimer() {

@@ -1,7 +1,7 @@
-import { BaseModel } from './base-model';
-import { Role } from './role';
-import { Language } from './language';
-import { Song } from '../services/song-service.service';
+import {BaseModel} from './base-model';
+import {Role} from './role';
+import {Language} from './language';
+import {Song} from '../services/song-service.service';
 
 export class User extends BaseModel {
   email = '';
@@ -46,6 +46,10 @@ export class User extends BaseModel {
 
   isReviewer(): Boolean {
     return this.role == Role.ROLE_REVIEWER;
+  }
+
+  isDeployer(): Boolean {
+    return this.role == Role.ROLE_DEPLOYER;
   }
   
   hasReviewerRoleForSong(song: Song): Boolean {

@@ -1,5 +1,8 @@
 export enum Role {
-    ROLE_USER, ROLE_ADMIN, ROLE_REVIEWER
+    ROLE_USER = 0,
+    ROLE_ADMIN = 1,
+    ROLE_REVIEWER = 2,
+    ROLE_DEPLOYER = 3
 }
 
 export namespace Role {
@@ -7,6 +10,8 @@ export namespace Role {
         switch (role) {
             case Role.ROLE_USER: return 'User';
             case Role.ROLE_ADMIN: return 'Admin';
+            case Role.ROLE_DEPLOYER:
+                return 'Deployer';
             case Role.ROLE_REVIEWER: return 'Reviewer';
             default: return 'No role';
         }
@@ -17,6 +22,7 @@ export function getAllRole(): Role[] {
     let roles = [];
     roles.push(Role.ROLE_USER);
     roles.push(Role.ROLE_ADMIN);
+    roles.push(Role.ROLE_DEPLOYER);
     roles.push(Role.ROLE_REVIEWER);
     return roles;
 }

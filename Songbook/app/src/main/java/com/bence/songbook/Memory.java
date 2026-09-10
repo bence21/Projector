@@ -2,13 +2,10 @@ package com.bence.songbook;
 
 import static com.bence.songbook.ui.activity.YoutubeActivity.logWithNullCheck;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
+import androidx.annotation.VisibleForTesting;
 
 import com.bence.songbook.models.FavouriteSong;
 import com.bence.songbook.models.Language;
-import com.bence.songbook.models.QueueSong;
 import com.bence.songbook.models.Song;
 import com.bence.songbook.models.SongCollection;
 import com.bence.songbook.models.SongList;
@@ -31,13 +28,15 @@ public class Memory {
     private Song passingSong;
     private List<String> sharedTexts;
     private List<FavouriteSong> favouriteSongs;
-    private List<QueueSong> queue;
-    private int queueIndex = -1;
-    private final List<Listener> listeners = new ArrayList<>();
     private SongList passingSongList;
     private SongList editingSongList;
     private String lastSearchedInText;
     private List<Language> passingLanguages;
+    /**
+     * Song to upload once after the user completes {@link com.bence.songbook.ui.activity.LoginActivity}
+     * (e.g. new-song flow finished before login). Consumed by {@link com.bence.songbook.ui.utils.PendingUploadRetryAfterLogin}.
+     */
+    private Song pendingUploadRetrySong;
 
     private Memory() {
 
@@ -48,6 +47,11 @@ public class Memory {
             instance = new Memory();
         }
         return instance;
+    }
+
+    @VisibleForTesting
+    public static synchronized void resetForTests() {
+        instance = null;
     }
 
     public synchronized List<Song> getSongs() {
@@ -136,49 +140,6 @@ public class Memory {
         this.favouriteSongs = favouriteSongs;
     }
 
-    public void addSongToQueue(QueueSong queueSong) {
-        if (queue == null) {
-            queue = new ArrayList<>();
-        }
-        if (queue.isEmpty()) {
-            queueIndex = 0;
-        }
-        queueSong.setQueueNumber(queue.size());
-        queue.add(queueSong);
-        for (Listener listener : listeners) {
-            listener.onAdd(queueSong);
-        }
-    }
-
-    public List<QueueSong> getQueue() {
-        return queue;
-    }
-
-    public void setQueue(List<QueueSong> queue) {
-        this.queue = queue;
-    }
-
-    public void addOnQueueChangeListener(Listener listener) {
-        listeners.add(listener);
-    }
-
-    public void removeQueueSong(QueueSong temp) {
-        queue.remove(temp);
-        for (Listener listener : listeners) {
-            listener.onRemove(temp);
-        }
-    }
-
-    public int getQueueIndex() {
-        return queueIndex;
-    }
-
-    public void setQueueIndex(int queueIndex, Context context) {
-        this.queueIndex = queueIndex;
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        sharedPreferences.edit().putInt("queueIndex", queueIndex).apply();
-    }
-
     public SongList getPassingSongList() {
         return passingSongList;
     }
@@ -211,6 +172,23 @@ public class Memory {
         this.passingLanguages = passingLanguages;
     }
 
+    public synchronized void setPendingUploadRetrySong(Song song) {
+        this.pendingUploadRetrySong = song;
+    }
+
+    /**
+     * @return the pending song and clears it, or null if none
+     */
+    public synchronized Song consumePendingUploadRetrySong() {
+        Song s = pendingUploadRetrySong;
+        pendingUploadRetrySong = null;
+        return s;
+    }
+
+    public synchronized void clearPendingUploadRetrySong() {
+        pendingUploadRetrySong = null;
+    }
+
     public void onText(String text) {
         try {
             if (projectionTextChangeListeners != null) {
@@ -228,11 +206,5 @@ public class Memory {
         if (memory != null) {
             memory.onText(text);
         }
-    }
-
-    public interface Listener {
-        void onAdd(QueueSong queueSong);
-
-        void onRemove(QueueSong queueSong);
     }
 }

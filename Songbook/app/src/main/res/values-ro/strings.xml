@@ -17,6 +17,8 @@
     <string name="filter">Filtrează</string>
     <string name="sort">Sortează</string>
     <string name="select">Selectați</string>
+    <string name="all_collections">TOATE</string>
+    <string name="none_collections">NICIUNA</string>
     <string name="modified_date">Data modificata</string>
     <string name="ascending_by_title">Crescător după titlu</string>
     <string name="descending_by_title">Descrescător după titlu</string>
@@ -28,6 +30,7 @@
     <string name="light_theme">Temă luminoasă</string>
     <string name="maximum_size_of_text">Dimensiunea maximă a textului</string>
     <string name="collection">Colecţie</string>
+    <string name="collections">Colecții</string>
     <string name="saving_songs">Salvarea cântecelor</string>
     <string name="downloading_collections">Descărcarea colecțiilor</string>
     <string name="saving_collections">Salvarea colecțiilor</string>
@@ -40,7 +43,13 @@
     <string name="blank_at_end_of_song">Gol după ultimul verset</string>
     <string name="advanced_options">Opțiuni avansate</string>
     <string name="share_on_network">Share on network</string>
+    <string name="share_on_network_addresses">Conectați-vă de pe alt dispozitiv folosind:\n%1$s</string>
+    <string name="share_on_network_no_lan_ip">Nicio adresă LAN vizibilă. Pe hotspot, celălalt dispozitiv poate încerca 192.168.43.1:%1$d sau 172.20.10.1:%1$d</string>
     <string name="no_connections">Nu există conexiuni!</string>
+    <string name="searching_shared">Căutare conexiuni partajate…</string>
+    <string name="enter_ip_address">Adresă IP</string>
+    <string name="connect">Conectare</string>
+    <string name="invalid_ip_address">Introduceți o adresă IPv4 validă</string>
     <string name="connection_successfully_wait_">Conectarea cu succes! Așteptați texte trimise.</string>
     <string name="select_one_below">Alegeți una mai jos:</string>
     <string name="connect_to_shared">Connectare</string>
@@ -57,6 +66,10 @@
     <string name="language_of_the_song">Limba cântecului</string>
     <string name="successfully_uploaded">S-a încărcat cu succes!</string>
     <string name="upload_failed">Încărcare eșuată</string>
+    <string name="upload_needs_sign_in_message">Conectați-vă pentru a încărca cântece pe server.</string>
+    <string name="upload_session_expired_message">Sesiunea a expirat. Conectați-vă din nou, apoi încercați din nou încărcarea.</string>
+    <string name="upload_open_login">Conectare</string>
+    <string name="upload_network_or_server_message">Nu s-a putut încărca. Verificați conexiunea și încercați din nou.</string>
     <string name="suggest_edits">Sugerează modificări</string>
     <string name="short_description_of_the_suggestion">Scurta descriere a sugestii:</string>
     <string name="submit">Afirmă</string>

@@ -2,11 +2,12 @@ import { Song } from '../services/song-service.service';
 
 /**
  * Checks if a song is public using the same logic as the server-side isPublic() method:
- * !isReviewerErased() && !isDeleted() && !isBackUp() && !hasUnsolvedWords()
+ * !isReviewerErased() && !isDeleted() && !isBackUp() && !hasBlockingWordIssues()
  * and only for persisted songs that already have an id.
  */
 export function isSongPublic(song: Song): boolean {
   const hasId = !!song.id;
   const isBackUp = song.isBackUp === true;
-  return hasId && !song.reviewerErased && !song.deleted && !isBackUp && !song.hasUnsolvedWords;
+  const blocking = song.hasBlockingWordIssues === true;
+  return hasId && !song.reviewerErased && !song.deleted && !isBackUp && !blocking;
 }

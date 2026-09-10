@@ -72,8 +72,9 @@ public class SongCollectionServiceImpl extends BaseServiceImpl<SongCollection> i
 
     @Override
     public SongCollection save(SongCollection songCollection) {
+        SongCollection persisted = saveWithoutForeign(songCollection);
         songCollectionElementService.save(songCollection.getSongCollectionElements());
-        return saveWithoutForeign(songCollection);
+        return persisted;
     }
 
     @Override

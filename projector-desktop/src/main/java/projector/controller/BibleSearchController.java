@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import static projector.utils.StringUtils.stripAccents;
+
 import static projector.controller.BibleController.addTextWithBackGround;
 import static projector.controller.BibleController.setFoundTextColor;
 import static projector.controller.BibleController.setGeneralTextColor;
@@ -126,7 +128,7 @@ public class BibleSearchController {
     }
 
     public boolean contains(String a, String b) {
-        return a.contains(b);
+        return a != null && b != null && a.contains(b);
     }
 
     private synchronized String getNewSearchText() {
@@ -196,6 +198,12 @@ public class BibleSearchController {
                         text2 = bibleVerse.getText();
                     } else {
                         text2 = bibleVerse.getStrippedText();
+                        if (text2 == null) {
+                            String text = bibleVerse.getText();
+                            if (text != null) {
+                                text2 = stripAccents(text.toLowerCase(Locale.US));
+                            }
+                        }
                     }
                     if (contains(text2, text3)) {
                         TextFlow textFlow = new TextFlow();

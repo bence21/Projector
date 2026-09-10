@@ -1,0 +1,18 @@
+# Local-only Spring overrides (not committed).
+#
+# Setup:
+# 1. Copy this file to application-local.properties (same folder).
+#    application-local.properties is gitignored.
+# 2. Uncomment and adjust settings below.
+# 3. If MySQL cannot bind to port 3306 on Windows (Hyper-V / WSL reserved ports),
+#    change MySQL's my.ini port and match it here. See docs/mysql-local-port.md.
+# 4. If the web server fails with "Port … already in use" but nothing is listening,
+#    the port may be in a Windows exclusion range. See docs/http-local-port.md.
+#
+# spring.datasource.url=jdbc:mysql://localhost:3452/songbook
+# server.port=8400
+# app.base-url=http://localhost:${server.port}
+#
+# Alternatives via env vars:
+#   set MYSQL_PORT=3452
+#   set PORT=8400

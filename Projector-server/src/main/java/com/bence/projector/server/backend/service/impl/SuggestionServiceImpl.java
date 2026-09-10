@@ -9,6 +9,7 @@ import com.bence.projector.server.backend.repository.SuggestionRepository;
 import com.bence.projector.server.backend.service.SongVerseService;
 import com.bence.projector.server.backend.service.SuggestionService;
 import com.bence.projector.server.utils.AppProperties;
+import org.hibernate.LazyInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -151,7 +152,15 @@ public class SuggestionServiceImpl extends BaseServiceImpl<Suggestion> implement
 
     @Override
     public List<Suggestion> findAllBySong(Song song) {
-        List<Suggestion> allBySongId = song.getSuggestions();
+        if (song == null || song.getUuid() == null) {
+            return new ArrayList<>();
+        }
+        List<Suggestion> allBySongId;
+        try {
+            allBySongId = song.getSuggestions();
+        } catch (LazyInitializationException e) {
+            allBySongId = suggestionRepository.findAllBySongUuid(song.getUuid());
+        }
         List<Suggestion> suggestions = new ArrayList<>(allBySongId.size());
         for (Suggestion suggestion : allBySongId) {
             suggestions.add(findOneByUuid(suggestion.getUuid()));

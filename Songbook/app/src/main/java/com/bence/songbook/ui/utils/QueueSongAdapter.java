@@ -1,116 +1,99 @@
 package com.bence.songbook.ui.utils;
 
 import static com.bence.songbook.ui.activity.MainActivity.getOrdinalNumberText;
-import static com.bence.songbook.ui.utils.SongListElementAdapter.getImageViewGrabOnTouchListener;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
-import android.os.Build;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.bence.songbook.Memory;
 import com.bence.songbook.R;
 import com.bence.songbook.models.QueueSong;
 import com.bence.songbook.models.Song;
-import com.bence.songbook.ui.activity.MainActivity;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+public class QueueSongAdapter extends ListAdapter<QueueSong, QueueSongAdapter.ViewHolder> {
 
-public class QueueSongAdapter extends ArrayAdapter<QueueSong> {
+    public interface DragStartListener {
+        void onStartDrag(QueueSongAdapter.ViewHolder holder);
+    }
 
-    private final MainActivity.Listener listener;
-    private final Map<QueueSong, Integer> mIdMap = new HashMap<>();
+    public interface ItemClickListener {
+        void onItemClick(int position);
+    }
+
+    private final DragStartListener dragStartListener;
+    private final ItemClickListener itemClickListener;
     private final boolean shortCollectionName;
 
-    public QueueSongAdapter(Context context, int textViewResourceId, List<QueueSong> list, MainActivity.Listener listener, boolean shortCollectionName) {
-        super(context, textViewResourceId, list);
-        this.listener = listener;
-        for (int i = 0; i < list.size(); ++i) {
-            mIdMap.put(list.get(i), i);
-        }
-        Memory.getInstance().addOnQueueChangeListener(new Memory.Listener() {
-            @Override
-            public void onAdd(QueueSong queueSong) {
-                mIdMap.put(queueSong, mIdMap.size());
-            }
-
-            @Override
-            public void onRemove(QueueSong queueSong) {
-                mIdMap.remove(queueSong);
-            }
-        });
+    public QueueSongAdapter(DragStartListener dragStartListener,
+                            ItemClickListener itemClickListener,
+                            boolean shortCollectionName) {
+        super(new QueueSongDiffCallback());
+        this.dragStartListener = dragStartListener;
+        this.itemClickListener = itemClickListener;
         this.shortCollectionName = shortCollectionName;
     }
 
-    @SuppressLint("InflateParams")
     @NonNull
     @Override
-    public View getView(final int position, View view, @NonNull ViewGroup parent) {
-        Context context = getContext();
-        if (null == view) {
-            view = LayoutInflater.from(context).inflate(R.layout.list_row, null);
-        }
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_row, parent, false);
+        return new ViewHolder(view);
+    }
+
+    @Override
+    @SuppressLint("ClickableViewAccessibility")
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         QueueSong item = getItem(position);
         if (item == null) {
-            return view;
+            return;
         }
-        final Song song = item.getSong();
+        Song song = item.getSong();
         if (song == null) {
-            return view;
+            return;
         }
-        final LinearLayout row = view.findViewById(R.id.lytPattern);
+        holder.ordinalNumberTextView.setText(getOrdinalNumberText(song, shortCollectionName));
+        holder.titleTextView.setText(song.getTitle());
+        holder.starImageView.setVisibility(song.isFavourite() ? View.VISIBLE : View.INVISIBLE);
 
-        TextView ordinalNumberTextView = view.findViewById(R.id.ordinalNumberTextView);
-        ordinalNumberTextView.setText(getOrdinalNumberText(song, shortCollectionName));
-        TextView titleTextView = view.findViewById(R.id.titleTextView);
-        titleTextView.setText(song.getTitle());
-        ImageView imageView = view.findViewById(R.id.starImageView);
-        imageView.setVisibility(song.isFavourite() ? View.VISIBLE : View.INVISIBLE);
-
-        view.findViewById(R.id.imageViewGrab)
-                .setOnTouchListener(getImageViewGrabOnTouchListener(position, row, listener));
-
-        return view;
-    }
-
-    @Override
-    public long getItemId(int position) {
-        if (position < 0 || position >= mIdMap.size()) {
-            return -1;
-        }
-        try {
-            QueueSong item = getItem(position);
-            if (item != null) {
-                Integer integer = mIdMap.get(item);
-                return getLongFromInteger(integer);
+        holder.grabImageView.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                dragStartListener.onStartDrag(holder);
+                return false;
             }
-        } catch (IndexOutOfBoundsException ignored) {
-        } catch (Exception e) {
-            e.printStackTrace();
+            return true;
+        });
+
+        holder.rowLayout.setOnClickListener(v -> {
+            int adapterPosition = holder.getBindingAdapterPosition();
+            if (adapterPosition != RecyclerView.NO_POSITION) {
+                itemClickListener.onItemClick(adapterPosition);
+            }
+        });
+    }
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        final LinearLayout rowLayout;
+        final TextView ordinalNumberTextView;
+        final TextView titleTextView;
+        final ImageView starImageView;
+        final View grabImageView;
+
+        ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            rowLayout = itemView.findViewById(R.id.lytPattern);
+            ordinalNumberTextView = itemView.findViewById(R.id.ordinalNumberTextView);
+            titleTextView = itemView.findViewById(R.id.titleTextView);
+            starImageView = itemView.findViewById(R.id.starImageView);
+            grabImageView = itemView.findViewById(R.id.imageViewGrab);
         }
-        return 0L;
     }
-
-    public static long getLongFromInteger(Integer integer) {
-        if (integer == null) {
-            return 0L;
-        }
-        return integer;
-    }
-
-    @Override
-    public boolean hasStableIds() {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP;
-    }
-
 }

@@ -1,8 +1,11 @@
 package com.bence.songbook.api.retrofit;
 
+import android.util.Log;
+
 import com.bence.projector.common.dto.LanguageDTO;
 import com.bence.projector.common.serializer.DateDeserializer;
 import com.bence.projector.common.serializer.DateSerializer;
+import com.bence.songbook.BuildConfig;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
@@ -22,6 +25,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiManager {
 
+    private static final String TAG = ApiManager.class.getSimpleName();
     private static ApiManager instance;
     private List<Cookie> cookies = null;
 
@@ -37,10 +41,11 @@ public class ApiManager {
     }
 
     public static Retrofit getClient() {
-        String BASE_URL = "http://192.168.1.134:8080";
-        String SECOND_BASE_URL = "http://192.168.100.119:8080";
+        String BASE_URL = BuildConfig.API_BASE_URL;
+        String SECOND_BASE_URL = BuildConfig.API_SECOND_BASE_URL;
         HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
-        httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        httpLoggingInterceptor.setLevel(
+                BuildConfig.DEBUG ? HttpLoggingInterceptor.Level.BODY : HttpLoggingInterceptor.Level.BASIC);
         HeaderInterceptor headerInterceptor = new HeaderInterceptor();
         OkHttpClient shortOkHttpClient = new OkHttpClient.Builder()
                 .connectTimeout(3, TimeUnit.SECONDS)
@@ -74,7 +79,7 @@ public class ApiManager {
                 return build;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Primary API base URL unavailable, falling back to secondary", e);
         }
         return new Retrofit.Builder()
                 .baseUrl(SECOND_BASE_URL)

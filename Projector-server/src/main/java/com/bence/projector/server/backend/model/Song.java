@@ -29,6 +29,14 @@ import static com.bence.projector.server.utils.SetLanguages.addWordsInCollection
 public class Song extends AbstractModel {
 
     private static final long THIRTY_DAYS_IN_MILLISECONDS = 2592000000L;
+    /**
+     * Upper bound of {@link #wordQualityScore} used when mapping into {@link #getScore()}.
+     */
+    private static final int WORD_QUALITY_SCORE_SCALE_MAX = 100;
+    /**
+     * Max points {@link #getScore()} may add from {@link #wordQualityScore}; proportional to {@link #WORD_QUALITY_SCORE_SCALE_MAX}.
+     */
+    private static final int WORD_QUALITY_SCORE_BONUS_CAP = 25;
 
     private String originalId;
     private String title;
@@ -63,6 +71,14 @@ public class Song extends AbstractModel {
     private Boolean isBackUp;
     private Boolean reviewerErased;
     private Boolean hasUnsolvedWords;
+    /**
+     * When true, song must not be public (banned/rejected words).
+     */
+    private Boolean hasBlockingWordIssues;
+    /**
+     * Aggregate word-review quality score in {@code [0, 100]}; higher is better.
+     */
+    private Integer wordQualityScore;
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     @Transient
     private String beforeId;
@@ -107,6 +123,12 @@ public class Song extends AbstractModel {
         setSongVerseOrderListItems(createCopyOfVerseOrderList(song.verseOrderList));
         lastModifiedBy = song.lastModifiedBy;
         backUp = song.backUp;
+        hasUnsolvedWords = song.hasUnsolvedWords;
+        hasBlockingWordIssues = song.hasBlockingWordIssues;
+        wordQualityScore = song.wordQualityScore;
+        reviewerErased = song.reviewerErased;
+        deleted = song.deleted;
+        isBackUp = song.isBackUp;
     }
 
     private List<SongVerseOrderListItem> createCopyOfVerseOrderList(List<SongVerseOrderListItem> verseOrderList) {
@@ -194,6 +216,14 @@ public class Song extends AbstractModel {
         return views;
     }
 
+    public void setViews(long views) {
+        this.views = views;
+    }
+
+    public Date getLastIncrementViewDate() {
+        return lastIncrementViewDate == null ? null : (Date) lastIncrementViewDate.clone();
+    }
+
     public void setLastIncrementViewDate(Date lastIncrementViewDate) {
         this.lastIncrementViewDate = lastIncrementViewDate;
     }
@@ -260,6 +290,10 @@ public class Song extends AbstractModel {
         this.youtubeUrl = youtubeUrl;
     }
 
+    public Date getLastIncrementFavouritesDate() {
+        return lastIncrementFavouritesDate == null ? null : (Date) lastIncrementFavouritesDate.clone();
+    }
+
     public void setLastIncrementFavouritesDate(Date lastIncrementFavouritesDate) {
         this.lastIncrementFavouritesDate = lastIncrementFavouritesDate;
     }
@@ -270,6 +304,10 @@ public class Song extends AbstractModel {
 
     public long getFavourites() {
         return favourites;
+    }
+
+    public void setFavourites(long favourites) {
+        this.favourites = favourites;
     }
 
     public String getVerseOrder() {
@@ -294,6 +332,9 @@ public class Song extends AbstractModel {
         for (String s : split) {
             short index = 0;
             List<SongVerse> songVerses = getVerses();
+            if (songVerses == null) {
+                continue;
+            }
             for (SongVerse songVerse : songVerses) {
                 String type = songVerse.getType();
                 if (type != null && type.equalsIgnoreCase(s)) {
@@ -333,9 +374,14 @@ public class Song extends AbstractModel {
 
     public List<Short> getVerseOrderList() {
         if (verses != null && verseOrderWasSaved()) {
+            List<SongVerseOrderListItem> orderItems = getSongVerseOrderListItems();
+            if (orderItems == null) {
+                orderItems = new ArrayList<>();
+                setSongVerseOrderListItems(orderItems);
+            }
             for (short index = 0; index < verses.size(); ++index) {
                 if (!containsIndex(index)) {
-                    addToVerseOrderList(index, verseOrderList);
+                    addToVerseOrderList(index, orderItems);
                 }
             }
         } else if (verseOrderWasNotSaved()) {
@@ -433,6 +479,26 @@ public class Song extends AbstractModel {
         this.hasUnsolvedWords = hasUnsolvedWords;
     }
 
+    public boolean hasBlockingWordIssues() {
+        return hasBlockingWordIssues != null && hasBlockingWordIssues;
+    }
+
+    public Boolean getHasBlockingWordIssues() {
+        return hasBlockingWordIssues;
+    }
+
+    public void setHasBlockingWordIssues(Boolean hasBlockingWordIssues) {
+        this.hasBlockingWordIssues = hasBlockingWordIssues;
+    }
+
+    public Integer getWordQualityScore() {
+        return wordQualityScore;
+    }
+
+    public void setWordQualityScore(Integer wordQualityScore) {
+        this.wordQualityScore = wordQualityScore;
+    }
+
     @SuppressWarnings("unused") // it's used by queue.html
     public String getBeforeId() {
         return beforeId;
@@ -443,7 +509,7 @@ public class Song extends AbstractModel {
     }
 
     public boolean isPublic() {
-        return !isReviewerErased() && !isDeleted() && !isBackUp() && !hasUnsolvedWords();
+        return !isReviewerErased() && !isDeleted() && !isBackUp() && !hasBlockingWordIssues();
     }
 
     private String idOrVersionGroup() {
@@ -638,6 +704,10 @@ public class Song extends AbstractModel {
             if (timeSinceModified < THIRTY_DAYS_IN_MILLISECONDS) {
                 score += (long) (4 * (1 - (double) timeSinceModified / THIRTY_DAYS_IN_MILLISECONDS));
             }
+        }
+        if (wordQualityScore != null && wordQualityScore > 0) {
+            long wordBonus = (long) wordQualityScore * WORD_QUALITY_SCORE_BONUS_CAP / WORD_QUALITY_SCORE_SCALE_MAX;
+            score += Math.min(wordBonus, WORD_QUALITY_SCORE_BONUS_CAP);
         }
         return score;
     }

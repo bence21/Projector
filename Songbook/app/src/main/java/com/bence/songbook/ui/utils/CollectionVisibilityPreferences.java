@@ -36,7 +36,7 @@ public final class CollectionVisibilityPreferences {
 
     public static void saveSelectedCollectionIds(Context context, long languageId, Set<Long> collectionIds) {
         SharedPreferences.Editor editor = getPreferences(context).edit();
-        if (collectionIds == null || collectionIds.isEmpty()) {
+        if (collectionIds == null) {
             editor.remove(getKey(languageId));
         } else {
             Set<String> stored = new HashSet<>(collectionIds.size());
@@ -45,11 +45,7 @@ public final class CollectionVisibilityPreferences {
                     stored.add(String.valueOf(collectionId));
                 }
             }
-            if (stored.isEmpty()) {
-                editor.remove(getKey(languageId));
-            } else {
-                editor.putStringSet(getKey(languageId), stored);
-            }
+            editor.putStringSet(getKey(languageId), stored);
         }
         editor.apply();
     }

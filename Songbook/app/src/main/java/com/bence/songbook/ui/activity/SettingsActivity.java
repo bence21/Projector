@@ -11,11 +11,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bence.songbook.Memory;
 import com.bence.songbook.R;
+import com.bence.songbook.network.LocalNetwork;
 import com.bence.songbook.network.ProjectionTextChangeListener;
+import com.bence.songbook.network.TCPClient;
 import com.bence.songbook.network.TCPServer;
 import com.bence.songbook.ui.utils.Preferences;
 import com.bence.songbook.service.UserService;
@@ -24,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SettingsActivity extends BaseActivity {
+
+    private TextView shareOnNetworkAddressText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,8 +108,10 @@ public class SettingsActivity extends BaseActivity {
             }
         });
         final Switch shareOnNetworkSwitch = findViewById(R.id.shareOnNetworkSwitch);
+        shareOnNetworkAddressText = findViewById(R.id.shareOnNetworkAddressText);
         final Memory memory = Memory.getInstance();
         shareOnNetworkSwitch.setChecked(memory.isShareOnNetwork());
+        updateShareAddressVisibility(memory.isShareOnNetwork());
         shareOnNetworkSwitch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -118,6 +125,7 @@ public class SettingsActivity extends BaseActivity {
                         TCPServer.close();
                     }
                     memory.setShareOnNetwork(checked);
+                    updateShareAddressVisibility(checked);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -142,6 +150,38 @@ public class SettingsActivity extends BaseActivity {
             });
         } else {
             deleteAccountButton.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateShareAddressVisibility(boolean sharing) {
+        if (shareOnNetworkAddressText == null) {
+            return;
+        }
+        if (!sharing) {
+            shareOnNetworkAddressText.setVisibility(View.GONE);
+            return;
+        }
+        shareOnNetworkAddressText.setVisibility(View.VISIBLE);
+        List<String> ips = LocalNetwork.getRfc1918Addresses();
+        if (ips.isEmpty()) {
+            shareOnNetworkAddressText.setText(getString(R.string.share_on_network_no_lan_ip, TCPClient.PORT));
+            return;
+        }
+        StringBuilder addresses = new StringBuilder();
+        for (String ip : ips) {
+            if (addresses.length() > 0) {
+                addresses.append('\n');
+            }
+            addresses.append(ip).append(':').append(TCPClient.PORT);
+        }
+        shareOnNetworkAddressText.setText(getString(R.string.share_on_network_addresses, addresses.toString()));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (shareOnNetworkAddressText != null) {
+            updateShareAddressVisibility(Memory.getInstance().isShareOnNetwork());
         }
     }
 

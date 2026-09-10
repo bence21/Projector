@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ApplicationUtil;
+import projector.application.SessionAutosave;
 import projector.application.Settings;
 
 import javax.swing.*;
@@ -45,6 +46,7 @@ public class HandleUnexpectedError {
                     e.printStackTrace(pw);
                     logError(e);
                     if (!anExceptionStarted) {
+                        SessionAutosave.getInstance().saveNow();
                         showReLunchApp(s + "\n\n" + sw);
                     }
                 } finally {
@@ -132,9 +134,8 @@ public class HandleUnexpectedError {
     private static void reLunch() {
         Platform.runLater(() -> {
             try {
-                ApplicationUtil applicationUtil = ApplicationUtil.getInstance();
-                applicationUtil.saveProjectorState();
-                applicationUtil.closeApplication();
+                SessionAutosave.getInstance().saveNow();
+                ApplicationUtil.getInstance().closeApplication();
                 new Thread(() -> {
                     try {
                         sleep(1000);

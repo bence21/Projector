@@ -1,11 +1,11 @@
-import { Component, Inject, OnInit } from '@angular/core';
-import { Song } from "../../services/song-service.service";
-import { SongCollectionDataService } from "../../services/song-collection-data.service";
-import { SongCollection, SongCollectionElement } from "../../models/songCollection";
-import { FormBuilder, FormGroup, Validators } from "@angular/forms";
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialog } from "@angular/material";
-import { AuthenticateComponent } from '../authenticate/authenticate.component';
-import { AuthService } from '../../services/auth.service';
+import {Component, Inject, OnInit} from '@angular/core';
+import {Song} from "../../services/song-service.service";
+import {SongCollectionDataService} from "../../services/song-collection-data.service";
+import {SongCollection, SongCollectionElement} from "../../models/songCollection";
+import {FormBuilder, FormGroup, Validators} from "@angular/forms";
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from "@angular/material";
+import {AuthService} from '../../services/auth.service';
+import {generalError} from '../../util/error-util';
 
 @Component({
   selector: 'app-add-to-collection',
@@ -67,27 +67,7 @@ export class AddToCollectionComponent implements OnInit {
       this.dialogRef.close('ok');
       window.location.reload();
     }, (err) => {
-      if (err.status === 405) {
-        this.openAuthenticateDialog();
-      }
-      else {
-        console.log(err);
-      }
-    });
-  }
-
-  private openAuthenticateDialog() {
-    let user = JSON.parse(localStorage.getItem('currentUser'));
-    const dialogRef = this.dialog.open(AuthenticateComponent, {
-      data: {
-        email: user.email
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result === 'ok') {
-        this.updateSongCollectionElement();
-      }
+      generalError(this.updateSongCollectionElement, this, err, this.dialog, null);
     });
   }
 

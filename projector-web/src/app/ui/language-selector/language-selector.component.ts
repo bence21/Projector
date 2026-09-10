@@ -10,6 +10,12 @@ import { AuthService } from '../../services/auth.service';
 export class LanguageSelectorComponent {
   @Input() languages: Language[] = [];
   @Input() selectedLanguage: Language;
+  /**
+   * When true (and the parent sets this after choosing the admin "All" option), the select shows "All" instead of
+   * the last concrete language. Optional; when unset, behavior matches the historical "All" action (load all, still
+   * show the previous language in the trigger).
+   */
+  @Input() allLanguagesSelected: boolean = false;
   @Input() darkTheme: boolean = false;
   @Output() selectedLanguageChange = new EventEmitter<Language>();
   @Output() allSelected = new EventEmitter<void>();
@@ -20,9 +26,6 @@ export class LanguageSelectorComponent {
   onLanguageChange(event: any) {
     const selectedValue = event.value;
     if (selectedValue === 'All') {
-      // Don't update selectedLanguage when "All" is selected
-      // Reset the select to show the current selectedLanguage
-      event.source.value = this.selectedLanguage;
       this.onAllSelected();
     } else {
       // Update selectedLanguage and emit the change

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.api.retrofit.ApiManager;
 import projector.api.retrofit.LoginApi;
+import projector.http.LoginHttpResponseUtil;
 import retrofit2.Call;
 import retrofit2.Response;
 
@@ -47,7 +48,11 @@ public class LoginApiBean {
         Call<Void> loginCall = loginApi.login(loginDTO.getUsername(), loginDTO.getPassword());
         try {
             Response<Void> execute = loginCall.execute();
-            setCookie(execute.headers(), execute);
+            Headers headers = execute.headers();
+            if (!LoginHttpResponseUtil.isLoginHttpSuccess(execute.code(), headers.values("Location"))) {
+                return false;
+            }
+            setCookie(headers, execute);
             return true;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);

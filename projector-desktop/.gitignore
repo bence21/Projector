@@ -13,3 +13,4 @@ data/
 /runtime
 *.log
 /bin/
+/data*/

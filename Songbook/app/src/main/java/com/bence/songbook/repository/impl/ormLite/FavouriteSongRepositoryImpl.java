@@ -12,7 +12,6 @@ import com.bence.songbook.repository.dao.CustomDao;
 import com.bence.songbook.repository.exception.RepositoryException;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class FavouriteSongRepositoryImpl extends BaseRepositoryImpl<FavouriteSong> implements FavouriteSongRepository {
@@ -35,6 +34,27 @@ public class FavouriteSongRepositoryImpl extends BaseRepositoryImpl<FavouriteSon
         }
     }
 
+    /**
+     * Looks up a favourite row by the local {@code songs} row id (column {@code song_id}).
+     * This is the authoritative lookup for the UNIQUE constraint and works when the song has no server UUID.
+     */
+    private FavouriteSong findFavouriteByLocalSongId(Long localSongId) {
+        if (localSongId == null) {
+            return null;
+        }
+        String msg = "Could not find favouriteSong by song_id";
+        try {
+            List<FavouriteSong> favouriteSongs = favouriteSongDao.queryForEq("song_id", localSongId);
+            if (favouriteSongs != null && !favouriteSongs.isEmpty()) {
+                return favouriteSongs.get(0);
+            }
+            return null;
+        } catch (SQLException e) {
+            Log.e(TAG, msg, e);
+            throw new RepositoryException(msg, e);
+        }
+    }
+
     @Override
     public FavouriteSong findFavouriteSongBySongUuid(String uuid) {
         if (uuid == null) {
@@ -45,14 +65,11 @@ public class FavouriteSongRepositoryImpl extends BaseRepositoryImpl<FavouriteSon
             songRepository = getSongRepository();
             Song byUUID = songRepository.findByUUID(uuid);
             if (byUUID != null) {
-                ArrayList<FavouriteSong> favouriteSongs = favouriteSongDao.queryForEq("song_id", byUUID.getId());
-                if (favouriteSongs != null && favouriteSongs.size() > 0) {
-                    return favouriteSongs.get(0);
-                }
+                return findFavouriteByLocalSongId(byUUID.getId());
             }
             return null;
         } catch (Exception e) {
-            Log.e(TAG, msg);
+            Log.e(TAG, msg, e);
             throw new RepositoryException(msg, e);
         }
     }
@@ -114,11 +131,14 @@ public class FavouriteSongRepositoryImpl extends BaseRepositoryImpl<FavouriteSon
         // Attach the verified local song to the favourite object
         favourite.setSong(localSong);
 
-        // Now check for existing Favourite logic
-        FavouriteSong favouriteSongBySongUuid = findFavouriteSongBySongUuid(song.getUuid());
-
-        if (favouriteSongBySongUuid != null) {
-            favourite.setId(favouriteSongBySongUuid.getId());
+        // Like before: look up an existing row by the local song's server UUID when present
+        FavouriteSong existing = findFavouriteSongBySongUuid(localSong.getUuid());
+        if (existing == null) {
+            // Local-only or missing UUID: unique row is keyed by song_id
+            existing = findFavouriteByLocalSongId(localSong.getId());
+        }
+        if (existing != null) {
+            favourite.setId(existing.getId());
         }
 
         super.save(favourite);

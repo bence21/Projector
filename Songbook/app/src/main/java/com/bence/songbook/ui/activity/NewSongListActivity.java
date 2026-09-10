@@ -1,6 +1,7 @@
 package com.bence.songbook.ui.activity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
@@ -14,6 +15,7 @@ import com.bence.songbook.models.QueueSong;
 import com.bence.songbook.models.Song;
 import com.bence.songbook.models.SongList;
 import com.bence.songbook.models.SongListElement;
+import com.bence.songbook.repository.QueueRepository;
 import com.bence.songbook.repository.impl.ormLite.SongListElementRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListRepositoryImpl;
 import com.bence.songbook.ui.utils.Preferences;
@@ -84,8 +86,8 @@ public class NewSongListActivity extends BaseActivity {
         SongListRepositoryImpl songListRepository = new SongListRepositoryImpl(this);
         songListRepository.save(songList);
         if (saveQueue) {
-            List<QueueSong> queue = Memory.getInstance().getQueue();
-            if (queue != null) {
+            List<QueueSong> queue = QueueRepository.getInstance(this).getQueueSnapshot();
+            if (!queue.isEmpty()) {
                 List<SongListElement> songListElements = new ArrayList<>(queue.size());
                 for (QueueSong queueSong : queue) {
                     SongListElement songListElement = new SongListElement();
@@ -110,7 +112,7 @@ public class NewSongListActivity extends BaseActivity {
             try {
                 songListElementRepository.save(songListElements);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, e.getMessage(), e);
                 Toast.makeText(getApplicationContext(), "Could not save song list element", Toast.LENGTH_LONG).show();
                 return;
             }

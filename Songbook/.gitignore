@@ -8,3 +8,5 @@
 /ignore/
 /app/release/
 /app/src/main/java/com/bence/songbook/utils/NumberRound.java
+/app/src/androidTest/assets/songbook.db
+/songbook-fixture-work.db

@@ -2,11 +2,12 @@ package projector.application;
 
 import org.junit.Assert;
 import org.junit.Test;
+import projector.Credentials;
 
 public class UpdaterTest {
 
     @Test
     public void getUrlTest() {
-        Assert.assertEquals(Updater.getInstance().getUrl(41), "http://localhost:8080/api/files/projectorUpdate41.zip");
+        Assert.assertEquals(Credentials.BASE_URL + "/api/files/projectorUpdate41.zip", Updater.getInstance().getUrl(41));
     }
 }

@@ -7,6 +7,8 @@ public class AppProperties {
 
     private static AppProperties instance;
     private final Properties properties;
+    /** Optional override from Spring (e.g. application-local.properties). */
+    private String baseUrlOverride;
 
     private AppProperties() {
         properties = new Properties();
@@ -23,8 +25,20 @@ public class AppProperties {
         return instance;
     }
 
+    public void setBaseUrlOverride(String baseUrlOverride) {
+        this.baseUrlOverride = baseUrlOverride;
+    }
+
     public String baseUrl() {
-        return (String) properties.get("baseUrl");
+        if (baseUrlOverride != null && !baseUrlOverride.isEmpty()) {
+            return baseUrlOverride;
+        }
+        String baseUrl = (String) properties.get("baseUrl");
+        String port = System.getenv("PORT");
+        if (port != null && !port.isEmpty() && baseUrl != null && baseUrl.contains("://localhost")) {
+            return baseUrl.replaceFirst("^(https?://localhost):\\d+", "$1:" + port);
+        }
+        return baseUrl;
     }
 
     public String shortBaseUrl() {

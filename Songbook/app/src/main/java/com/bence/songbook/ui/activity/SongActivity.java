@@ -12,7 +12,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -30,11 +29,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager.widget.ViewPager;
 
 import com.bence.songbook.Memory;
@@ -42,7 +43,6 @@ import com.bence.songbook.R;
 import com.bence.songbook.api.SongApiBean;
 import com.bence.songbook.models.FavouriteSong;
 import com.bence.songbook.models.Language;
-import com.bence.songbook.models.QueueSong;
 import com.bence.songbook.models.Song;
 import com.bence.songbook.models.SongCollection;
 import com.bence.songbook.models.SongCollectionElement;
@@ -52,16 +52,17 @@ import com.bence.songbook.repository.FavouriteSongRepository;
 import com.bence.songbook.repository.SongCollectionRepository;
 import com.bence.songbook.repository.SongRepository;
 import com.bence.songbook.repository.impl.ormLite.FavouriteSongRepositoryImpl;
-import com.bence.songbook.repository.impl.ormLite.QueueSongRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongCollectionRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListElementRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongListRepositoryImpl;
 import com.bence.songbook.repository.impl.ormLite.SongRepositoryImpl;
 import com.bence.songbook.service.FavouriteSongService;
 import com.bence.songbook.service.SongService;
+import com.bence.songbook.ui.queue.QueueViewModel;
 import com.bence.songbook.ui.utils.CheckSongForUpdate;
 import com.bence.songbook.ui.utils.PageAdapter;
 import com.bence.songbook.ui.utils.Preferences;
+import com.bence.songbook.ui.utils.SongUploadFailureUi;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.tasks.Task;
@@ -88,6 +89,7 @@ public class SongActivity extends BaseActivity {
     PageAdapter pageAdapter;
     private Song song;
     private Memory memory;
+    private QueueViewModel queueViewModel;
     private MenuItem favouriteMenuItem;
     private View mainLayout;
     private Menu menu;
@@ -105,6 +107,7 @@ public class SongActivity extends BaseActivity {
         setTheme(Preferences.getTheme(this));
         super.onCreate(savedInstanceState);
         memory = Memory.getInstance();
+        queueViewModel = new ViewModelProvider(this).get(QueueViewModel.class);
         setContentView(R.layout.activity_song);
         mainLayout = findViewById(R.id.main_layout);
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -282,38 +285,56 @@ public class SongActivity extends BaseActivity {
             Intent intent = new Intent(this, YoutubeActivity.class);
             startActivity(intent);
         } else if (itemId == R.id.action_add_to_queue) {
-            QueueSongRepositoryImpl queueSongRepository = new QueueSongRepositoryImpl(this);
-            QueueSong model = new QueueSong();
-            model.setSong(song);
-            memory.addSongToQueue(model);
-            queueSongRepository.save(model);
+            queueViewModel.addSong(song);
             showToaster(getString(R.string.added_to_queue), Toast.LENGTH_SHORT);
         } else if (itemId == R.id.action_save_to_song_list) {
             saveToSongList();
         } else if (itemId == R.id.action_upload) {
             MenuItem uploadMenuItem = menu.findItem(R.id.action_upload);
-            uploadMenuItem.setVisible(false);
-            Thread thread = new Thread(() -> {
-                SongApiBean songApiBean = new SongApiBean();
-                final Song uploadedSong = songApiBean.uploadSong(song);
-                runOnUiThread(() -> {
-                    if (uploadedSong != null && !uploadedSong.getUuid().trim().isEmpty()) {
-                        song.setSavedOnlyToDevice(false);
-                        song.setUuid(uploadedSong.getUuid());
-                        song.setModifiedDate(uploadedSong.getModifiedDate());
-                        SongRepository songRepository = new SongRepositoryImpl(this);
-                        songRepository.save(song);
-                        Toast.makeText(SongActivity.this, R.string.successfully_uploaded, Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(SongActivity.this, R.string.upload_failed, Toast.LENGTH_SHORT).show();
-                    }
-                });
-            });
-            thread.start();
+            startUploadInBackground(uploadMenuItem, false);
         } else if (itemId == R.id.action_delete) {
             setSongAsDeleted();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void startUploadInBackground(MenuItem uploadMenuItem, boolean isPostLoginRetry) {
+        uploadMenuItem.setVisible(false);
+        new Thread(() -> {
+            SongApiBean songApiBean = new SongApiBean();
+            SongApiBean.SongUploadResult uploadResult = songApiBean.uploadSong(song, SongActivity.this);
+            runOnUiThread(() -> handleUploadResult(uploadMenuItem, uploadResult, isPostLoginRetry));
+        }).start();
+    }
+
+    private void handleUploadResult(MenuItem uploadMenuItem, SongApiBean.SongUploadResult uploadResult,
+                                    boolean isPostLoginRetry) {
+        Song uploadedSong = uploadResult.getSong();
+        if (uploadedSong != null && !uploadedSong.getUuid().trim().isEmpty()) {
+            song.setSavedOnlyToDevice(false);
+            song.setUuid(uploadedSong.getUuid());
+            song.setModifiedDate(uploadedSong.getModifiedDate());
+            SongRepository songRepository = new SongRepositoryImpl(this);
+            songRepository.save(song);
+            Toast.makeText(SongActivity.this, R.string.successfully_uploaded, Toast.LENGTH_SHORT).show();
+            setUpMenu();
+        } else {
+            SongApiBean.SongUploadFailureKind kind = uploadResult.getFailureKind();
+            boolean authFailure = kind == SongApiBean.SongUploadFailureKind.NEEDS_SIGN_IN
+                    || kind == SongApiBean.SongUploadFailureKind.SESSION_NOT_REFRESHED;
+            if (!isPostLoginRetry && authFailure) {
+                SongUploadFailureUi.showForActivity(SongActivity.this, uploadResult,
+                        SongUploadFailureUi.REQUEST_LOGIN_FOR_UPLOAD_RETRY,
+                        () -> uploadMenuItem.setVisible(true));
+            } else {
+                if (isPostLoginRetry) {
+                    SongUploadFailureUi.showUploadFailureAfterRetry(SongActivity.this, uploadResult);
+                } else {
+                    SongUploadFailureUi.showForActivity(SongActivity.this, uploadResult);
+                }
+                uploadMenuItem.setVisible(true);
+            }
+        }
     }
 
     private void setSongAsDeleted() {
@@ -353,9 +374,7 @@ public class SongActivity extends BaseActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        if (Build.VERSION.SDK_INT >= 21) {
-            saveToSongListPopupWindow.setElevation(5.0f);
-        }
+        saveToSongListPopupWindow.setElevation(5.0f);
         Button closeButton = customView.findViewById(R.id.closeButton);
         closeButton.setOnClickListener(view -> saveToSongListPopupWindow.dismiss());
         ListView listView = customView.findViewById(R.id.listView);
@@ -407,6 +426,20 @@ public class SongActivity extends BaseActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SongUploadFailureUi.REQUEST_LOGIN_FOR_UPLOAD_RETRY) {
+            if (resultCode == LoginActivity.RESULT_LOGGED_IN) {
+                MenuItem uploadMenuItem = menu != null ? menu.findItem(R.id.action_upload) : null;
+                if (uploadMenuItem != null && song != null && song.isSavedOnlyToDevice()) {
+                    startUploadInBackground(uploadMenuItem, true);
+                }
+            } else {
+                MenuItem uploadMenuItem = menu != null ? menu.findItem(R.id.action_upload) : null;
+                if (uploadMenuItem != null) {
+                    uploadMenuItem.setVisible(true);
+                }
+            }
+            return;
+        }
         if (resultCode == CheckSongForUpdate.UPDATE_SONGS_RESULT) {
             setResult(resultCode);
             finish();
@@ -485,23 +518,13 @@ public class SongActivity extends BaseActivity {
             menu.removeItem(shareMenuItem.getItemId());
         }
         favouriteMenuItem = menu.findItem(R.id.action_favourite);
-        final SongActivity context = this;
         boolean notNewSong = song.isNotNewSong();
         if (notNewSong) {
             if (song.isFavourite()) {
                 favouriteMenuItem.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_star_black_24dp, null));
             }
             favouriteMenuItem.setOnMenuItemClickListener(item -> {
-                song.setFavourite(!song.isFavourite());
-                FavouriteSong favourite = song.getFavourite();
-                favourite.setModifiedDate(new Date());
-                favourite.setUploadedToServer(false);
-                favourite.setFavouritePublished(favourite.isFavouriteNotPublished());
-                FavouriteSongRepository favouriteSongRepository = new FavouriteSongRepositoryImpl(context);
-                favouriteSongRepository.save(favourite);
-                favouriteMenuItem.setIcon(ResourcesCompat.getDrawable(getResources(), song.isFavourite() ?
-                        R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp, null));
-                FavouriteSongService.getInstance().syncFavourites(SongActivity.this);
+                toggleFavourite();
                 return false;
             });
             favouriteMenuItem.setVisible(true);
@@ -527,7 +550,6 @@ public class SongActivity extends BaseActivity {
         finish();
     }
 
-    @SuppressWarnings("SpellCheckingInspection")
     public void onDontShowAgain(View view) {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         sharedPreferences.edit().putBoolean("ShowGoogleSignInWhenFavouriteChanges", false).apply();
@@ -539,5 +561,26 @@ public class SongActivity extends BaseActivity {
         intent.putExtra("addSongToSongList", true);
         memory.setPassingSong(song);
         startActivity(intent);
+    }
+
+    private void toggleFavourite() {
+        song.setFavourite(!song.isFavourite());
+        FavouriteSong favourite = song.getFavourite();
+        favourite.setModifiedDate(new Date());
+        favourite.setUploadedToServer(false);
+        favourite.setFavouritePublished(favourite.isFavouriteNotPublished());
+        FavouriteSongRepository favouriteSongRepository = new FavouriteSongRepositoryImpl(this);
+        favouriteSongRepository.save(favourite);
+        if (favouriteMenuItem != null) {
+            favouriteMenuItem.setIcon(ResourcesCompat.getDrawable(getResources(), song.isFavourite() ?
+                    R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp, null));
+        }
+        queueViewModel.refreshQueueDisplay();
+        FavouriteSongService.getInstance().syncFavourites(this);
+    }
+
+    @VisibleForTesting
+    public void testingToggleFavourite() {
+        toggleFavourite();
     }
 }

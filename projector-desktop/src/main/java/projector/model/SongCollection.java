@@ -11,10 +11,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static projector.utils.StringUtils.parseToShortName;
 import static projector.utils.StringUtils.stripAccents;
 
 public class SongCollection extends BaseEntity {
     @ForeignCollectionField
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private ForeignCollection<SongCollectionElement> songCollectionElementForeignCollection;
     @Expose
     private List<SongCollectionElement> songCollectionElements;
@@ -140,29 +142,7 @@ public class SongCollection extends BaseEntity {
     }
 
     private String getShortName() {
-        return parseToShortName();
-    }
-
-    private String parseToShortName() {
-        StringBuilder shortName = new StringBuilder();
-        String[] split = name.trim().split(" ");
-        if (split.length > 1) {
-            for (String s : split) {
-                try {
-                    shortName.append((s.charAt(0) + "").toUpperCase());
-                    int i = 1;
-                    while (i < s.length() && Character.isUpperCase(s.charAt(i))) {
-                        shortName.append(s.charAt(i));
-                        ++i;
-                    }
-                } catch (Exception e) {
-                    shortName.append(s);
-                }
-            }
-        } else {
-            return (name.trim().charAt(0) + "").toUpperCase();
-        }
-        return shortName.toString();
+        return parseToShortName(name);
     }
 
     public String getStrippedShortName() {

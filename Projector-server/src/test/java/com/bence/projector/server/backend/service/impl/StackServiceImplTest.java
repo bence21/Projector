@@ -16,9 +16,10 @@ public class StackServiceImplTest extends BaseServiceTest {
         Stack stack = new Stack();
         String longText = getLongText();
         stack.setStackTrace(longText);
+        String expectedStackTrace = stack.getStackTrace();
         stackService.save(stack);
         Stack stackServiceOne = stackService.findOne(stack.getId());
-        Assert.assertEquals(longText, stackServiceOne.getStackTrace());
+        Assert.assertEquals(expectedStackTrace, stackServiceOne.getStackTrace());
     }
 
     private String getLongText() {

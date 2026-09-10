@@ -10,4 +10,6 @@ public interface ProjectorVersionRepository extends CrudRepository<ProjectorVers
     List<ProjectorVersion> findAllByVersionIdGreaterThan(int nr);
 
     List<ProjectorVersion> findAllByVersionIdGreaterThanAndVersionIdLessThan(int nr, int nr2);
+
+    boolean existsByVersionId(int versionId);
 }

@@ -1,0 +1,67 @@
+<h2 mat-dialog-title>{{ data.title }}</h2>
+<mat-dialog-content>
+  <p><strong>New song:</strong> {{ data.newSongTitle }}</p>
+  <p><strong>Language:</strong> {{ data.languageLabel }}</p>
+  <ng-container *ngIf="data.notes && data.notes.length">
+    <p><strong>Notes:</strong></p>
+    <ul>
+      <li *ngFor="let n of data.notes">{{ n }}</li>
+    </ul>
+  </ng-container>
+  <p *ngIf="data.loadingMessage"><strong>{{ data.loadingMessage }}</strong></p>
+  <div class="compare-wrapper" *ngIf="data.newSong && data.similarSong">
+    <app-compare-songs
+      [song]="data.newSong"
+      [secondSong]="data.similarSong"
+      [descriptionLabelLeft]="'Current song:'"
+      [descriptionLabelRight]="'Top similar:'"
+      (textsMatchChange)="onTextsMatchChange($event)">
+    </app-compare-songs>
+  </div>
+  <div class="meta-wrapper" *ngIf="data.newSong">
+    <div class="meta-column">
+      <h4>Current song details</h4>
+      <app-song-meta-table [song]="data.newSong"></app-song-meta-table>
+    </div>
+    <div class="meta-column" *ngIf="data.similarSong">
+      <h4>Top similar details</h4>
+      <app-song-meta-table [song]="data.similarSong"></app-song-meta-table>
+    </div>
+  </div>
+  <p *ngIf="displayedFooterHint">{{ displayedFooterHint }}</p>
+</mat-dialog-content>
+<mat-dialog-actions class="quick-review-actions" align="end">
+  <button mat-button (click)="dialogRef.close(false)">{{ data.cancelText || 'Cancel' }}</button>
+  <button
+          *ngIf="primaryIsReplaceDuplicate"
+          mat-raised-button
+          color="primary"
+          [disabled]="!data.canConfirm"
+          (click)="onPrimaryReplace()">
+    {{ replaceLabel() }}
+  </button>
+  <button
+          *ngIf="!primaryIsReplaceDuplicate"
+          mat-stroked-button
+          class="secondary-action"
+          [disabled]="!data.canConfirm"
+          (click)="onSecondaryReplace()">
+    {{ replaceLabel() }}
+  </button>
+  <button
+          *ngIf="!primaryIsReplaceDuplicate"
+          mat-raised-button
+          color="primary"
+          [disabled]="!data.canConfirm"
+          (click)="onPrimaryMerge()">
+    {{ mergeLabel() }}
+  </button>
+  <button
+          *ngIf="primaryIsReplaceDuplicate"
+          mat-stroked-button
+          class="secondary-action"
+          [disabled]="!data.canConfirm"
+          (click)="onSecondaryMerge()">
+    {{ mergeLabel() }}
+  </button>
+</mat-dialog-actions>

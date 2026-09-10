@@ -12,4 +12,8 @@ public interface LanguageService extends BaseService<Language> {
     Language findOneByUuid(String uuid);
 
     List<Language> findAllDeleted();
+
+    boolean existsActiveByEnglishName(String englishName);
+
+    Language findActiveByEnglishName(String englishName);
 }

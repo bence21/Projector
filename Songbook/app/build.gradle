@@ -6,18 +6,28 @@ ext {
     support_version = "27.1.1"
 }
 android {
-    compileSdkVersion 36
+    compileSdkVersion 37
     defaultConfig {
         applicationId "com.bence.songbook.dev"
         minSdkVersion 21
         //noinspection OldTargetApi
         targetSdkVersion 35
-        versionCode 142
-        versionName '2.16.9'
+        versionCode 144
+        versionName '2.16.11'
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        def localProperties = new Properties()
+        def localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withInputStream { localProperties.load(it) }
+        }
+        def testApiBaseUrl = localProperties.getProperty("test.api.base.url", "http://192.168.1.134:8081")
+        def testApiSecondBaseUrl = localProperties.getProperty("test.api.second.base.url", "http://192.168.100.119:8081")
+        buildConfigField "String", "API_BASE_URL", "\"${testApiBaseUrl}\""
+        buildConfigField "String", "API_SECOND_BASE_URL", "\"${testApiSecondBaseUrl}\""
     }
     buildTypes {
         // debug { // This can be used if we want to test e2e with minifyEnabled and proguard feature
@@ -70,6 +80,12 @@ dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    //noinspection GradleDependency // 2.11.0+ requires minSdk 23; app minSdk is 21
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.8.7'
+    //noinspection GradleDependency // 2.11.0+ requires minSdk 23; app minSdk is 21
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.8.7'
+    //noinspection GradleDependency // 2.11.0+ requires minSdk 23; app minSdk is 21
+    implementation 'androidx.lifecycle:lifecycle-runtime:2.8.7'
 //    implementation project(":projector-common")
 //    implementation fileTree(include: ['*.jar'], dir: 'libs')
     //noinspection GradleDependency

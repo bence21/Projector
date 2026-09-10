@@ -18,6 +18,8 @@ import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.application.ProjectionType;
+import projector.application.SessionAutosave;
+import projector.application.VideoViewerTabState;
 import projector.controller.util.ProjectionScreensUtil;
 
 import java.io.File;
@@ -49,6 +51,7 @@ public class VideoViewerController {
     private boolean isPlaying = false;
     private boolean isSeeking = false;
     private final ProjectionScreensUtil projectionScreensUtil = ProjectionScreensUtil.getInstance();
+    private VideoViewerTabState pendingRestore;
 
     public void initialize() {
         setupKeyboardNavigation();
@@ -119,6 +122,30 @@ public class VideoViewerController {
         }
     }
 
+    public void setPendingSessionRestore(VideoViewerTabState state) {
+        this.pendingRestore = state;
+    }
+
+    public VideoViewerTabState captureSessionState(String filePath) {
+        VideoViewerTabState state = new VideoViewerTabState();
+        state.setFilePath(filePath);
+        if (mediaPlayer == null) {
+            state.setPositionSeconds(0);
+            state.setPlaying(false);
+            if (volumeSlider != null) {
+                state.setVolume(volumeSlider.getValue());
+            }
+            return state;
+        }
+        Duration currentTime = mediaPlayer.getCurrentTime();
+        state.setPositionSeconds(currentTime != null ? currentTime.toSeconds() : 0);
+        state.setPlaying(isPlaying);
+        if (volumeSlider != null) {
+            state.setVolume(volumeSlider.getValue());
+        }
+        return state;
+    }
+
     public void setVideoFile(String filePath) {
         File videoFile = new File(filePath);
         if (!videoFile.exists()) {
@@ -138,6 +165,7 @@ public class VideoViewerController {
             mediaPlayer.setOnReady(() -> Platform.runLater(() -> {
                 enableControls();
                 updateTimeLabel();
+                applyPendingSessionRestore();
             }));
 
             // Handle errors
@@ -264,6 +292,34 @@ public class VideoViewerController {
             projectionScreensUtil.playVideoOnAllScreens();
         }
         updatePlayPauseButton();
+        SessionAutosave.getInstance().notifySessionChanged();
+    }
+
+    private void applyPendingSessionRestore() {
+        if (pendingRestore == null || mediaPlayer == null) {
+            return;
+        }
+        VideoViewerTabState restore = pendingRestore;
+        pendingRestore = null;
+        if (volumeSlider != null) {
+            volumeSlider.setValue(restore.getVolume());
+        }
+        double position = Math.max(0, restore.getPositionSeconds());
+        Duration seekDuration = Duration.seconds(position);
+        mediaPlayer.seek(seekDuration);
+        projectionScreensUtil.seekVideoOnAllScreens(seekDuration);
+        if (restore.isPlaying()) {
+            mediaPlayer.play();
+            isPlaying = true;
+            projectionScreensUtil.playVideoOnAllScreens();
+        } else {
+            mediaPlayer.pause();
+            isPlaying = false;
+            projectionScreensUtil.pauseVideoOnAllScreens();
+        }
+        updatePlayPauseButton();
+        updateTimeLabel();
+        updateSeekSlider();
     }
 
     private void updatePlayPauseButton() {
@@ -320,6 +376,7 @@ public class VideoViewerController {
         // Synchronize seek with all projection screens
         projectionScreensUtil.seekVideoOnAllScreens(seekDuration);
         isSeeking = false;
+        SessionAutosave.getInstance().notifySessionChanged();
     }
 
     @FXML
@@ -369,6 +426,7 @@ public class VideoViewerController {
             // No projection screens - the viewer (preview) should have sound
             mediaPlayer.setVolume(volume);
         }
+        SessionAutosave.getInstance().notifySessionChanged();
     }
 
     private void adjustVolume(double delta) {

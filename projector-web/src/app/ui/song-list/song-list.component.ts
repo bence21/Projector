@@ -14,8 +14,10 @@ import { Title } from "@angular/platform-browser";
 import { User } from '../../models/user';
 import { SELECTED_LANGUGAGE } from '../../util/constants';
 import { compress, decompress } from 'lz-string';
-import { generalError } from '../../util/error-util';
+import { checkAuthenticationError, ErrorUtil, generalError } from '../../util/error-util';
 import { MatDialog, MatSnackBar } from '@angular/material';
+import { SongWordValidationService } from '../../services/song-word-validation.service';
+import { QuickReviewFlowService } from '../../services/quick-review-flow.service';
 
 @Component({
   selector: 'app-song-list',
@@ -37,11 +39,12 @@ export class SongListComponent implements OnInit {
   languages: Language[];
   selectedLanguage: Language;
   oldLanguagesKey = 'languages_v2';
-  languagesKey = 'languages_v3';
+  languagesKey = 'languages_v4';
   myUploadsCheck = false;
   private songListComponent_songsType = 'songListComponent_songsType';
   private songListComponent_myUploadsCheck = 'songListComponent_myUploadsCheck';
   private _subscription: Subscription;
+  quickReviewBusy = false;
 
   constructor(private songService: SongService,
     private router: Router,
@@ -51,6 +54,8 @@ export class SongListComponent implements OnInit {
     public auth: AuthService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
+    private songWordValidationService: SongWordValidationService,
+    private quickReviewFlowService: QuickReviewFlowService,
   ) {
     localStorage.setItem(this.oldLanguagesKey, '');
     this.songControl = new FormControl();
@@ -59,7 +64,7 @@ export class SongListComponent implements OnInit {
     this.filteredSongsList = [];
     this.songTitlesLocalStorage = JSON.parse(localStorage.getItem('songTitles'));
     if (this.songTitlesLocalStorage) {
-      this.songTitles = this.songTitlesLocalStorage;
+      this.songTitles = this.filterSongsWithVerses(this.songTitlesLocalStorage);
       this.sortSongTitles();
     } else {
       this.songTitlesLocalStorage = [];
@@ -209,6 +214,24 @@ export class SongListComponent implements OnInit {
     return s.toLowerCase();
   }
 
+  /** Keep list entries that have verse content; title API sets verseCount, full songs may set verse arrays. */
+  private static hasDisplayableVerses(song: Song): boolean {
+    if (song == null || song.title === 'loading') {
+      return true;
+    }
+    if (song.verseCount != null) {
+      return song.verseCount > 0;
+    }
+    if (song.songVerseDTOS != null) {
+      return song.songVerseDTOS.length > 0;
+    }
+    return true;
+  }
+
+  private filterSongsWithVerses(songs: Song[]): Song[] {
+    return songs.filter(SongListComponent.hasDisplayableVerses);
+  }
+
   filterStates(filter: string) {
     filter = SongListComponent.stripAccents(filter);
     return this.songTitles.filter(song => {
@@ -266,6 +289,7 @@ export class SongListComponent implements OnInit {
         if (lang.songTitles === undefined) {
           lang.songTitles = [];
         } else {
+          lang.songTitles = this.filterSongsWithVerses(lang.songTitles);
           this.songTitles = lang.songTitles;
           this.sortSongTitles();
           this.songControl.updateValueAndValidity();
@@ -287,6 +311,7 @@ export class SongListComponent implements OnInit {
                 this.removeSong(song, this.songTitles);
               }
             }
+            this.songTitles = this.filterSongsWithVerses(this.songTitles);
             lang.songTitles = this.songTitles;
           } else {
             let modifiedSongs = [];
@@ -301,7 +326,7 @@ export class SongListComponent implements OnInit {
                 modifiedSongs.push(song);
               }
             }
-            this.songTitles = lang.songTitles.concat(modifiedSongs);
+            this.songTitles = this.filterSongsWithVerses(lang.songTitles.concat(modifiedSongs));
             lang.songTitles = this.songTitles;
             this.removeFromOtherLanguages(modifiedSongs, languages, lang);
           }
@@ -332,7 +357,7 @@ export class SongListComponent implements OnInit {
     let languages: Language[] = JSON.parse(this.getFromLocalStorage(this.languagesKey));
     this.songTitles = [];
     for (let language of languages) {
-      this.songTitles = this.songTitles.concat(language.songTitles);
+      this.songTitles = this.songTitles.concat(this.filterSongsWithVerses(language.songTitles || []));
     }
     this.sortAndUpdate();
   }
@@ -431,7 +456,7 @@ export class SongListComponent implements OnInit {
   }
 
   private setSongTitles(songTitles: Song[]) {
-    this.songTitles = songTitles;
+    this.songTitles = this.filterSongsWithVerses(songTitles);
     this.sortSongTitles();
     this.songControl.updateValueAndValidity();
     const pageEvent = new PageEvent();
@@ -546,5 +571,55 @@ export class SongListComponent implements OnInit {
     localStorage.setItem(this.songListComponent_myUploadsCheck, this.myUploadsCheck.toString());
     this.loadSongs();
   }
+
+  /**
+   * Admin-only: first song in the in-review list → validate words → summary → save (publish) → merge with top similar.
+   * Merge order matches the manual flow (similar song first, new queued song second).
+   */
+  processFirstInReviewSongQuick(): void {
+    const user = this.auth.getUser();
+    if (!user || !user.isAdmin()) {
+      return;
+    }
+    if (this.songsType !== Song.REVIEWER || !this.selectedLanguage) {
+      this.snackBar.open('Switch to "In review" and pick a language.', 'Close', { duration: 4000 });
+      return;
+    }
+    const titles = this.songTitles.filter((t) =>
+      t != null && t.title !== 'loading' && (t.id != null && t.id !== '' || t.uuid != null && t.uuid !== '')
+    );
+    if (titles.length === 0) {
+      this.snackBar.open('No songs in review for this filter.', 'Close', { duration: 3000 });
+      return;
+    }
+    const firstRef = titles[0];
+    const songId = (firstRef.id != null && firstRef.id !== '') ? firstRef.id : firstRef.uuid;
+    this.quickReviewBusy = true;
+    this.songService.getSong(songId).subscribe(
+      (fullSong) => {
+        if (!fullSong) {
+          this.quickReviewBusy = false;
+          this.snackBar.open('Could not load the first queued song.', 'Close', { duration: 4000 });
+          return;
+        }
+        this.openQuickReviewSummaryAndContinue(fullSong);
+      },
+      (err) => {
+        this.quickReviewBusy = false;
+        generalError(this.processFirstInReviewSongQuick, this, err, this.dialog, this.snackBar);
+      }
+    );
+  }
+
+  private openQuickReviewSummaryAndContinue(fullSong: Song): void {
+    this.quickReviewFlowService.runQuickReview(
+      fullSong,
+      this.selectedLanguage,
+      (busy) => this.quickReviewBusy = busy,
+      () => this.loadSongs(),
+      (err) => generalError(this.processFirstInReviewSongQuick, this, err, this.dialog, this.snackBar)
+    );
+  }
+
 }
 

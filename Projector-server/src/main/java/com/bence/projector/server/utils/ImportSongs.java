@@ -1,5 +1,7 @@
 package com.bence.projector.server.utils;
 
+import com.bence.projector.common.dto.RejectedWordSuggestion;
+import com.bence.projector.common.dto.SongWordValidationResult;
 import com.bence.projector.common.model.SectionType;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Song;
@@ -10,6 +12,8 @@ import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongService;
+import com.bence.projector.server.backend.service.SongWordValidationOptions;
+import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -27,7 +31,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static com.bence.projector.server.utils.SongModerationUtil.markSongForReviewQueue;
 import static com.bence.projector.server.utils.StringUtils.formatSongs;
 
 @SuppressWarnings({"unused", "CommentedOutCode"})
@@ -35,6 +42,16 @@ public class ImportSongs {
 
     private static final String ENGLISH_LANGUAGE_UUID = "5a2d25458c270b37345af0c5";
     private static final String HUNGARIAN_LANGUAGE_UUID = "5a2d253b8c270b37345af0c3";
+
+    /**
+     * Plain-text Református book: first line {@code <n>. <title>}, verses separated by one empty line,
+     * songs separated by two empty lines (see {@link #importReformatusPlainTextSongs}).
+     */
+    private static final String REFORMATUS_PLAIN_FILENAME = "reformatuse-songpraise.txt";
+    private static final String REFORMATUS_COLLECTION_NAME = "Református Énekeskönyv (régi)";
+    private static final char UTF8_BOM = '\ufeff';
+
+    private static final Pattern REFORMATUS_HEADER = Pattern.compile("^(\\d+)\\.\\s+(.+)$");
 
     public static List<Song> importBGyESongs(LanguageService languageService, SongService songService, SongCollectionService songCollectionService) {
         List<Song> songs = new ArrayList<>();
@@ -291,6 +308,175 @@ public class ImportSongs {
         mRESongCollection.setModifiedDate(new Date());
         songCollectionService.save(mRESongCollection);
         return songs;
+    }
+
+    /**
+     * Imports the Református (régi) plain-text file: first line of each song is
+     * {@code <ordinalNumber>. <title>}; verse blocks are separated by a single empty line; the next
+     * song starts after two consecutive empty lines. Creates a new {@link SongCollection} and, like
+     * {@link #importMRE_jsonSongs}, runs formatting, similarity, then persistence. Songs that contain
+     * dictionary words marked REJECTED or BANNED are sent to the review queue
+     * ({@code deleted=true}, {@code uploaded=true}).
+     *
+     * @param filePath path to the UTF-8 file (e.g. {@value #REFORMATUS_PLAIN_FILENAME} in the working directory)
+     */
+    public static List<Song> importReformatusPlainTextSongs(LanguageService languageService,
+                                                            SongService songService,
+                                                            SongCollectionService songCollectionService,
+                                                            SongWordValidationService songWordValidationService,
+                                                            String filePath) {
+        List<Song> songs = new ArrayList<>();
+        try (FileInputStream inputStream = new FileInputStream(filePath);
+             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            List<String> lines = readUtf8LinesWithOptionalBom(br);
+            List<MRESong> parsedSongs = parseReformatusPlainTextLines(lines);
+            Language hungarianLanguage = findHungarianLanguage(languageService);
+            SongCollection newCollection = createReformatusSongCollection(hungarianLanguage);
+            prepareMRESongs(songs, new ArrayList<>(parsedSongs), hungarianLanguage, newCollection);
+            // songs.forEach(song -> song.setCreatedByEmail(""));
+            System.out.println(songs.size());
+            prepareSongs2(songs);
+            checkForSimilar(songs, songService);
+            markSongsForReviewIfRejectedOrBanned(songWordValidationService, songs);
+            songService.save(songs);
+            newCollection.setModifiedDate(new Date());
+            songCollectionService.save(newCollection);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return songs;
+    }
+
+    private static List<String> readUtf8LinesWithOptionalBom(BufferedReader br) throws IOException {
+        br.mark(4);
+        if (br.read() != UTF8_BOM) {
+            br.reset();
+        }
+        List<String> lines = new ArrayList<>();
+        String line;
+        while ((line = br.readLine()) != null) {
+            lines.add(line);
+        }
+        return lines;
+    }
+
+    public static List<Song> importReformatusPlainTextSongs(LanguageService languageService,
+                                                            SongService songService,
+                                                            SongCollectionService songCollectionService,
+                                                            SongWordValidationService songWordValidationService) {
+        return importReformatusPlainTextSongs(languageService, songService, songCollectionService,
+                songWordValidationService, REFORMATUS_PLAIN_FILENAME);
+    }
+
+    private static SongCollection createReformatusSongCollection(Language hungarianLanguage) {
+        Date now = new Date();
+        SongCollection songCollection = new SongCollection();
+        songCollection.setName(REFORMATUS_COLLECTION_NAME);
+        songCollection.setLanguage(hungarianLanguage);
+        songCollection.setCreatedDate(now);
+        songCollection.setModifiedDate(now);
+        songCollection.setDeleted(false);
+        songCollection.setUploaded(true);
+        return songCollection;
+    }
+
+    /**
+     * Parses Református plain text into the same in-memory shape as the MRE JSON import.
+     */
+    public static List<MRESong> parseReformatusPlainTextLines(List<String> lines) {
+        List<MRESong> out = new ArrayList<>();
+        int n = lines.size();
+        int i = 0;
+        while (i < n) {
+            while (i < n && isBlankLine(lines.get(i))) {
+                i++;
+            }
+            if (i >= n) {
+                break;
+            }
+            Matcher header = REFORMATUS_HEADER.matcher(lines.get(i).trim());
+            if (!header.matches()) {
+                i++;
+                continue;
+            }
+            String ordinal = header.group(1);
+            String title = header.group(2).trim();
+            i++;
+            List<String> bodyWithVerseBreaks = new ArrayList<>();
+            while (i < n) {
+                String current = lines.get(i);
+                if (isBlankLine(current)) {
+                    if (i + 1 < n && isBlankLine(lines.get(i + 1))) {
+                        i += 2;
+                        break;
+                    }
+                    bodyWithVerseBreaks.add("");
+                    i++;
+                } else {
+                    bodyWithVerseBreaks.add(current);
+                    i++;
+                }
+            }
+            List<String> verseTexts = buildVersesFromBodyLines(bodyWithVerseBreaks);
+            if (verseTexts.isEmpty()) {
+                continue;
+            }
+            MRESong mreSong = new MRESong();
+            mreSong.number = ordinal;
+            mreSong.title = title;
+            mreSong.verses = verseTexts;
+            out.add(mreSong);
+        }
+        return out;
+    }
+
+    private static List<String> buildVersesFromBodyLines(List<String> bodyLines) {
+        List<String> verses = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String l : bodyLines) {
+            if (l.isEmpty()) {
+                if (!current.isEmpty()) {
+                    verses.add(current.toString().trim());
+                    current = new StringBuilder();
+                }
+            } else {
+                if (!current.isEmpty()) {
+                    current.append('\n');
+                }
+                current.append(l);
+            }
+        }
+        if (!current.isEmpty()) {
+            verses.add(current.toString().trim());
+        }
+        return verses;
+    }
+
+    private static boolean isBlankLine(String line) {
+        return line == null || line.trim().isEmpty();
+    }
+
+    /**
+     * Review queue: same flags as {@code SongResource} native/web upload
+     * ({@code deleted=true}, {@code uploaded=true}) when the song has REJECTED or BANNED words.
+     */
+    private static void markSongsForReviewIfRejectedOrBanned(SongWordValidationService songWordValidationService,
+                                                             List<Song> songs) {
+        for (Song song : songs) {
+            if (hasRejectedOrBannedWords(songWordValidationService, song)) {
+                markSongForReviewQueue(song);
+            }
+        }
+    }
+
+    private static boolean hasRejectedOrBannedWords(SongWordValidationService songWordValidationService, Song song) {
+        SongWordValidationResult result = songWordValidationService.validateWords(song, SongWordValidationOptions.FAST_ISSUE_SCAN);
+        List<String> bannedWords = result.getBannedWords();
+        if (bannedWords != null && !bannedWords.isEmpty()) {
+            return true;
+        }
+        List<RejectedWordSuggestion> rejectedWords = result.getRejectedWords();
+        return rejectedWords != null && !rejectedWords.isEmpty();
     }
 
     public static void markSimilarSongsAsDeleted(SongService songService, SongRepository songRepository) {

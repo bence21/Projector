@@ -11,6 +11,10 @@ public class SongTitleDTO extends BaseDTO {
     private String youtubeUrl;
     private Date createdDate;
     private Long favourites;
+    /**
+     * Number of verses on the song; 0 means the song has no verses.
+     */
+    private int verseCount;
 
     public String getTitle() {
         return title;
@@ -66,5 +70,13 @@ public class SongTitleDTO extends BaseDTO {
 
     public void setFavourites(long favourites) {
         this.favourites = favourites;
+    }
+
+    public int getVerseCount() {
+        return verseCount;
+    }
+
+    public void setVerseCount(int verseCount) {
+        this.verseCount = verseCount;
     }
 }

@@ -40,6 +40,9 @@ public class ProjectionScreensUtil {
     private ScheduledFuture<?> syncTask = null;
     private static final double SYNC_THRESHOLD = 0.2; // seconds
     private static final long SYNC_CHECK_INTERVAL = 2000; // milliseconds
+    private static final int QR_ENCODE_MIN_SIDE = 256;
+    private static final int QR_ENCODE_MAX_SIDE = 4096;
+    private static final int QR_ENCODE_FALLBACK_SIDE = 512;
     private double currentVideoVolume = 1.0; // Track current volume setting
 
     private ProjectionScreensUtil() {
@@ -414,6 +417,40 @@ public class ProjectionScreensUtil {
 
     public boolean hasProjectionScreens() {
         return !projectionScreenHolders.isEmpty();
+    }
+
+    /**
+     * Largest square side length (in pixels) suitable for QR bitmap encoding across non-preview projection screens,
+     * based on scaled content pane size. Clamped for ZXing/memory; falls back when no valid layout.
+     */
+    public int getMaxQrEncodeSideLength() {
+        int maxSide = computeMaxSquareSideFromProjectionScreens();
+        if (maxSide <= 0) {
+            return QR_ENCODE_FALLBACK_SIDE;
+        }
+        return Math.min(Math.max(maxSide, QR_ENCODE_MIN_SIDE), QR_ENCODE_MAX_SIDE);
+    }
+
+    /** Max of per-screen min(scaled width, scaled height) over non-preview holders; 0 if none valid. */
+    private int computeMaxSquareSideFromProjectionScreens() {
+        int maxSide = 0;
+        for (ProjectionScreenHolder holder : projectionScreenHolders) {
+            if (!holder.isNotPreview()) {
+                continue;
+            }
+            ProjectionScreenController controller = holder.getProjectionScreenController();
+            if (controller == null) {
+                continue;
+            }
+            double w = controller.getScaledContentWidth();
+            double h = controller.getScaledContentHeight();
+            if (w <= 0 || h <= 0) {
+                continue;
+            }
+            int side = (int) Math.ceil(Math.min(w, h));
+            maxSide = Math.max(maxSide, side);
+        }
+        return maxSide;
     }
 
     public void startVideoSyncTask() {

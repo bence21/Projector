@@ -1,13 +1,16 @@
 package projector.controller.util;
 
 import com.bence.projector.common.dto.ProjectionDTO;
+import com.google.gson.annotations.Expose;
 import projector.model.Song;
 import projector.utils.scene.text.SongVersePartTextFlow;
 
 import java.util.List;
 
 public class ProjectionData {
+    @Expose
     private ProjectionDTO projectionDTO;
+    @Expose
     private Song song;
     private List<SongVersePartTextFlow> songVersePartTextFlows;
 

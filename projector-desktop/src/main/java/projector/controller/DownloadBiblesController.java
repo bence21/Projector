@@ -11,12 +11,14 @@ import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import projector.api.BibleApiBean;
+import projector.api.RemoteFetchResult;
 import projector.application.Settings;
 import projector.model.Bible;
 import projector.model.Book;
 import projector.service.BibleService;
 import projector.service.BookService;
 import projector.service.ServiceManager;
+import projector.utils.ConnectionErrorMessages;
 
 import java.awt.*;
 import java.io.File;
@@ -63,11 +65,14 @@ public class DownloadBiblesController {
         BibleApiBean bibleApiBean = new BibleApiBean();
         updateButton.setVisible(false);
         Thread thread = new Thread(() -> {
-            List<Bible> onlineBibles = bibleApiBean.getBibleTitles();
-            if (onlineBibles == null) {
-                noInternetMessage();
+            RemoteFetchResult<List<Bible>> biblesResult = bibleApiBean.getBibleTitlesResult();
+            if (biblesResult.isFailure()) {
+                ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
+                Platform.runLater(() -> label.setText(
+                        ConnectionErrorMessages.getMessage(resourceBundle, biblesResult.getFailureKind())));
                 return;
             }
+            List<Bible> onlineBibles = biblesResult.getData();
             bibleService.sort(onlineBibles);
             HashMap<String, Bible> hashMap = new HashMap<>();
             for (Bible bible : bibles) {
@@ -90,7 +95,7 @@ public class DownloadBiblesController {
                     }
                 }
             }
-            if (updateNeededBibles.size() > 0) {
+            if (!updateNeededBibles.isEmpty()) {
                 updateButton.setVisible(true);
             }
             Platform.runLater(() -> label.setText(""));
@@ -123,7 +128,7 @@ public class DownloadBiblesController {
             try {
                 thread1.join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOG.error(e.getMessage(), e);
             }
         }
         closeDownloadBibleStage();
@@ -163,7 +168,7 @@ public class DownloadBiblesController {
             });
             thread.start();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOG.error(e.getMessage(), e);
         }
         return thread;
     }
@@ -188,7 +193,7 @@ public class DownloadBiblesController {
             thread = new Thread(() -> bibleService.create(bible));
             thread.start();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOG.error(e.getMessage(), e);
         }
         return thread;
     }
@@ -204,13 +209,6 @@ public class DownloadBiblesController {
         if (bibleUuid != null) {
             checkBoxHashMap.put(bibleUuid, checkBox);
         }
-    }
-
-    private void noInternetMessage() {
-        final ResourceBundle resourceBundle = Settings.getInstance().getResourceBundle();
-        final String no_internet_connection = resourceBundle.getString("No internet connection");
-        final String try_again_later = resourceBundle.getString("Try again later");
-        Platform.runLater(() -> label.setText(no_internet_connection + "! " + try_again_later + "!"));
     }
 
     public void setStage(Stage stage) {

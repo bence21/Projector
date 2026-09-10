@@ -1,0 +1,5 @@
+{
+  "baseUrl": "https://your-server.example.com",
+  "deployEmail": "deployer@example.com",
+  "description": "Performance improvements and bug fixes."
+}
