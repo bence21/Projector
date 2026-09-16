@@ -171,6 +171,8 @@ export class Song extends BaseModel {
   wordQualityScore?: number;
   /** From SongTitle API: number of verses; 0 means the song has no verse content. */
   verseCount?: number;
+  /** From In-review title API: sum of verse text lengths (title excluded). */
+  lyricCharCount?: number;
 
   constructor(values: Object = {}) {
     super(values);
@@ -342,6 +344,26 @@ export class Song extends BaseModel {
   }
 }
 
+export class InReviewSongFilterCounts {
+  total = 0;
+  shortLyrics = 0;
+  bannedOrRejected = 0;
+
+  constructor(values: Object = {}) {
+    Object.assign(this, values);
+  }
+}
+
+export interface InReviewSongPageOptions {
+  myUploads?: boolean;
+  maxLyricChars?: number;
+  hasBannedOrRejected?: boolean;
+  search?: string;
+  sort?: string;
+  page?: number;
+  size?: number;
+}
+
 @Injectable()
 export class SongService {
 
@@ -387,6 +409,49 @@ export class SongService {
       url = url + '?myUploads=true';
     }
     return this.api.getAll(Song, url);
+  }
+
+  getInReviewSongsPage(selectedLanguage: Language, options: InReviewSongPageOptions) {
+    return this.api.getPage(Song, SongService.inReviewQueryUrl(selectedLanguage, options, '/page'));
+  }
+
+  getInReviewFilterCounts(selectedLanguage: Language, myUploads: boolean) {
+    let url = 'api/songTitlesInReview/language/' + selectedLanguage.uuid + '/filterCounts';
+    if (myUploads) {
+      url = url + '?myUploads=true';
+    }
+    return this.api.getAttribute(InReviewSongFilterCounts, url);
+  }
+
+  exportInReviewSongsCsv(selectedLanguage: Language, options: InReviewSongPageOptions) {
+    return this.api.getBlob(SongService.inReviewQueryUrl(selectedLanguage, options, '/export.csv'));
+  }
+
+  private static inReviewQueryUrl(selectedLanguage: Language, options: InReviewSongPageOptions, suffix: string): string {
+    let url = 'api/songTitlesInReview/language/' + selectedLanguage.uuid + suffix + '?';
+    const params: string[] = [];
+    if (options.myUploads) {
+      params.push('myUploads=true');
+    }
+    if (options.maxLyricChars != null) {
+      params.push('maxLyricChars=' + options.maxLyricChars);
+    }
+    if (options.hasBannedOrRejected) {
+      params.push('hasBannedOrRejected=true');
+    }
+    if (options.search) {
+      params.push('search=' + encodeURIComponent(options.search));
+    }
+    if (options.sort) {
+      params.push('sort=' + encodeURIComponent(options.sort));
+    }
+    if (options.page != null) {
+      params.push('page=' + options.page);
+    }
+    if (options.size != null) {
+      params.push('size=' + options.size);
+    }
+    return url + params.join('&');
   }
 
   getAllSongTitlesReviewedByUser(user: User) {

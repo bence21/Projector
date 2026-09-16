@@ -57,6 +57,13 @@ public class SongWordValidationService {
         return validateWords(song, SongWordValidationOptions.DEFAULT);
     }
 
+    /**
+     * True when lyrics contain a banned or rejected word for the song's language.
+     */
+    public boolean hasBannedOrRejectedWords(Song song) {
+        return validateWords(song, SongWordValidationOptions.BLOCKING_WORDS_ONLY).isHasBlockingIssues();
+    }
+
     public SongWordValidationResult validateWords(Song song, SongWordValidationOptions options) {
         if (options == null) {
             options = SongWordValidationOptions.DEFAULT;

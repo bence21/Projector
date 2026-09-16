@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Song, SongService } from '../../services/song-service.service';
+import { Song, SongService, InReviewSongFilterCounts, InReviewSongPageOptions } from '../../services/song-service.service';
 import { FormControl } from '@angular/forms';
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/startWith';
@@ -41,8 +41,17 @@ export class SongListComponent implements OnInit {
   oldLanguagesKey = 'languages_v2';
   languagesKey = 'languages_v4';
   myUploadsCheck = false;
+  shortLyricsFilter = false;
+  bannedWordFilter = false;
+  inReviewCounts: InReviewSongFilterCounts;
+  inReviewTotalElements = 0;
+  inReviewLoading = false;
+  exportBusy = false;
   private songListComponent_songsType = 'songListComponent_songsType';
   private songListComponent_myUploadsCheck = 'songListComponent_myUploadsCheck';
+  private songListComponent_shortLyricsFilter = 'songListComponent_shortLyricsFilter';
+  private songListComponent_bannedWordFilter = 'songListComponent_bannedWordFilter';
+  private static readonly SHORT_LYRIC_MAX_CHARS = 300;
   private _subscription: Subscription;
   quickReviewBusy = false;
 
@@ -100,6 +109,8 @@ export class SongListComponent implements OnInit {
       this.songsType = Song.PUBLIC;
     }
     this.myUploadsCheck = localStorage.getItem(this.songListComponent_myUploadsCheck) == 'true';
+    this.shortLyricsFilter = localStorage.getItem(this.songListComponent_shortLyricsFilter) == 'true';
+    this.bannedWordFilter = localStorage.getItem(this.songListComponent_bannedWordFilter) == 'true';
     this.songControl.valueChanges.subscribe(value => {
       for (const song of this.songTitles) {
         if (song == undefined) {
@@ -112,6 +123,9 @@ export class SongListComponent implements OnInit {
       }
     });
     this.filteredSongs.subscribe(filteredSongsList => {
+      if (this.songsType === Song.REVIEWER) {
+        return;
+      }
       let pageIndex = JSON.parse(sessionStorage.getItem("pageIndex"));
       let start = pageIndex * this.pageE.pageSize;
       while (start > filteredSongsList.length) {
@@ -249,15 +263,24 @@ export class SongListComponent implements OnInit {
 
   pageEvent(pageEvent: PageEvent) {
     this.pageE = pageEvent;
-    const start = this.pageE.pageIndex * this.pageE.pageSize;
     sessionStorage.setItem("pageIndex", JSON.stringify(this.pageE.pageIndex));
     sessionStorage.setItem("pageSize", JSON.stringify(this.pageE.pageSize));
+    if (this.songsType === Song.REVIEWER) {
+      this.loadInReviewPage();
+      return;
+    }
+    const start = this.pageE.pageIndex * this.pageE.pageSize;
     const end = (this.pageE.pageIndex + 1) * this.pageE.pageSize;
     this.paginatedSongs = this.filteredSongsList.slice(start, end);
   }
 
   changeSorting() {
     localStorage.setItem(this.sortMode, JSON.stringify(this.sortType));
+    if (this.songsType === Song.REVIEWER) {
+      this.resetInReviewPageIndex();
+      this.loadInReviewPage();
+      return;
+    }
     this.sortSongTitles();
     this.filteredSongs = this.songControl.valueChanges
       .startWith(null)
@@ -375,6 +398,10 @@ export class SongListComponent implements OnInit {
       delete params[LANGUAGE_PARAM];
     }
     this.router.navigate(['.'], { queryParams: params });
+    if (this.songsType === Song.REVIEWER) {
+      this.resetInReviewPageIndex();
+      this.loadInReviewPage();
+    }
   }
 
   private sortAndUpdate() {
@@ -410,14 +437,9 @@ export class SongListComponent implements OnInit {
           this.loadPublicSongs();
           return;
         }
-        this.songService.getAllInReviewSongsByLanguage(this.selectedLanguage, this.myUploadsCheck).subscribe(
-          (songTitles) => {
-            this.setSongTitles(songTitles);
-          }, (error) => {
-            this.setSongTitles([]);
-            generalError(this.loadSongs, this, error, this.dialog, this.snackBar);
-          }
-        );
+        this.loadInReviewCounts();
+        this.resetInReviewPageIndex();
+        this.loadInReviewPage();
         break;
     }
   }
@@ -572,6 +594,99 @@ export class SongListComponent implements OnInit {
     this.loadSongs();
   }
 
+  onInReviewFilterChange() {
+    localStorage.setItem(this.songListComponent_shortLyricsFilter, this.shortLyricsFilter.toString());
+    localStorage.setItem(this.songListComponent_bannedWordFilter, this.bannedWordFilter.toString());
+    this.resetInReviewPageIndex();
+    this.loadInReviewPage();
+  }
+
+  exportInReviewCsv() {
+    if (!this.selectedLanguage || this.exportBusy) {
+      return;
+    }
+    this.exportBusy = true;
+    this.songService.exportInReviewSongsCsv(this.selectedLanguage, this.buildInReviewPageOptions(false)).subscribe(
+      (blob) => {
+        this.exportBusy = false;
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'in-review-songs.csv';
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+      },
+      (error) => {
+        this.exportBusy = false;
+        generalError(this.exportInReviewCsv, this, error, this.dialog, this.snackBar);
+      }
+    );
+  }
+
+  private resetInReviewPageIndex() {
+    this.pageE.pageIndex = 0;
+    sessionStorage.setItem("pageIndex", JSON.stringify(0));
+  }
+
+  private inReviewSearchValue(): string {
+    const value = this.songControl.value;
+    if (value == null || value === '') {
+      return undefined;
+    }
+    return value;
+  }
+
+  private buildInReviewPageOptions(includePaging: boolean): InReviewSongPageOptions {
+    const options: InReviewSongPageOptions = {
+      myUploads: this.myUploadsCheck,
+      hasBannedOrRejected: this.bannedWordFilter,
+      search: this.inReviewSearchValue(),
+      sort: this.sortType
+    };
+    if (this.shortLyricsFilter) {
+      options.maxLyricChars = SongListComponent.SHORT_LYRIC_MAX_CHARS;
+    }
+    if (includePaging && this.pageE) {
+      options.page = this.pageE.pageIndex || 0;
+      options.size = this.pageE.pageSize || 10;
+    }
+    return options;
+  }
+
+  private loadInReviewCounts() {
+    this.songService.getInReviewFilterCounts(this.selectedLanguage, this.myUploadsCheck).subscribe(
+      (counts) => {
+        this.inReviewCounts = counts;
+      },
+      (error) => {
+        this.inReviewCounts = new InReviewSongFilterCounts();
+        generalError(this.loadInReviewCounts, this, error, this.dialog, this.snackBar);
+      }
+    );
+  }
+
+  private loadInReviewPage() {
+    this.inReviewLoading = true;
+    this.songService.getInReviewSongsPage(this.selectedLanguage, this.buildInReviewPageOptions(true)).subscribe(
+      (result) => {
+        this.inReviewLoading = false;
+        this.inReviewTotalElements = result.totalElements || 0;
+        const titles = this.filterSongsWithVerses(result.content || []);
+        this.songTitles = titles;
+        this.filteredSongsList = titles;
+        this.paginatedSongs = titles;
+      },
+      (error) => {
+        this.inReviewLoading = false;
+        this.inReviewTotalElements = 0;
+        this.songTitles = [];
+        this.filteredSongsList = [];
+        this.paginatedSongs = [];
+        generalError(this.loadInReviewPage, this, error, this.dialog, this.snackBar);
+      }
+    );
+  }
+
   /**
    * Admin-only: first song in the in-review list → validate words → summary → save (publish) → merge with top similar.
    * Merge order matches the manual flow (similar song first, new queued song second).
@@ -585,24 +700,36 @@ export class SongListComponent implements OnInit {
       this.snackBar.open('Switch to "In review" and pick a language.', 'Close', { duration: 4000 });
       return;
     }
-    const titles = this.songTitles.filter((t) =>
-      t != null && t.title !== 'loading' && (t.id != null && t.id !== '' || t.uuid != null && t.uuid !== '')
-    );
-    if (titles.length === 0) {
-      this.snackBar.open('No songs in review for this filter.', 'Close', { duration: 3000 });
-      return;
-    }
-    const firstRef = titles[0];
-    const songId = (firstRef.id != null && firstRef.id !== '') ? firstRef.id : firstRef.uuid;
     this.quickReviewBusy = true;
-    this.songService.getSong(songId).subscribe(
-      (fullSong) => {
-        if (!fullSong) {
+    const options = this.buildInReviewPageOptions(false);
+    options.page = 0;
+    options.size = 1;
+    this.songService.getInReviewSongsPage(this.selectedLanguage, options).subscribe(
+      (result) => {
+        const titles = (result.content || []).filter((t) =>
+          t != null && t.title !== 'loading' && (t.id != null && t.id !== '' || t.uuid != null && t.uuid !== '')
+        );
+        if (titles.length === 0) {
           this.quickReviewBusy = false;
-          this.snackBar.open('Could not load the first queued song.', 'Close', { duration: 4000 });
+          this.snackBar.open('No songs in review for this filter.', 'Close', { duration: 3000 });
           return;
         }
-        this.openQuickReviewSummaryAndContinue(fullSong);
+        const firstRef = titles[0];
+        const songId = (firstRef.id != null && firstRef.id !== '') ? firstRef.id : firstRef.uuid;
+        this.songService.getSong(songId).subscribe(
+          (fullSong) => {
+            if (!fullSong) {
+              this.quickReviewBusy = false;
+              this.snackBar.open('Could not load the first queued song.', 'Close', { duration: 4000 });
+              return;
+            }
+            this.openQuickReviewSummaryAndContinue(fullSong);
+          },
+          (err) => {
+            this.quickReviewBusy = false;
+            generalError(this.processFirstInReviewSongQuick, this, err, this.dialog, this.snackBar);
+          }
+        );
       },
       (err) => {
         this.quickReviewBusy = false;

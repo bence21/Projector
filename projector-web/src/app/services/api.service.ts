@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BaseModel } from '../models/base-model';
-import { Headers, Http, RequestOptions, Response } from '@angular/http';
+import { Headers, Http, RequestOptions, Response, ResponseContentType } from '@angular/http';
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
@@ -47,6 +47,14 @@ export class ApiService {
         const content = (json.content || []).map((item: any) => new c(item));
         return { content, totalElements: json.totalElements || 0 };
       })
+      .catch(ApiService.handleError);
+  }
+
+  public getBlob(api_url: string): Observable<Blob> {
+    const options = new RequestOptions({responseType: ResponseContentType.Blob});
+    return this.http
+      .get(api_url, options)
+      .map(response => response.blob())
       .catch(ApiService.handleError);
   }
 

@@ -178,6 +178,23 @@ public class SongWordValidationServiceTest {
         Assert.assertTrue(result.isHasIssues());
     }
 
+    @Test
+    public void hasBannedOrRejectedWords_trueForBanned_falseForUnreviewed() {
+        Song banned = createSong(songLanguage, List.of("badword"));
+        Map<String, ReviewedWord> map = new HashMap<>();
+        ReviewedWord rw = new ReviewedWord();
+        rw.setLanguage(songLanguage);
+        rw.setWord("badword");
+        rw.setStatus(ReviewedWordStatus.BANNED);
+        map.put("badword", rw);
+        when(normalizedWordBunchCacheService.getReviewedWordMapForLanguage(songLanguage)).thenReturn(map);
+        Assert.assertTrue(service.hasBannedOrRejectedWords(banned));
+
+        Song clean = createSong(songLanguage, List.of("unknown"));
+        when(normalizedWordBunchCacheService.getReviewedWordMapForLanguage(songLanguage)).thenReturn(new HashMap<>());
+        Assert.assertFalse(service.hasBannedOrRejectedWords(clean));
+    }
+
     private Song createSong(Language language, List<String> words) {
         Song song = new Song();
         song.setTitle("Mixed language test song");

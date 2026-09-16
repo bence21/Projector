@@ -46,6 +46,21 @@
           <mat-radio-button class="example-radio-button" [value]="'REVIEWER'">In review</mat-radio-button>
         </mat-radio-group>
       </div>
+      <div class="section in-review-filters" *ngIf="auth.isLoggedIn && (auth.getUser().isAdmin() || hasRoleForSongReview()) && songsType === 'REVIEWER'">
+        <mat-checkbox [(ngModel)]="shortLyricsFilter" (change)="onInReviewFilterChange()">
+          Short lyrics (≤ 300)
+          <span class="filter-count" *ngIf="inReviewCounts">{{ inReviewCounts.shortLyrics }}</span>
+        </mat-checkbox>
+        <mat-checkbox [(ngModel)]="bannedWordFilter" (change)="onInReviewFilterChange()">
+          Banned / rejected words
+          <span class="filter-count" *ngIf="inReviewCounts">{{ inReviewCounts.bannedOrRejected }}</span>
+        </mat-checkbox>
+        <button mat-stroked-button type="button" (click)="exportInReviewCsv()" [disabled]="exportBusy || inReviewLoading">
+          Export CSV
+        </button>
+        <span class="filter-count" *ngIf="inReviewCounts">All in review: {{ inReviewCounts.total }}</span>
+        <span *ngIf="inReviewLoading || exportBusy" class="filter-status">Working…</span>
+      </div>
       <div class="section" *ngIf="auth.isLoggedIn && auth.getUser().isAdmin() && songsType === 'REVIEWER'">
         <button mat-raised-button color="primary" type="button"
           (click)="processFirstInReviewSongQuick()"
@@ -60,7 +75,7 @@
             (change)="searchTermTyped()">
         </mat-form-field>
       </form>
-      <mat-paginator [length]="filteredSongsList.length" [pageSize]="pageE.pageSize"
+      <mat-paginator [length]="songsType === 'REVIEWER' ? inReviewTotalElements : filteredSongsList.length" [pageSize]="pageE.pageSize"
         [pageSizeOptions]="[5, 10, 25, 100]" [pageIndex]="pageE.pageIndex" (page)="pageEvent($event)">
       </mat-paginator>
       <mat-nav-list>
