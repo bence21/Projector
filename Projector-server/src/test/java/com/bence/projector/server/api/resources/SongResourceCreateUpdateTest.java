@@ -17,6 +17,7 @@ import com.bence.projector.server.backend.service.SongLinkService;
 import com.bence.projector.server.backend.service.SongService;
 import com.bence.projector.server.backend.service.SongWordValidationService;
 import com.bence.projector.server.backend.service.StatisticsService;
+import com.bence.projector.server.backend.service.inreview.InReviewSongQueryService;
 import com.bence.projector.server.backend.service.SuggestionService;
 import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.mailsending.MailSenderService;
@@ -78,6 +79,7 @@ public class SongResourceCreateUpdateTest {
         SongLinkService songLinkService = mock(SongLinkService.class);
         SongCollectionElementService songCollectionElementService = mock(SongCollectionElementService.class);
         SongWordValidationService songWordValidationService = mock(SongWordValidationService.class);
+        InReviewSongQueryService inReviewSongQueryService = mock(InReviewSongQueryService.class);
 
         songResource = new SongResource(
                 songRepository,
@@ -93,7 +95,8 @@ public class SongResourceCreateUpdateTest {
                 songLinkRepository,
                 songLinkService,
                 songCollectionElementService,
-                songWordValidationService
+                songWordValidationService,
+                inReviewSongQueryService
         );
 
         doAnswer(inv -> inv.getArgument(0)).when(songService).save(any(Song.class));

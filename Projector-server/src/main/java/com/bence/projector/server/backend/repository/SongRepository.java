@@ -3,6 +3,7 @@ package com.bence.projector.server.backend.repository;
 import com.bence.projector.server.backend.model.Language;
 import com.bence.projector.server.backend.model.Song;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -32,6 +33,9 @@ public interface SongRepository extends CrudRepository<Song, Long> {
     List<Song> findAllByModifiedDateGreaterThanAndLanguage(Date lastModifiedDate, Language language);
 
     List<Song> findAllByLanguageAndUploadedIsTrueAndIsBackUpIsNullAndDeletedIsTrue(Language language);
+
+    @EntityGraph(attributePaths = "verses", type = EntityGraph.EntityGraphType.LOAD)
+    List<Song> findDistinctByLanguageAndUploadedIsTrueAndIsBackUpIsNullAndDeletedIsTrue(Language language);
 
     List<Song> findAllByCreatedByEmail(String createdByEmail);
 

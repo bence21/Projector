@@ -1,7 +1,9 @@
 package com.bence.projector.server.api.resources;
 
 import com.bence.projector.common.dto.BooleanResponse;
+import com.bence.projector.common.dto.InReviewSongFilterCountsDTO;
 import com.bence.projector.common.dto.LoginSongDTO;
+import com.bence.projector.common.dto.PageResponse;
 import com.bence.projector.common.dto.SongDTO;
 import com.bence.projector.common.dto.SongFavouritesDTO;
 import com.bence.projector.common.dto.SongTitleDTO;
@@ -21,6 +23,8 @@ import com.bence.projector.server.backend.repository.SongRepository;
 import com.bence.projector.server.backend.service.LanguageService;
 import com.bence.projector.server.backend.service.ServiceException;
 import com.bence.projector.server.backend.service.SongCollectionElementService;
+import com.bence.projector.server.backend.service.inreview.InReviewSongQuery;
+import com.bence.projector.server.backend.service.inreview.InReviewSongQueryService;
 import com.bence.projector.server.backend.service.SongCollectionService;
 import com.bence.projector.server.backend.service.SongLinkService;
 import com.bence.projector.server.backend.service.SongPublicScope;
@@ -32,7 +36,9 @@ import com.bence.projector.server.backend.service.UserService;
 import com.bence.projector.server.mailsending.MailSenderService;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -46,6 +52,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -88,6 +95,7 @@ public class SongResource {
     private final SongCollectionElementService songCollectionElementService;
     private final SuggestionService suggestionService;
     private final SongWordValidationService songWordValidationService;
+    private final InReviewSongQueryService inReviewSongQueryService;
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -104,7 +112,8 @@ public class SongResource {
                         SongLinkRepository songLinkRepository,
                         SongLinkService songLinkService,
                         SongCollectionElementService songCollectionElementService,
-                        SongWordValidationService songWordValidationService
+                        SongWordValidationService songWordValidationService,
+                        InReviewSongQueryService inReviewSongQueryService
     ) {
         this.songRepository = songRepository;
         this.songService = songService;
@@ -120,6 +129,7 @@ public class SongResource {
         this.songCollectionElementService = songCollectionElementService;
         this.suggestionService = suggestionService;
         this.songWordValidationService = songWordValidationService;
+        this.inReviewSongQueryService = inReviewSongQueryService;
     }
 
     private static boolean isWebClientSongCreate(HttpServletRequest request) {
@@ -244,6 +254,103 @@ public class SongResource {
             }
         }
         return new ResponseEntity<>(songTitleAssembler.createDtoList(all), HttpStatus.ACCEPTED);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/api/songTitlesInReview/language/{languageId}/page")
+    public ResponseEntity<Object> getSongTitlesInReviewPage(HttpServletRequest httpServletRequest,
+                                                            @PathVariable("languageId") String languageId,
+                                                            @RequestParam(required = false) Boolean myUploads,
+                                                            @RequestParam(required = false) Integer maxLyricChars,
+                                                            @RequestParam(required = false) Boolean hasBannedOrRejected,
+                                                            @RequestParam(required = false) String search,
+                                                            @RequestParam(required = false) String sort,
+                                                            @RequestParam(required = false, defaultValue = "0") int page,
+                                                            @RequestParam(required = false, defaultValue = "10") int size,
+                                                            Principal principal) {
+        saveStatistics(httpServletRequest, statisticsService);
+        ResponseEntity<Object> unauthorized = unauthorizedIfMyUploadsWithoutUser(myUploads, principal);
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+        InReviewSongQuery query = buildInReviewQuery(languageId, myUploads, principal, maxLyricChars,
+                hasBannedOrRejected, search, sort, page, size);
+        PageResponse<SongTitleDTO> response = inReviewSongQueryService.page(query);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/api/songTitlesInReview/language/{languageId}/filterCounts")
+    public ResponseEntity<Object> getSongTitlesInReviewFilterCounts(HttpServletRequest httpServletRequest,
+                                                                    @PathVariable("languageId") String languageId,
+                                                                    @RequestParam(required = false) Boolean myUploads,
+                                                                    Principal principal) {
+        saveStatistics(httpServletRequest, statisticsService);
+        ResponseEntity<Object> unauthorized = unauthorizedIfMyUploadsWithoutUser(myUploads, principal);
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+        Language language = languageService.findOneByUuid(languageId);
+        InReviewSongFilterCountsDTO counts = inReviewSongQueryService.counts(language, myUploadsEmail(myUploads, principal));
+        return new ResponseEntity<>(counts, HttpStatus.OK);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/api/songTitlesInReview/language/{languageId}/export.csv")
+    public ResponseEntity<Object> exportSongTitlesInReviewCsv(HttpServletRequest httpServletRequest,
+                                                              @PathVariable("languageId") String languageId,
+                                                              @RequestParam(required = false) Boolean myUploads,
+                                                              @RequestParam(required = false) Integer maxLyricChars,
+                                                              @RequestParam(required = false) Boolean hasBannedOrRejected,
+                                                              @RequestParam(required = false) String search,
+                                                              @RequestParam(required = false) String sort,
+                                                              Principal principal) {
+        saveStatistics(httpServletRequest, statisticsService);
+        ResponseEntity<Object> unauthorized = unauthorizedIfMyUploadsWithoutUser(myUploads, principal);
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+        InReviewSongQuery query = buildInReviewQuery(languageId, myUploads, principal, maxLyricChars,
+                hasBannedOrRejected, search, sort, 0, InReviewSongQuery.MAX_PAGE_SIZE);
+        String csv = inReviewSongQueryService.exportCsv(query);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(new MediaType("text", "csv", StandardCharsets.UTF_8));
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"in-review-songs.csv\"");
+        return new ResponseEntity<>(csv.getBytes(StandardCharsets.UTF_8), headers, HttpStatus.OK);
+    }
+
+    private ResponseEntity<Object> unauthorizedIfMyUploadsWithoutUser(Boolean myUploads, Principal principal) {
+        if (myUploads != null && myUploads && myUploadsEmail(true, principal) == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        return null;
+    }
+
+    private String myUploadsEmail(Boolean myUploads, Principal principal) {
+        if (myUploads == null || !myUploads) {
+            return null;
+        }
+        User user = UserPrincipalUtil.getUserFromPrincipalAndUserService(principal, userService);
+        return user == null ? null : user.getEmail();
+    }
+
+    private InReviewSongQuery buildInReviewQuery(String languageId,
+                                                 Boolean myUploads,
+                                                 Principal principal,
+                                                 Integer maxLyricChars,
+                                                 Boolean hasBannedOrRejected,
+                                                 String search,
+                                                 String sort,
+                                                 int page,
+                                                 int size) {
+        Language language = languageService.findOneByUuid(languageId);
+        return new InReviewSongQuery(
+                language,
+                myUploadsEmail(myUploads, principal),
+                maxLyricChars,
+                Boolean.TRUE.equals(hasBannedOrRejected),
+                search,
+                sort,
+                page,
+                size
+        );
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "/api/songViews/language/{language}")

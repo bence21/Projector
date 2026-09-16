@@ -67,6 +67,11 @@ public interface SongService extends BaseService<Song> {
 
     List<Song> findAllInReviewByLanguage(Language language);
 
+    /**
+     * In-review queue songs with verses already loaded (for lyric-length / banned-word scans).
+     */
+    List<Song> findAllInReviewByLanguageWithVerses(Language language);
+
     List<Song> findAllReviewedByUser(User user);
 
     Song findOneByUuid(String uuid);

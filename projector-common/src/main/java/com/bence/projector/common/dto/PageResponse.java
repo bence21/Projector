@@ -12,6 +12,9 @@ public class PageResponse<T> {
     private List<T> content;
     private long totalElements;
 
+    public PageResponse() {
+    }
+
     public PageResponse(List<T> content, long totalElements) {
         this.content = content;
         this.totalElements = totalElements;

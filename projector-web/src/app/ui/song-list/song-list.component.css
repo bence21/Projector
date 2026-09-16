@@ -36,3 +36,19 @@
   border-radius: 5px;
   align-items: flex-start; /* align items to the top */
 }
+
+.in-review-filters {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-count {
+  margin-left: 6px;
+  color: #555;
+  font-size: 12px;
+}
+
+.filter-status {
+  margin-left: 8px;
+}

@@ -15,6 +15,10 @@ public class SongTitleDTO extends BaseDTO {
      * Number of verses on the song; 0 means the song has no verses.
      */
     private int verseCount;
+    /**
+     * Sum of verse text lengths (title excluded). 0 when the song has no verse text.
+     */
+    private int lyricCharCount;
 
     public String getTitle() {
         return title;
@@ -78,5 +82,13 @@ public class SongTitleDTO extends BaseDTO {
 
     public void setVerseCount(int verseCount) {
         this.verseCount = verseCount;
+    }
+
+    public int getLyricCharCount() {
+        return lyricCharCount;
+    }
+
+    public void setLyricCharCount(int lyricCharCount) {
+        this.lyricCharCount = lyricCharCount;
     }
 }

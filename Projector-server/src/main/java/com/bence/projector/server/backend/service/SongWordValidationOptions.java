@@ -14,4 +14,9 @@ public record SongWordValidationOptions(boolean includeWordSuggestions, boolean 
      */
     public static final SongWordValidationOptions FAST_ISSUE_SCAN = new SongWordValidationOptions(false, true);
 
+    /**
+     * Banned/rejected detection only: no suggestions and no mixed-language probing.
+     */
+    public static final SongWordValidationOptions BLOCKING_WORDS_ONLY = new SongWordValidationOptions(false, false);
+
 }

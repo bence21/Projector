@@ -478,8 +478,16 @@ public class SongServiceImpl extends BaseServiceImpl<Song> implements SongServic
         return getSongsWithReviewerErasedFalse(songRepository.findAllByLanguageAndUploadedIsTrueAndIsBackUpIsNullAndDeletedIsTrue(language));
     }
 
+    @Override
+    public List<Song> findAllInReviewByLanguageWithVerses(Language language) {
+        return getSongsWithReviewerErasedFalse(songRepository.findDistinctByLanguageAndUploadedIsTrueAndIsBackUpIsNullAndDeletedIsTrue(language));
+    }
+
     private List<Song> getSongsWithReviewerErasedFalse(List<Song> songs) {
         List<Song> filtered = new ArrayList<>();
+        if (songs == null) {
+            return filtered;
+        }
         for (Song song : songs) {
             if (!song.isReviewerErased() && song.getOriginalId() == null) {
                 filtered.add(song);
