@@ -33,6 +33,7 @@ import { ActivateComponent } from './ui/activate/activate.component';
 import { NotificationSettingsComponent } from './ui/notification-settings/notification-settings.component';
 import { ProjectorComponent } from './ui/projector/projector.component';
 import { YoutubeVideoCheckerComponent } from './ui/youtube-video-checker/youtube-video-checker.component';
+import { DuplicateYoutubeIdsComponent } from './ui/duplicate-youtube-ids/duplicate-youtube-ids.component';
 import { ForgottenPasswordComponent } from './ui/forgotten-password/forgotten-password.component';
 import { ChangePasswordByTokenComponent } from './ui/forgotten-password/change-password-by-token/change-password-by-token.component';
 import { AccountComponent } from './ui/account/account.component';
@@ -70,6 +71,7 @@ describe('AppComponent', () => {
         NotificationSettingsComponent,
         ProjectorComponent,
         YoutubeVideoCheckerComponent,
+        DuplicateYoutubeIdsComponent,
         ForgottenPasswordComponent,
         ChangePasswordByTokenComponent,
         AccountComponent,

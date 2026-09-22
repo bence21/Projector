@@ -1,0 +1,45 @@
+<div class="container">
+  <h2>Duplicate YouTube IDs</h2>
+  <p class="page-intro">
+    Songs that share the same YouTube video ID. Review each group and clear or change the ID on songs
+    where the video does not match the lyrics.
+  </p>
+
+  <div *ngIf="loading">Loading songs with YouTube links…</div>
+  <div *ngIf="loadError" class="error">{{ loadError }}</div>
+
+  <div *ngIf="!loading && !loadError">
+    <p class="summary">
+      {{ totalSongsWithYouTube }} songs with YouTube ·
+      {{ duplicateGroups.length }} duplicate ID{{ duplicateGroups.length === 1 ? '' : 's' }} ·
+      {{ duplicateSongCount }} songs involved
+    </p>
+
+    <div *ngIf="duplicateGroups.length === 0" class="empty">
+      No duplicate YouTube IDs found.
+    </div>
+
+    <div *ngFor="let group of duplicateGroups" class="duplicate-group">
+      <h3>
+        <a [href]="watchUrl(group.youtubeId)" target="_blank" rel="noopener">{{ group.youtubeId }}</a>
+        <span class="count">({{ group.songs.length }} songs)</span>
+      </h3>
+      <table class="simple-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let song of group.songs">
+            <td>{{ song.title }}</td>
+            <td>
+              <a [href]="songLink(song)" target="_blank" rel="noopener">Open</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

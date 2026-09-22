@@ -100,6 +100,7 @@ import { EditTitleComponent } from './ui/edit-title/edit-title.component';
 import { AccountComponent } from './ui/account/account.component';
 import { DeleteAccountComponent } from './ui/delete-account/delete-account.component';
 import { YoutubeVideoCheckerComponent } from './ui/youtube-video-checker/youtube-video-checker.component';
+import { DuplicateYoutubeIdsComponent } from './ui/duplicate-youtube-ids/duplicate-youtube-ids.component';
 import { YoutubeIdCheckComponent } from './ui/youtube-id-check/youtube-id-check.component';
 import { SongGuidelinesComponent } from './ui/song-guidelines/song-guidelines.component';
 import { SongGuidelinesCheckerComponent } from './ui/song-guidelines-checker/song-guidelines-checker.component';
@@ -217,6 +218,7 @@ export class PlunkerMaterialModule {
     AccountComponent,
     DeleteAccountComponent,
     YoutubeVideoCheckerComponent,
+    DuplicateYoutubeIdsComponent,
     YoutubeIdCheckComponent,
     SongGuidelinesComponent,
     SongGuidelinesCheckerComponent,

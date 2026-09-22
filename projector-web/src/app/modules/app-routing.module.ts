@@ -25,6 +25,7 @@ import { NewSongCollectionComponent } from '../ui/new-song-collection/new-song-c
 import { AccountComponent } from '../ui/account/account.component';
 import { DeleteAccountComponent } from '../ui/delete-account/delete-account.component';
 import { YoutubeVideoCheckerComponent } from '../ui/youtube-video-checker/youtube-video-checker.component';
+import { DuplicateYoutubeIdsComponent } from '../ui/duplicate-youtube-ids/duplicate-youtube-ids.component';
 import { WordsSpellCheckerComponent } from '../ui/words-spell-checker/words-spell-checker.component';
 import { AdminSongMaintenanceComponent } from '../ui/admin-song-maintenance/admin-song-maintenance.component';
 
@@ -69,6 +70,7 @@ export const appRoutes: Routes = [
   { path: 'user/notifications', component: NotificationSettingsComponent },
   { path: 'desktop-app', component: ProjectorComponent },
   { path: 'admin/YouTube-Video-Checker', component: YoutubeVideoCheckerComponent },
+  { path: 'admin/Duplicate-YouTube-IDs', component: DuplicateYoutubeIdsComponent },
   { path: 'admin/song-maintenance', component: AdminSongMaintenanceComponent },
   { path: 'forgottenPassword', component: ForgottenPasswordComponent },
   { path: 'changePasswordByToken', component: ChangePasswordByTokenComponent },
