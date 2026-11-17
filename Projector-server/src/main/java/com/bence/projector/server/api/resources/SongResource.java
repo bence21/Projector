@@ -790,6 +790,47 @@ public class SongResource {
         return new ResponseEntity<>(songAssembler.createDtoList(songsByVersesIsEmpty), HttpStatus.ACCEPTED);
     }
 
+    @RequestMapping(method = RequestMethod.GET, value = "/admin/songsWithNoVerses")
+    public ResponseEntity<Object> songsWithNoVerses(HttpServletRequest httpServletRequest) {
+        saveStatistics(httpServletRequest, statisticsService);
+        List<Song> songs = songsWithNoVersesExcludingBackups();
+        return new ResponseEntity<>(songAssembler.createDtoList(songs), HttpStatus.OK);
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/admin/deleteSongsWithNoVerses")
+    public ResponseEntity<Object> deleteSongsWithNoVerses(HttpServletRequest httpServletRequest) {
+        saveStatistics(httpServletRequest, statisticsService);
+        List<Song> songs = songsWithNoVersesExcludingBackups();
+        int softDeletedCount = 0;
+        int erasedCount = 0;
+        for (Song song : songs) {
+            if (song.isPublic()) {
+                song.setDeleted(true);
+                song.setModifiedDate(new Date());
+                songService.save(song);
+                softDeletedCount++;
+            } else {
+                songService.deleteByUuid(song.getUuid());
+                erasedCount++;
+            }
+        }
+        HashMap<String, Integer> result = new HashMap<>();
+        result.put("softDeletedCount", softDeletedCount);
+        result.put("erasedCount", erasedCount);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    private List<Song> songsWithNoVersesExcludingBackups() {
+        List<Song> songs = songRepository.findAllByVersesIsEmpty();
+        List<Song> filtered = new ArrayList<>();
+        for (Song song : songs) {
+            if (!song.isBackUp()) {
+                filtered.add(song);
+            }
+        }
+        return filtered;
+    }
+
     @RequestMapping(method = RequestMethod.GET, value = "/admin/deleteEmptySongs")
     public String deleteEmptySongs() {
         List<Song> songsByVersesIsEmpty = songRepository.findAllByVersesIsEmpty();

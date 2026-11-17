@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { MatDialog, MatSnackBar } from '@angular/material';
-import { SongService } from '../../services/song-service.service';
+import { DeleteSongsWithNoVersesResult, Song, SongService } from '../../services/song-service.service';
 import { checkAuthenticationError, ErrorUtil } from '../../util/error-util';
 import { LanguageDataService } from '../../services/language-data.service';
 import { AuthService } from '../../services/auth.service';
@@ -9,6 +9,7 @@ import { Language } from '../../models/language';
 import { User } from '../../models/user';
 import { SELECTED_LANGUGAGE } from '../../util/constants';
 import { SongListComponent } from '../song-list/song-list.component';
+import { ConfirmActionDialogComponent } from '../confirm-action-dialog/confirm-action-dialog.component';
 
 const NEAR_DUPLICATE_CUTOFF_STORAGE_KEY = 'adminSongMaintenance_nearDuplicateCutoffDate';
 
@@ -21,6 +22,9 @@ export class AdminSongMaintenanceComponent implements OnInit {
 
   loadingSimilarBatch = false;
   loadingRemoveDuplicates = false;
+  loadingNoVerseSongs = false;
+  deletingNoVerseSongs = false;
+  noVerseSongs: Song[] = [];
 
   languages: Language[] = [];
   selectedLanguage: Language;
@@ -47,6 +51,7 @@ export class AdminSongMaintenanceComponent implements OnInit {
 
   ngOnInit() {
     this.titleService.setTitle('Song maintenance');
+    this.loadNoVerseSongs();
     this.languageDataService.getAll().subscribe((languages) => {
       const user: User = this.auth.getUser();
       this.languages = [];
@@ -87,6 +92,86 @@ export class AdminSongMaintenanceComponent implements OnInit {
 
   get maintenanceActionsDisabled(): boolean {
     return !this.runForAllLanguages && !this.selectedLanguage;
+  }
+
+  loadNoVerseSongs(): void {
+    this.loadingNoVerseSongs = true;
+    this.songService.getSongsWithNoVerses().subscribe(
+      (songs) => {
+        this.noVerseSongs = songs || [];
+        this.loadingNoVerseSongs = false;
+      },
+      (err) => {
+        this.loadingNoVerseSongs = false;
+        if (ErrorUtil.errorIsNeededLogin(err)) {
+          checkAuthenticationError(this.loadNoVerseSongs, this, err, this.dialog);
+        } else {
+          this.snackBar.open('Could not load songs with no verses.', undefined, { duration: 5000 });
+        }
+      }
+    );
+  }
+
+  songPageUrl(song: Song): string {
+    return '/#/song/' + song.uuid;
+  }
+
+  countNoVerseSongsForDelete(): { softDeleted: number; erased: number } {
+    let softDeleted = 0;
+    let erased = 0;
+    for (const song of this.noVerseSongs) {
+      if (this.songIsPublic(song)) {
+        softDeleted++;
+      } else {
+        erased++;
+      }
+    }
+    return { softDeleted, erased };
+  }
+
+  /** Same rules as server {@code Song#isPublic()} for list DTOs (uuid-only, no {@code hasId} gate). */
+  private songIsPublic(song: Song): boolean {
+    const isBackUp = song.isBackUp === true;
+    const blocking = song.hasBlockingWordIssues === true;
+    return !song.reviewerErased && !song.deleted && !isBackUp && !blocking;
+  }
+
+  deleteAllNoVerseSongs(): void {
+    if (this.deletingNoVerseSongs || this.noVerseSongs.length === 0) {
+      return;
+    }
+    const { softDeleted, erased } = this.countNoVerseSongsForDelete();
+    const confirmDialogRef = this.dialog.open(ConfirmActionDialogComponent, {
+      data: {
+        title: 'Delete all songs with no verses?',
+        message: `${this.noVerseSongs.length} song(s) have no verses.`,
+        reason: `${softDeleted} public song(s) will be hidden (soft delete).\n${erased} non-public song(s) will be permanently removed.`,
+        confirmText: 'Delete all',
+        cancelText: 'Cancel',
+      },
+    });
+    confirmDialogRef.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) {
+        return;
+      }
+      this.deletingNoVerseSongs = true;
+      this.songService.deleteSongsWithNoVerses().subscribe(
+        (result: DeleteSongsWithNoVersesResult) => {
+          this.deletingNoVerseSongs = false;
+          const msg = `Done. Hidden: ${result.softDeletedCount}, permanently removed: ${result.erasedCount}.`;
+          this.snackBar.open(msg, undefined, { duration: 7000 });
+          this.loadNoVerseSongs();
+        },
+        (err) => {
+          this.deletingNoVerseSongs = false;
+          if (ErrorUtil.errorIsNeededLogin(err)) {
+            checkAuthenticationError(this.deleteAllNoVerseSongs, this, err, this.dialog);
+          } else {
+            this.snackBar.open('Delete failed.', undefined, { duration: 5000 });
+          }
+        }
+      );
+    });
   }
 
   private languageUuidForBatch(): string | undefined {

@@ -1,5 +1,5 @@
 .page-wrap {
-  max-width: 720px;
+  max-width: 960px;
   margin: 24px auto;
   padding: 0 16px;
 }
@@ -42,4 +42,26 @@
 mat-card-actions {
   padding-left: 16px;
   padding-bottom: 16px;
+}
+
+.empty-songs-status {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.empty-songs-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.empty-songs-table th,
+.empty-songs-table td {
+  text-align: left;
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.empty-songs-table th {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.7);
 }

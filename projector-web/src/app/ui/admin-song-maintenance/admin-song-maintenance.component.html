@@ -2,6 +2,46 @@
   <h1 class="page-title">Song maintenance</h1>
   <p class="page-intro">Batch jobs for similarity and duplicate uploads. Admin only.</p>
 
+  <mat-card class="action-card empty-songs-card">
+    <mat-card-title>Songs with no verses</mat-card-title>
+    <mat-card-content>
+      <p>
+        Songs that have no verse content (same set as the empty-songs cleanup, not short-text warnings).
+        Open each song to check, then use one action for all listed songs: public songs are hidden; others are permanently removed.
+      </p>
+      <p *ngIf="loadingNoVerseSongs" class="empty-songs-status">Loading…</p>
+      <p *ngIf="!loadingNoVerseSongs && noVerseSongs.length === 0" class="empty-songs-status">No songs with empty verses.</p>
+      <table *ngIf="!loadingNoVerseSongs && noVerseSongs.length > 0" class="empty-songs-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Language</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let song of noVerseSongs">
+            <td>{{ song.title }}</td>
+            <td>{{ song.languageDTO?.nativeName }}</td>
+            <td>
+              <a [href]="songPageUrl(song)" target="_blank" rel="noopener">Open</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="warn"
+              (click)="deleteAllNoVerseSongs()"
+              [disabled]="deletingNoVerseSongs || loadingNoVerseSongs || noVerseSongs.length === 0">
+        {{ deletingNoVerseSongs ? 'Deleting…' : 'Delete all' }}
+      </button>
+      <button mat-button (click)="loadNoVerseSongs()" [disabled]="loadingNoVerseSongs || deletingNoVerseSongs">
+        Refresh list
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
   <app-language-selector
     [languages]="languages"
     [selectedLanguage]="selectedLanguage"

@@ -36,8 +36,8 @@
                                   <td valign="top" style="padding: 18px;color: #ffffff;">
                                     <p
                                       style="text-align: center;display: block;margin: 0;color: #ffffff;font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 12px;font-style: normal;line-height: 225%;letter-spacing: normal;">
-                                      <a href="${baseUrl}/admin/checkForEmptySongs" target="_blank"
-                                          style="color: #2BAADF;font-weight: normal;text-decoration: underline;">${baseUrl}/admin/checkForEmptySongs</a>
+                                      <a href="${baseUrl}/#/admin/song-maintenance" target="_blank"
+                                          style="color: #2BAADF;font-weight: normal;text-decoration: underline;">${baseUrl}/#/admin/song-maintenance</a>
                                     </p>
                                   </td>
                                 </tr>

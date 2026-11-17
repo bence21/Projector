@@ -465,4 +465,21 @@ export class SongService {
     const path = languageUuid ? 'admin/removeDuplicates/' + languageUuid : 'admin/removeDuplicates';
     return this.api.getRaw(path);
   }
+
+  getSongsWithNoVerses(): Observable<Song[]> {
+    return this.api.getAll(Song, 'admin/songsWithNoVerses');
+  }
+
+  deleteSongsWithNoVerses(): Observable<DeleteSongsWithNoVersesResult> {
+    return this.api.postWithBody(DeleteSongsWithNoVersesResult, 'admin/deleteSongsWithNoVerses', null);
+  }
+}
+
+export class DeleteSongsWithNoVersesResult {
+  softDeletedCount: number;
+  erasedCount: number;
+
+  constructor(values: Object = {}) {
+    Object.assign(this, values);
+  }
 }
